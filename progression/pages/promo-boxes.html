@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gentlemen's Gaming - Progression Series 4: Promo Boxes</title>
+  <link rel="stylesheet" href="../css/promo-legacy.css" />
+</head>
+<body>
+  <!-- SELECTION HUB -->
+  <main id="selectionView" class="view view-active">
+    <div class="hub-shell">
+      <header class="hub-header">
+        <img
+          src="../assets/images/ui/yugioh-logo.png"
+          alt="Yu-Gi-Oh! Logo"
+          class="yugioh-logo"
+        />
+        <h1 class="hub-title">Gentlemen's Gaming</h1>
+        <p class="hub-subtitle">Progression Series 4: Promo Boxes</p>
+        <div class="title-divider"></div>
+      </header>
+
+      <section class="hub-main-layout">
+        <!-- LEFT: USER STORE PANEL -->
+        <aside class="user-store-panel panel">
+          <div class="panel-header">
+            <h2>User Store</h2>
+            <p>Manage player credits for box openings and future purchases.</p>
+          </div>
+
+          <div class="panel-body user-store-body">
+            <div class="user-card" data-user="qamazi">
+              <div class="user-card-pfp-wrap">
+                <img src="../assets/images/users/QaMazi.png" alt="QaMazi Profile Picture" class="user-card-pfp" />
+              </div>
+              <div class="user-card-info">
+                <div class="user-card-name">QaMazi</div>
+                <label class="user-card-credit-row">
+                  <span>Credits</span>
+                  <input type="number" class="user-credit-input" value="100" min="0" step="1" />
+                </label>
+              </div>
+            </div>
+
+            <div class="user-card" data-user="skx">
+              <div class="user-card-pfp-wrap">
+                <img src="../assets/images/users/SKX.png" alt="SKX Profile Picture" class="user-card-pfp" />
+              </div>
+              <div class="user-card-info">
+                <div class="user-card-name">SKX</div>
+                <label class="user-card-credit-row">
+                  <span>Credits</span>
+                  <input type="number" class="user-credit-input" value="100" min="0" step="1" />
+                </label>
+              </div>
+            </div>
+
+            <div class="user-card" data-user="silverwolf">
+              <div class="user-card-pfp-wrap">
+                <img src="../assets/images/users/Silverwolf.png" alt="Silverwolf Profile Picture" class="user-card-pfp" />
+              </div>
+              <div class="user-card-info">
+                <div class="user-card-name">Silverwolf</div>
+                <label class="user-card-credit-row">
+                  <span>Credits</span>
+                  <input type="number" class="user-credit-input" value="100" min="0" step="1" />
+                </label>
+              </div>
+            </div>
+
+            <div class="user-card" data-user="blu">
+              <div class="user-card-pfp-wrap">
+                <img src="../assets/images/users/Blu.png" alt="Blu Profile Picture" class="user-card-pfp" />
+              </div>
+              <div class="user-card-info">
+                <div class="user-card-name">Blu</div>
+                <label class="user-card-credit-row">
+                  <span>Credits</span>
+                  <input type="number" class="user-credit-input" value="100" min="0" step="1" />
+                </label>
+              </div>
+            </div>
+
+            <div class="user-card" data-user="nightmare">
+              <div class="user-card-pfp-wrap">
+                <img src="../assets/images/users/Nightmare.png" alt="Nightmare Profile Picture" class="user-card-pfp" />
+              </div>
+              <div class="user-card-info">
+                <div class="user-card-name">Nightmare</div>
+                <label class="user-card-credit-row">
+                  <span>Credits</span>
+                  <input type="number" class="user-credit-input" value="100" min="0" step="1" />
+                </label>
+              </div>
+            </div>
+
+            <div class="user-card" data-user="na">
+              <div class="user-card-pfp-wrap">
+                <img src="../assets/images/users/NA.png" alt="N/A Profile Picture" class="user-card-pfp" />
+              </div>
+              <div class="user-card-info">
+                <div class="user-card-name">N/A</div>
+                <label class="user-card-credit-row">
+                  <span>Credits</span>
+                  <input type="number" class="user-credit-input" value="100" min="0" step="1" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- CENTER: BOX GRID -->
+        <section class="box-selector-panel">
+          <div class="box-grid" id="boxRow"></div>
+        </section>
+
+        <!-- RIGHT: BOX INFO PANEL -->
+        <aside class="hub-info-panel panel">
+          <div class="hub-info-image-wrap">
+            <img id="hubInfoImage" src="" alt="Selected Box Art" />
+          </div>
+
+          <div class="hub-info-content">
+            <div class="hub-info-label">Selected Box</div>
+            <h2 id="hubInfoTitle">Loading...</h2>
+            <p id="hubInfoSubtitle">Loading...</p>
+
+            <div class="hub-info-meta">
+              <div class="hub-info-meta-row">
+                <span>Release Date</span>
+                <strong id="hubInfoRelease">Loading...</strong>
+              </div>
+              <div class="hub-info-meta-row">
+                <span>Edition</span>
+                <strong id="hubInfoEdition">Loading...</strong>
+              </div>
+              <div class="hub-info-meta-row">
+                <span>Type</span>
+                <strong id="hubInfoType">Loading...</strong>
+              </div>
+              <div class="hub-info-meta-row">
+                <span>Card Count</span>
+                <strong id="hubInfoTotal">0 Possible Cards</strong>
+              </div>
+            </div>
+
+            <div class="hub-info-actions">
+              <button id="enterBoxBtn" class="primary-btn">Enter Box</button>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <!-- SPONSOR STRIP -->
+      <section class="sponsor-strip panel">
+        <div class="panel-header center">
+          <h2>Partners</h2>
+          <p>Supported by the communities and platforms behind the format.</p>
+        </div>
+
+        <div class="panel-body sponsor-strip-body">
+          <div class="sponsor-card">
+            <div class="sponsor-logo-wrap">
+              <img src="../assets/logos/Gentlemens Gaming.png" alt="Gentlemen's Gaming Logo" class="sponsor-logo" />
+            </div>
+            <div class="sponsor-name">Gentlemen's Gaming</div>
+          </div>
+
+          <div class="sponsor-card">
+            <div class="sponsor-logo-wrap">
+              <img src="../assets/logos/YGOprog.png" alt="YGOprog.com Logo" class="sponsor-logo" />
+            </div>
+            <div class="sponsor-name">YGOprog.com</div>
+          </div>
+
+          <div class="sponsor-card">
+            <div class="sponsor-logo-wrap">
+              <img src="../assets/logos/YGOOmega.png" alt="YGOOmega Logo" class="sponsor-logo" />
+            </div>
+            <div class="sponsor-name">YGOOmega</div>
+          </div>
+
+          <div class="sponsor-card">
+            <div class="sponsor-logo-wrap">
+              <img src="../assets/logos/Progression Series Logo.png" alt="Progression Series Logo" class="sponsor-logo" />
+            </div>
+            <div class="sponsor-name">Progression Series Logo</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- OPENING VIEW -->
+  <main id="openingView" class="view">
+    <div class="open-shell">
+      <div class="open-topbar">
+        <div class="open-left">
+          <button id="backBtn" class="back-btn">← Back</button>
+
+          <div class="current-box-panel panel">
+            <div class="current-box-image-wrap">
+              <img id="currentBoxImage" src="" alt="Current Box Art" />
+            </div>
+
+            <div class="current-box-content">
+              <div class="current-box-label">Current Box</div>
+              <div class="current-box-name" id="boxName">Loading...</div>
+              <div class="current-box-desc" id="boxSubtitle">Loading...</div>
+
+              <div class="current-box-meta">
+                <div class="current-box-meta-row">
+                  <span>Release Date</span>
+                  <strong id="boxReleaseDate">Loading...</strong>
+                </div>
+                <div class="current-box-meta-row">
+                  <span>Edition</span>
+                  <strong id="boxEdition">Loading...</strong>
+                </div>
+                <div class="current-box-meta-row">
+                  <span>Type</span>
+                  <strong id="boxType">Loading...</strong>
+                </div>
+                <div class="current-box-meta-row">
+                  <span>Card Count</span>
+                  <strong id="boxCardCount">0 Possible Cards</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="open-right">
+          <img
+            src="../assets/images/ui/yugioh-logo.png"
+            alt="Yu-Gi-Oh! Logo"
+            class="yugioh-logo open-logo"
+          />
+          <div class="open-brand-title">Gentlemen's Gaming</div>
+          <div class="open-brand-subtitle">Progression Series 4: Promo Boxes</div>
+        </div>
+      </div>
+
+      <section class="opener-panel panel">
+        <div class="panel-header center">
+          <h2>Opening Area</h2>
+          <p>Single-card CS-style case opening.</p>
+        </div>
+
+        <div class="case-panel">
+          <div class="case-window" id="caseWindow">
+            <div class="center-line"></div>
+            <div class="spinner" id="spinner"></div>
+          </div>
+
+          <div class="case-controls">
+  <div id="selectedPlayerKeyInfo" class="selected-player-key-info">
+    No player selected.
+  </div>
+  <button class="open-btn" id="openBtn">Open Promo Box</button>
+</div>
+
+        </div>
+      </section>
+
+      <section class="possible-cards-panel panel">
+        <div class="panel-header">
+          <h2>Possible Cards</h2>
+          <p>Card odds by section. Secret / Platinum sections remain hidden.</p>
+        </div>
+        <div class="panel-body" id="possibleCardsSections"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- RESULT MODAL -->
+  <div class="result-modal" id="resultModal" aria-hidden="true">
+    <div class="result-modal-backdrop" id="resultBackdrop"></div>
+
+    <div class="result-modal-card" id="resultModalCard">
+      <button class="modal-close" id="closeModalBtn" aria-label="Close">×</button>
+
+      <div class="result-modal-image-wrap">
+        <img id="resultImage" alt="Pulled Card" src="" />
+        <div class="flash-overlay" id="flashOverlay"></div>
+        <div class="hit-effect-overlay" id="hitEffectOverlay"></div>
+      </div>
+
+      <div class="result-modal-meta">
+        <div class="result-small-label">You Unboxed</div>
+        <div class="picked-card" id="pickedCard">No pull yet</div>
+        <div class="rarity-banner" id="rarityBanner">Awaiting Pull</div>
+        <div class="pull-odds" id="pullOdds">Pull Chance: --</div>
+        <div class="pull-odds-sub" id="pullOddsSub">Approx. 1 in -- packs</div>
+
+        <div class="result-actions">
+          <button class="modal-btn secondary" id="closeModalBtn2">Continue</button>
+          <button class="modal-btn primary" id="openAgainBtn">Open Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/promo-box-1.js"></script>
+  <script src="../js/promo-box-2.js"></script>
+  <script src="../js/promo-box-3.js"></script>
+  <script src="../js/promo-legacy.js"></script>
+</body>
+</html>

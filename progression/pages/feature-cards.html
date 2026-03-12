@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feature Cards - YGO Progression Series App</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="subpage-body">
+  <div class="video-background">
+    <video autoplay muted loop playsinline id="bgVideo">
+      <source src="../assets/video/background.mp4" type="video/mp4" />
+    </video>
+    <div class="video-overlay"></div>
+  </div>
+
+  <div class="app-shell subpage-shell">
+    <header class="subpage-header">
+      <a href="../index.html" class="back-button">← Back to Main Menu</a>
+      <div class="version-tag">v0.1.0</div>
+      <h1 class="subpage-title">Feature Cards</h1>
+    </header>
+
+    <main class="subpage-content feature-page-content">
+      <section class="feature-page-shell">
+        <article class="feature-intro-panel">
+          <h2>Feature Reward Pulls</h2>
+          <p>
+            Roll a random Yu-Gi-Oh! card by category. Use Token Mode to consume a
+            Feature Card Token only when you keep the final result. Free Reward Mode
+            lets you roll without consuming inventory.
+          </p>
+        </article>
+
+        <section class="feature-layout">
+          <section class="feature-roll-panel">
+            <div class="feature-panel-header">
+              <h3>Roll Controls</h3>
+            </div>
+
+            <div class="feature-controls-grid">
+              <div class="feature-field">
+                <label for="featurePlayerSelect">Selected Player</label>
+                <select id="featurePlayerSelect" class="feature-select">
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+
+              <div class="feature-field">
+                <label for="featureModeSelect">Mode</label>
+                <select id="featureModeSelect" class="feature-select">
+                  <option value="token">Token Mode</option>
+                  <option value="free">Free Reward Mode</option>
+                </select>
+              </div>
+
+              <div class="feature-field">
+                <label for="featureRerollsInput">Rerolls</label>
+                <input
+                  id="featureRerollsInput"
+                  class="feature-number-input"
+                  type="number"
+                  min="0"
+                  value="3"
+                />
+              </div>
+
+              <div class="feature-status-card">
+                <span class="feature-status-label">Tokens Owned</span>
+                <div id="featureTokenCount" class="feature-status-value">0</div>
+              </div>
+
+              <div class="feature-status-card">
+                <span class="feature-status-label">Rerolls Left</span>
+                <div id="featureRerollsLeft" class="feature-status-value">3</div>
+              </div>
+            </div>
+
+            <div class="feature-category-section">
+              <h4>Choose Category</h4>
+              <div class="feature-category-buttons">
+                <button class="feature-category-button" type="button" data-category="monster">
+                  Monster
+                </button>
+                <button class="feature-category-button" type="button" data-category="spell">
+                  Spell
+                </button>
+                <button class="feature-category-button" type="button" data-category="trap">
+                  Trap
+                </button>
+                <button class="feature-category-button" type="button" data-category="extra">
+                  Extra Deck
+                </button>
+              </div>
+            </div>
+
+            <div id="featureMessage" class="feature-message"></div>
+
+            <div class="feature-current-card" id="featureCurrentCard">
+              <div class="feature-card-placeholder">
+                Choose a category to begin rolling.
+              </div>
+            </div>
+
+            <div class="feature-action-row">
+              <button id="featureRollAgainButton" class="secondary-action-button" type="button" disabled>
+                Roll Again
+              </button>
+              <button id="featureKeepCardButton" class="promo-action-button" type="button" disabled>
+                Keep Card
+              </button>
+            </div>
+          </section>
+
+          <aside class="feature-recent-panel">
+            <div class="feature-panel-header">
+              <h3>Recent Feature Pulls</h3>
+            </div>
+            <div id="featureRecentPulls" class="feature-recent-list"></div>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <footer class="sponsor-strip">
+      <div class="sponsor-item">
+        <img src="../assets/logos/gentlemens-gaming.png" alt="Gentlemen's Gaming" />
+      </div>
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoprog.png" alt="YGOprog.com" />
+      </div>
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoomega.png" alt="YGOOmega" />
+      </div>
+      <div class="sponsor-item">
+        <img src="../assets/logos/progression-series.png" alt="Progression Series Logo" />
+      </div>
+    </footer>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/playerState.js"></script>
+  <script src="../js/feature-cards.js"></script>
+</body>
+</html>

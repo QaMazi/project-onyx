@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YGO Progression Series App</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="background-image"></div>
+
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <h2>YGO Progression Login</h2>
+      <p>Sign in with Discord to access the progression app.</p>
+      <button id="discordLoginButton" class="home-auth-button">Login with Discord</button>
+      <div id="authUserInfo" class="auth-user"></div>
+    </div>
+  </div>
+
+  <div class="home-stage">
+    <div class="home-canvas">
+
+      <!-- LEFT PINNED AREA -->
+      <aside class="home-left-rail">
+        <div class="home-version-pill">App v.<span id="appVersionLabel">0.1.5</span></div>
+
+        <section class="home-card home-user-card">
+          <div class="home-user-main">
+            <div class="home-user-avatar-wrap">
+              <img
+                id="accountAvatar"
+                class="home-user-avatar"
+                src="assets/logos/progression-series.png"
+                alt="User Avatar"
+              />
+            </div>
+
+            <div class="home-user-meta">
+              <div id="accountUsername" class="home-user-name">NAME</div>
+              <div id="accountRole" class="home-user-role">ROLE</div>
+              <div id="accountStatus" class="home-user-status">Status</div>
+              <div id="accountActiveSession" class="home-user-session">Active Session Name</div>
+            </div>
+
+            <div class="home-user-actions">
+              <button id="adminQuickButton" class="home-side-button" type="button">Admin P.</button>
+              <button id="logoutButton" class="home-side-button" type="button">Log Out</button>
+            </div>
+          </div>
+
+          <div class="home-user-footer">
+            <div class="home-user-footer-left" id="accountDiscordIdLine">Discord ID Goes Here</div>
+
+            <div class="home-user-ready-wrap">
+              <span class="home-ready-label">Ready</span>
+              <span id="accountReadyStatus" class="home-ready-pill ready-no">Not Ready</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="home-card home-online-card">
+          <div class="home-online-scroll">
+            <div class="home-online-track">
+
+              <article class="home-online-chip ready-yes">
+                <div class="home-chip-avatar-wrap">
+                  <img src="assets/logos/progression-series.png" alt="QaMazi" class="home-chip-avatar" />
+                </div>
+                <div class="home-chip-meta">
+                  <div class="home-chip-name">QaMazi</div>
+                  <div class="home-chip-role">Admin</div>
+                </div>
+                <div class="home-chip-status-block">
+                  <div class="home-chip-presence online">Online</div>
+                  <div class="home-chip-ready">Ready</div>
+                </div>
+              </article>
+
+              <article class="home-online-chip ready-no">
+                <div class="home-chip-avatar-wrap">
+                  <img src="assets/logos/progression-series.png" alt="SKX" class="home-chip-avatar" />
+                </div>
+                <div class="home-chip-meta">
+                  <div class="home-chip-name">SKX</div>
+                  <div class="home-chip-role">Player</div>
+                </div>
+                <div class="home-chip-status-block">
+                  <div class="home-chip-presence online">Online</div>
+                  <div class="home-chip-ready">Not Ready</div>
+                </div>
+              </article>
+
+              <article class="home-online-chip ready-yes">
+                <div class="home-chip-avatar-wrap">
+                  <img src="assets/logos/progression-series.png" alt="Silverwolf" class="home-chip-avatar" />
+                </div>
+                <div class="home-chip-meta">
+                  <div class="home-chip-name">Silverwolf</div>
+                  <div class="home-chip-role">Player</div>
+                </div>
+                <div class="home-chip-status-block">
+                  <div class="home-chip-presence away">Away</div>
+                  <div class="home-chip-ready">Ready</div>
+                </div>
+              </article>
+
+              <article class="home-online-chip ready-no">
+                <div class="home-chip-avatar-wrap">
+                  <img src="assets/logos/progression-series.png" alt="Blu" class="home-chip-avatar" />
+                </div>
+                <div class="home-chip-meta">
+                  <div class="home-chip-name">Blu</div>
+                  <div class="home-chip-role">Player</div>
+                </div>
+                <div class="home-chip-status-block">
+                  <div class="home-chip-presence offline">Offline</div>
+                  <div class="home-chip-ready">Not Ready</div>
+                </div>
+              </article>
+
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- CENTERED MAIN CLUSTER -->
+      <main class="home-main-cluster">
+        <section class="home-logo-panel">
+          <img
+            src="assets/logos/progression-series-logo.png"
+            alt="Progression Series Logo"
+            class="home-main-logo"
+          />
+        </section>
+
+        <div class="home-duel-row">
+          <button id="duelLaunchButton" class="home-duel-button" type="button">Duel</button>
+        </div>
+
+        <section class="home-bottom-grid">
+
+          <section class="home-card home-widget home-activity-widget">
+            <h2 class="home-widget-title">Recent Activity</h2>
+            <div class="home-widget-scroll">
+              <ul class="home-log-list">
+                <li>Nightmare pulled Secret Rare Jinzo</li>
+                <li>Silverwolf opened Promo Box 2</li>
+                <li>SKX pulled Dark Magician</li>
+                <li>Blu opened Legacy Pack</li>
+                <li>QaMazi joined the active session</li>
+                <li>Admin enabled Scoreboard</li>
+                <li>Feature phase scheduled for next session</li>
+                <li>Patch notes updated to v0.1.5</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="home-card home-widget home-schedule-widget">
+            <h2 class="home-widget-title">Schedule &amp; Next Match Ups</h2>
+            <div class="home-widget-scroll">
+              <div class="home-schedule-heading">Next Session</div>
+              <div class="home-schedule-phase">Draft Phase</div>
+              <div class="home-schedule-sub">June 12 • 8:00 PM</div>
+              <div class="home-schedule-countdown">02:14:21</div>
+
+              <div class="home-schedule-divider"></div>
+
+              <div class="home-schedule-heading">Bracket Preview</div>
+              <div class="home-bracket-item">Round 1: QaMazi vs SKX</div>
+              <div class="home-bracket-item">Round 1: Silverwolf vs Blu</div>
+              <div class="home-bracket-item">Nightmare receives bye</div>
+            </div>
+          </section>
+
+          <section class="home-menu-column home-menu-column-wide">
+            <div class="home-menu-stack">
+              <a href="#" class="home-menu-button">Join / Leave Session</a>
+              <a href="#" class="home-menu-button">Session Info</a>
+              <a href="#" class="home-menu-button">Session Scoreboard</a>
+              <a href="#" class="home-menu-button is-locked">Session Banlist <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">Session All Player Inventories <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">Session Starter Decks <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">Session Item (Future) <span class="lock-icon">🔒</span></a>
+            </div>
+          </section>
+
+          <section class="home-menu-column home-menu-column-narrow">
+            <div class="home-menu-stack">
+              <a href="#" class="home-menu-button">Ready Up</a>
+              <a href="#" class="home-menu-button">Scoreboard</a>
+              <a href="#" class="home-menu-button is-locked">Decks <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button">Inventory</a>
+              <a href="#" class="home-menu-button is-locked">Trade <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button">Store</a>
+              <a href="#" class="home-menu-button is-locked">Notes <span class="lock-icon">🔒</span></a>
+            </div>
+          </section>
+
+          <section class="home-menu-column home-menu-column-wide">
+            <div class="home-menu-stack">
+              <a href="#" class="home-menu-button is-locked">Card Database <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">Pack Database <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">Promo Box Database <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button">Phases &amp; Rules</a>
+              <a href="#" class="home-menu-button is-locked">Roadmap <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">Settings <span class="lock-icon">🔒</span></a>
+              <a href="#" class="home-menu-button is-locked">App Item (Future) <span class="lock-icon">🔒</span></a>
+            </div>
+          </section>
+
+          <section class="home-card home-widget home-patch-widget">
+            <h2 class="home-widget-title">Patch History</h2>
+            <div class="home-widget-scroll">
+              <article class="home-patch-entry current">
+                <div class="home-patch-top">
+                  <span class="home-patch-version">v0.1.5</span>
+                  <span class="home-patch-badge">Current</span>
+                </div>
+                <ul>
+                  <li>Session system added</li>
+                  <li>Supabase integration</li>
+                  <li>Activity feed</li>
+                  <li>Starter deck system</li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+        </section>
+      </main>
+
+    </div>
+  </div>
+
+  <footer class="site-footer">© Gentlemen's Gaming 2026</footer>
+
+  <script>
+    document.querySelectorAll(".is-locked").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        alert("This feature is currently disabled.");
+      });
+    });
+  </script>
+</body>
+</html>

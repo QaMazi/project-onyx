@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scoreboard - YGO Progression Series App</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="subpage-body">
+  <div class="video-background">
+    <video autoplay muted loop playsinline id="bgVideo">
+      <source src="../assets/video/background.mp4" type="video/mp4" />
+    </video>
+    <div class="video-overlay"></div>
+  </div>
+
+  <div class="app-shell subpage-shell">
+    <header class="subpage-header">
+      <a href="../index.html" class="back-button">← Back to Main Menu</a>
+      <div class="version-tag">v0.1.0</div>
+      <h1 class="subpage-title">Scoreboard</h1>
+    </header>
+
+    <main class="subpage-content scoreboard-page-content">
+      <section class="scoreboard-page-shell">
+        <article class="scoreboard-intro-panel">
+          <h2>Progression Standings</h2>
+          <p>
+            Track player wins and points. Applying placements will also award the same
+            amount of credits behind the scenes for Store and Inventory systems.
+          </p>
+        </article>
+
+        <section class="scoreboard-layout">
+          <section class="scoreboard-table-panel">
+            <div class="scoreboard-panel-header">
+              <h3>Current Standings</h3>
+            </div>
+
+            <div class="scoreboard-table-wrap">
+              <table class="scoreboard-table">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Wins</th>
+                    <th>Points</th>
+                  </tr>
+                </thead>
+                <tbody id="scoreboardTableBody">
+                  <tr data-player-id="1">
+                    <td>QaMazi</td>
+                    <td class="scoreboard-wins">0</td>
+                    <td class="scoreboard-points">0</td>
+                  </tr>
+                  <tr data-player-id="2">
+                    <td>SKX</td>
+                    <td class="scoreboard-wins">0</td>
+                    <td class="scoreboard-points">0</td>
+                  </tr>
+                  <tr data-player-id="3">
+                    <td>Silverwolf</td>
+                    <td class="scoreboard-wins">0</td>
+                    <td class="scoreboard-points">0</td>
+                  </tr>
+                  <tr data-player-id="4">
+                    <td>Blu</td>
+                    <td class="scoreboard-wins">0</td>
+                    <td class="scoreboard-points">0</td>
+                  </tr>
+                  <tr data-player-id="5">
+                    <td>Nightmare</td>
+                    <td class="scoreboard-wins">0</td>
+                    <td class="scoreboard-points">0</td>
+                  </tr>
+                  <tr data-player-id="6">
+                    <td>N/A</td>
+                    <td class="scoreboard-wins">0</td>
+                    <td class="scoreboard-points">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <aside class="placement-panel">
+            <div class="scoreboard-panel-header">
+              <h3>Round Placements</h3>
+            </div>
+
+            <div class="placement-form">
+              <div class="placement-field">
+                <label for="placement1">1st Place</label>
+                <select id="placement1" class="placement-select">
+                  <option value="">Select Player</option>
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+
+              <div class="placement-field">
+                <label for="placement2">2nd Place</label>
+                <select id="placement2" class="placement-select">
+                  <option value="">Select Player</option>
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+
+              <div class="placement-field">
+                <label for="placement3">3rd Place</label>
+                <select id="placement3" class="placement-select">
+                  <option value="">Select Player</option>
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+
+              <div class="placement-field">
+                <label for="placement4">4th Place</label>
+                <select id="placement4" class="placement-select">
+                  <option value="">Select Player</option>
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+
+              <div class="placement-field">
+                <label for="placement5">5th Place</label>
+                <select id="placement5" class="placement-select">
+                  <option value="">Select Player</option>
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+
+              <div class="placement-field">
+                <label for="placement6">6th Place</label>
+                <select id="placement6" class="placement-select">
+                  <option value="">Select Player</option>
+                  <option value="1">QaMazi</option>
+                  <option value="2">SKX</option>
+                  <option value="3">Silverwolf</option>
+                  <option value="4">Blu</option>
+                  <option value="5">Nightmare</option>
+                  <option value="6">N/A</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="placement-points-reference">
+              <h4>Scoring</h4>
+              <ul>
+                <li>1st: 10</li>
+                <li>2nd: 8</li>
+                <li>3rd: 6</li>
+                <li>4th: 4</li>
+                <li>5th: 2</li>
+                <li>6th: 0</li>
+              </ul>
+            </div>
+
+            <div id="scoreboardMessage" class="scoreboard-message"></div>
+
+            <div class="placement-actions">
+              <button id="applyPlacementsButton" class="promo-action-button" type="button">
+                Apply Placements
+              </button>
+              <button id="undoPlacementsButton" class="secondary-action-button" type="button">
+                Undo Last Placement
+              </button>
+              <button id="resetScoreboardButton" class="secondary-action-button danger-button" type="button">
+                Reset Scoreboard
+              </button>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <footer class="sponsor-strip">
+      <div class="sponsor-item">
+        <img src="../assets/logos/gentlemens-gaming.png" alt="Gentlemen's Gaming" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoprog.png" alt="YGOprog.com" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoomega.png" alt="YGOOmega" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/progression-series.png" alt="Progression Series Logo" />
+      </div>
+    </footer>
+  </div>
+
+<script src="../js/app.js"></script>
+<script src="../js/playerState.js"></script>
+<script src="../js/scoreboard.js"></script>
+
+</body>
+</html>

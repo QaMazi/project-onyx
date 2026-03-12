@@ -1,0 +1,35 @@
+assets/
+├── video/
+│   └── background.mp4
+├── logos/
+│   ├── progression-logo.png
+│   ├── gentlemens-gaming.png
+│   ├── ygoprog.png
+│   ├── ygoomega.png
+│   └── progression-series.png
+├── backgrounds/
+│   ├── menu-bg.jpg
+│   ├── store-bg.jpg
+│   ├── boxes-bg.jpg
+│   └── phases-bg.jpg
+├── box-art/
+│   ├── arcade-relics.png
+│   ├── chaos-gamble.png
+│   └── vault-of-supremacy.png
+├── items/
+│   ├── random-key.png
+│   ├── specific-key.png
+│   ├── feature-token.png
+│   └── steal-card.png
+├── avatars/
+│   ├── qamazi.png
+│   ├── skx.png
+│   ├── silverwolf.png
+│   ├── blu.png
+│   ├── nightmare.png
+│   └── na.png
+└── audio/
+    ├── reel-spin.mp3
+    ├── rarity-hit.mp3
+    ├── reward-claim.mp3
+    └── ui-click.mp3

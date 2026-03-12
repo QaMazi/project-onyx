@@ -1,0 +1,59 @@
+{
+  "patches": [
+    {
+      "version": "v0.1.5",
+      "title": "Card Database + Binder Backend",
+      "badge": "Current",
+      "points": [
+        "Imported 13,000+ cards from the EDOPro database into the master card library.",
+        "Added full player binder inventory storage using session-based player_cards.",
+        "Implemented duplicate card stacking so repeated pulls increase quantity.",
+        "Built the pull logging system for packs, promo boxes, and feature rewards.",
+        "Added indexed pull history storage for admin auditing and analytics.",
+        "Created a custom rarity system allowing any card to exist in multiple rarity tiers.",
+        "Added rarities and card_rarities tables to support rarity rolling independent of base card identity.",
+        "Implemented binder add-and-stack logic through add_card_to_player_binder().",
+        "Established the backend foundation for the upcoming pack opening engine."
+      ]
+    },
+    {
+      "version": "v0.1.4",
+      "title": "Core Backend Infrastructure",
+      "badge": "Previous",
+      "points": [
+        "Implemented full Supabase backend architecture for the progression system.",
+        "Added multi-session progression campaigns with persistent save/load support.",
+        "Built lobby system with join, leave, and ready state tracking.",
+        "Added real-time activity feed for session events.",
+        "Introduced content lock system for packs, promo boxes, and feature cards.",
+        "Added pull logging framework for future pack opening systems.",
+        "Implemented secure multiplayer permissions with Row Level Security.",
+        "Added card database foundation for binder, deck builder, and pack systems.",
+        "Frontend now builds a runtime progression state object for gameplay systems."
+      ]
+    },
+    {
+      "version": "v0.1.2",
+      "title": "Website Migration + Account System",
+      "badge": "Previous",
+      "points": [
+        "Moved the Progression App from a local tool into the live Gentlemen's Gaming website.",
+        "Added Discord login so users must authenticate before accessing the app.",
+        "Built the login overlay and logged-in user panel into the main dashboard.",
+        "Connected Supabase as the first live database layer for future league data.",
+        "Restructured the home layout into a three-column dashboard."
+      ]
+    },
+    {
+      "version": "v0.1.0",
+      "title": "Initial App Foundation",
+      "badge": "Launch",
+      "points": [
+        "Built the AIO Progression Series hub and main navigation structure.",
+        "Added pages for Phases, Scoreboard, Promotional Boxes, Store, Feature Cards, RNG, Inventory, and Admin.",
+        "Separated Promotional Boxes into their own dedicated app flow.",
+        "Laid the groundwork for league economy, inventory tracking, and admin systems."
+      ]
+    }
+  ]
+}

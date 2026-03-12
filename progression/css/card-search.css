@@ -1,0 +1,237 @@
+/* =========================
+   CARD SEARCH PAGE
+========================= */
+
+.card-search-page-content {
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 30px;
+}
+
+.card-search-layout {
+  width: 100%;
+  max-width: 1550px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.card-browser-panel,
+.card-filters-panel {
+  background: rgba(15, 15, 15, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+.card-browser-panel {
+  padding: 18px;
+}
+
+.card-browser-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.card-toolbar-group,
+.card-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-toolbar-group label,
+.card-filter-field label {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.card-search-select,
+.card-search-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(28, 28, 28, 0.95);
+  color: white;
+  font-size: 15px;
+  outline: none;
+}
+
+.card-search-select:focus,
+.card-search-input:focus {
+  border-color: rgba(255, 80, 80, 0.9);
+  box-shadow: 0 0 0 3px rgba(255, 80, 80, 0.14);
+}
+
+.card-toolbar-button {
+  width: auto;
+  min-width: 120px;
+  padding-left: 20px;
+  padding-right: 20px;
+  white-space: nowrap;
+}
+
+.card-results-meta {
+  min-height: 24px;
+  margin-bottom: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.card-list {
+  max-height: 980px;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.card-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.card-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.card-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-row:hover {
+  border-color: rgba(255, 80, 80, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-thumb {
+  width: 72px;
+  height: 104px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.card-row-body {
+  min-width: 0;
+}
+
+.card-row-name {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+
+.card-row-line {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.card-row-line.is-dim {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.card-results-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.card-load-more-button {
+  width: auto;
+  min-width: 180px;
+}
+
+.card-filters-panel {
+  padding: 18px;
+}
+
+.card-filters-header {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-filters-header h2 {
+  font-size: 28px;
+}
+
+.card-filter-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-double-field {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card-filter-actions {
+  margin-top: 6px;
+}
+
+.card-secondary-button {
+  background: rgba(45, 45, 45, 0.95);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.card-secondary-button:hover {
+  background: rgba(65, 65, 65, 0.95);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.card-empty-state {
+  padding: 26px 14px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.68);
+  font-style: italic;
+}
+
+@media (max-width: 1180px) {
+  .card-search-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .card-list {
+    max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .card-row {
+    grid-template-columns: 1fr;
+  }
+
+  .card-thumb {
+    width: 96px;
+    height: 138px;
+  }
+
+  .card-double-field {
+    grid-template-columns: 1fr;
+  }
+}

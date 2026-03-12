@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Store - YGO Progression Series App</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="subpage-body">
+  <div class="video-background">
+    <video autoplay muted loop playsinline id="bgVideo">
+      <source src="../assets/video/background.mp4" type="video/mp4" />
+    </video>
+    <div class="video-overlay"></div>
+  </div>
+
+  <div class="app-shell subpage-shell">
+    <header class="subpage-header">
+      <a href="../index.html" class="back-button">← Back to Main Menu</a>
+      <div class="version-tag">v0.1.0</div>
+      <h1 class="subpage-title">Store</h1>
+    </header>
+
+    <main class="subpage-content store-page-content">
+      <section class="store-page-shell">
+        <article class="store-intro-panel">
+          <h2>Progression Store</h2>
+          <p>
+            Purchase usable items with credits, view trade-in rarity values, and reference
+            the active Store Rules. Keys and Feature Card Tokens are stored in player inventory.
+          </p>
+        </article>
+
+        <section class="store-player-bar">
+          <div class="store-player-field">
+            <label for="storePlayerSelect">Selected Player</label>
+            <select id="storePlayerSelect" class="store-player-select">
+              <option value="1">QaMazi</option>
+              <option value="2">SKX</option>
+              <option value="3">Silverwolf</option>
+              <option value="4">Blu</option>
+              <option value="5">Nightmare</option>
+              <option value="6">N/A</option>
+            </select>
+          </div>
+
+          <div class="store-credit-display">
+            <span class="store-credit-label">Current Credits</span>
+            <div id="storePlayerCredits" class="store-credit-value">100</div>
+          </div>
+        </section>
+
+        <section class="store-layout">
+          <section class="store-items-panel">
+            <div class="store-panel-header">
+              <h3>Purchasable Items</h3>
+            </div>
+
+            <div class="store-items-grid">
+              <article class="store-item-card">
+                <div class="store-item-image">ITEM</div>
+                <h4>Random Key</h4>
+                <p class="store-item-cost">20 Credits</p>
+                <p class="store-item-description">
+                  Grants one random available box key to the selected player's inventory.
+                </p>
+                <button
+                  class="promo-action-button store-buy-button"
+                  type="button"
+                  data-store-item="random_key"
+                >
+                  Buy Random Key
+                </button>
+              </article>
+
+              <article class="store-item-card">
+                <div class="store-item-image">ITEM</div>
+                <h4>Specific Key</h4>
+                <p class="store-item-cost">40 Credits</p>
+                <p class="store-item-description">
+                  Adds one key for a specific live Promotional Box.
+                </p>
+
+                <label for="specificKeyBoxSelect" class="store-inline-label">Choose Live Box</label>
+                <select id="specificKeyBoxSelect" class="store-inline-select">
+                  <option value="1">Arcade Relics</option>
+                  <option value="2">Chaos Gamble</option>
+                  <option value="3">Vault of Supremacy</option>
+                </select>
+
+                <button
+                  class="promo-action-button store-buy-button"
+                  type="button"
+                  data-store-item="specific_key"
+                >
+                  Buy Specific Key
+                </button>
+              </article>
+
+              <article class="store-item-card">
+                <div class="store-item-image">ITEM</div>
+                <h4>Feature Card Token</h4>
+                <p class="store-item-cost">20 Credits</p>
+                <p class="store-item-description">
+                  Adds one redeemable Feature Card Token to the selected player's inventory.
+                </p>
+                <button
+                  class="promo-action-button store-buy-button"
+                  type="button"
+                  data-store-item="feature_token"
+                >
+                  Buy Feature Token
+                </button>
+              </article>
+
+              <article class="store-item-card">
+                <div class="store-item-image">ITEM</div>
+                <h4>Steal a Card</h4>
+                <p class="store-item-cost">20 Credits</p>
+                <p class="store-item-description">
+                  Deducts the cost immediately. This item is not added to inventory for now.
+                </p>
+                <button
+                  class="promo-action-button store-buy-button"
+                  type="button"
+                  data-store-item="steal_card"
+                >
+                  Buy Steal a Card
+                </button>
+              </article>
+            </div>
+
+            <div id="storeMessage" class="store-message"></div>
+          </section>
+
+          <aside class="store-side-column">
+            <section class="store-tradein-panel">
+              <div class="store-panel-header">
+                <h3>Trade-In Values</h3>
+              </div>
+
+              <div class="tradein-values-list">
+                <div class="tradein-row"><span>Common</span><span>1 Credit</span></div>
+                <div class="tradein-row"><span>Rare</span><span>3 Credits</span></div>
+                <div class="tradein-row"><span>Super Rare</span><span>5 Credits</span></div>
+                <div class="tradein-row"><span>Ultra Rare</span><span>8 Credits</span></div>
+                <div class="tradein-row"><span>Secret Rare</span><span>10 Credits</span></div>
+                <div class="tradein-row"><span>Gold Rare</span><span>12 Credits</span></div>
+                <div class="tradein-row"><span>Prismatic Rare</span><span>15 Credits</span></div>
+                <div class="tradein-row"><span>Ghost Rare</span><span>20 Credits</span></div>
+              </div>
+            </section>
+
+            <section class="store-rules-panel">
+              <div class="store-panel-header">
+                <h3>Store Rules</h3>
+              </div>
+
+              <div class="store-rules-block">
+                <h4>Card Trade-Ins</h4>
+                <ul>
+                  <li>Only the Banker may process card trade-ins to ensure there are no discrepancies.</li>
+                  <li>When trading in cards, send your list to the designated note page.</li>
+                  <li>Players should update their list while playing to ensure faster processing.</li>
+                </ul>
+              </div>
+
+              <div class="store-rules-block">
+                <h4>Credit System</h4>
+                <ul>
+                  <li>Players may trade in any cards from their binder in exchange for credits.</li>
+                  <li>The maximum credit balance is 1000 credits.</li>
+                </ul>
+              </div>
+
+              <div class="store-rules-block">
+                <h4>Purchasing Items</h4>
+                <ul>
+                  <li>At the end of player rewards being handed out after phases complete,</li>
+                  <li>each player will get the chance to spend as many credits as they want to.</li>
+                </ul>
+              </div>
+            </section>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <footer class="sponsor-strip">
+      <div class="sponsor-item">
+        <img src="../assets/logos/gentlemens-gaming.png" alt="Gentlemen's Gaming" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoprog.png" alt="YGOprog.com" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoomega.png" alt="YGOOmega" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/progression-series.png" alt="Progression Series Logo" />
+      </div>
+    </footer>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/playerState.js"></script>
+  <script src="../js/store.js"></script>
+</body>
+</html>

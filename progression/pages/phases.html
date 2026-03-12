@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phases - YGO Progression Series App</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="subpage-body">
+  <div class="video-background">
+    <video autoplay muted loop playsinline id="bgVideo">
+      <source src="../assets/video/background.mp4" type="video/mp4" />
+    </video>
+    <div class="video-overlay"></div>
+  </div>
+
+  <div class="app-shell subpage-shell">
+    <header class="subpage-header">
+      <a href="../index.html" class="back-button">← Back to Main Menu</a>
+      <div class="version-tag">v0.1.0</div>
+      <h1 class="subpage-title">YGO Progression</h1>
+    </header>
+
+    <main class="subpage-content phases-page-content">
+      <section class="phases-page-shell">
+        <article class="phases-intro-panel">
+          <h2>About the Game</h2>
+          <p>
+            In this game, players will progress through a series of phases each round.
+            The objective is simple: build the strongest deck possible using the cards
+            available to you and defeat your opponents.
+          </p>
+          <p>
+            As the game progresses, your card pool will grow, allowing you to improve
+            your deck and refine your strategy.
+          </p>
+          <p class="intro-highlight">
+            Good luck, and may the best duelist win!
+          </p>
+        </article>
+
+        <article class="ruleset-banner">
+          <h2>Ruleset</h2>
+        </article>
+
+        <div class="phases-grid">
+          <article class="phase-card phase-card-wide">
+            <div class="phase-card-header">
+              <span class="phase-number">Phase 1</span>
+              <h3>Ban Phase</h3>
+            </div>
+
+            <div class="phase-card-body">
+              <div class="phase-subsection">
+                <h4>General Rules</h4>
+                <ul class="phase-list">
+                  <li>Bans are in Round Robin style.</li>
+                  <li>The official ban list from the era being played must be used.</li>
+                  <li>Last round place picks first.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Random Deck Ban</h4>
+                <ul class="phase-list">
+                  <li>After all player bans are declared, each player must randomly lose 1 card from their deck.</li>
+                  <li>A random number generator will be used to select the card.</li>
+                  <li>The number generated corresponds to the card’s position in the player’s sorted deck list.</li>
+                  <li>The selected card is immediately banned from that player’s deck.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Custom Ban Limits</h4>
+                <ul class="phase-list">
+                  <li>There are 2 custom ban slots available in each banlist segment.</li>
+                  <li>When replacing a custom ban, you cannot choose a card that already appears in another section of the ban list.</li>
+                  <li>Custom bans must always occur each round.</li>
+                  <li>If all custom ban slots are already filled, players must replace an existing custom ban with a new one.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Era Ban List Rules</h4>
+                <ul class="phase-list">
+                  <li>The official era ban list cannot be modified directly.</li>
+                  <li>The only exception: a card from the era ban list may be placed in the Unlimited section as a custom change.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Unlimited Section</h4>
+                <ul class="phase-list">
+                  <li>The Unlimited section is reserved only for cards that appear on the era’s official ban list.</li>
+                  <li>These cards may be placed into the Unlimited section as a custom ban adjustment.</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="phase-card phase-card-wide">
+            <div class="phase-card-header">
+              <span class="phase-number">Phase 2</span>
+              <h3>Binder Phase</h3>
+            </div>
+
+            <div class="phase-card-body">
+              <div class="phase-subsection">
+                <h4>Selection Order</h4>
+                <ul class="phase-list">
+                  <li>The round winner chooses first.</li>
+                  <li>Selection order then proceeds 2nd place, 3rd place, and so on until all players have chosen.</li>
+                  <li>Options 1, 2, 3, and 4 must be placed ahead of you in the overall placement order when resolving their effects.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 1 – Binder Removal</h4>
+                <ul class="phase-list">
+                  <li>Remove 1 card from an opponent’s binder of your choice.</li>
+                  <li>All copies of that card are removed from their binder.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 2 – Forced Trade</h4>
+                <ul class="phase-list">
+                  <li>Force a trade of 4 cards total between you and another player. (2 cards from each player)</li>
+                  <li>You must take the equal, or lower rarities in this trade.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 3 – Card Lockout</h4>
+                <ul class="phase-list">
+                  <li>Choose 3 different card names.</li>
+                  <li>The chosen opponent cannot use those cards in the next set/pack.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 4 – Gambled Removal</h4>
+                <ul class="phase-list">
+                  <li>Remove 2 cards from an opponent's binder of your choice.</li>
+                  <li>All copies of each are removed.</li>
+                  <li>They get 2 Promo Boxes of their choice to open.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 5 – Binder Stack</h4>
+                <ul class="phase-list">
+                  <li>Choose any card in your binder.</li>
+                  <li>Increase that card to 3 total copies.</li>
+                  <li>Cannot be higher than Ultra Rare.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 6 – Ban List Cards</h4>
+                <ul class="phase-list">
+                  <li>Give yourself 2 cards currently on the Ban List.</li>
+                  <li>Can be the same card twice.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 7 – Progression Series Promo Box</h4>
+                <ul class="phase-list">
+                  <li>Open 2 Promo Boxes of your choice.</li>
+                  <li>Both must be the same box.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Option 8 – Draft Pack</h4>
+                <ul class="phase-list">
+                  <li>Choose any Yu-Gi-Oh pack from the entire game.</li>
+                  <li>All players receive 1 pack from that set.</li>
+                  <li>You receive 3 packs instead.</li>
+                  <li>These are treated as draft packs.</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="phase-card phase-card-wide">
+            <div class="phase-card-header">
+              <span class="phase-number">Phase 3</span>
+              <h3>Feature Phase</h3>
+            </div>
+
+            <div class="phase-card-body">
+              <div class="phase-subsection">
+                <h4>General Rules</h4>
+                <ul class="phase-list">
+                  <li>This phase contains two rounds of feature rewards.</li>
+                  <li>Depends which round you are on per set.</li>
+                  <li>The round winner selects first.</li>
+                  <li>Selection order then continues 2nd place, 3rd place, and so on.</li>
+                  <li>No duplicates are allowed.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Round I – Promo Boxes</h4>
+                <ul class="phase-list">
+                  <li>Choose 1 of the 5 available Promo Boxes.</li>
+                  <li>Open the selected box and add the contents to your card pool.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Round II – Drafted Pull</h4>
+                <ul class="phase-list">
+                  <li>Players may roll for a random pull from one of the following categories.</li>
+                  <li>Each player receives 3 rerolls for Options 1–4.</li>
+                  <li>Each player receives 1 reroll for Options 5–7.</li>
+                </ul>
+
+                <div class="option-grid">
+                  <div class="option-card">
+                    <h5>Option 1 — Trap Card</h5>
+                    <p>Roll for a random Trap Card.</p>
+                  </div>
+
+                  <div class="option-card">
+                    <h5>Option 2 — Spell Card</h5>
+                    <p>Roll for a random Spell Card.</p>
+                  </div>
+
+                  <div class="option-card">
+                    <h5>Option 3 — Monster Card</h5>
+                    <p>Roll for a random Monster Card.</p>
+                  </div>
+
+                  <div class="option-card">
+                    <h5>Option 4 — Extra Deck Card</h5>
+                    <p>Roll for a random Extra Deck Card.</p>
+                  </div>
+
+                  <div class="option-card option-card-wide">
+                    <h5>Option 5 — Loot Box of Choice</h5>
+                    <p>Choose from the 5 Promo Boxes.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Special Round</h4>
+                <ul class="phase-list">
+                  <li>After every 6 Mainline packs, each player chooses one of the following:</li>
+                  <li>5 Promo Boxes per person of their choice.</li>
+                  <li>5 Feature cards from a countdown pull of 4.</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="phase-card phase-card-wide">
+            <div class="phase-card-header">
+              <span class="phase-number">Phase 4</span>
+              <h3>Draft Phase</h3>
+            </div>
+
+            <div class="phase-card-body">
+              <div class="phase-subsection">
+                <h4>General Rules</h4>
+                <ul class="phase-list">
+                  <li>The Draft Phase is divided into two rounds for each pack release.</li>
+                  <li>Round 1: Full Pack Opening.</li>
+                  <li>Round 2: Draft Packs.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Round I – Full Packs</h4>
+                <ul class="phase-list">
+                  <li>Players open packs from the newly unlocked set.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Standard Pack Release</h4>
+                <ul class="phase-list">
+                  <li>If there are no special products between the previous set and the new set, use the following:</li>
+                  <li>Normal Packs: Open 20 packs from the new set.</li>
+                  <li>Chosen Packs: Open 10 packs of your choice from previously unlocked packs. Newest one does not count.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Special Product Release</h4>
+                <ul class="phase-list">
+                  <li>If special products exist between the previous set and the new set, include them:</li>
+                  <li>Special Packs: Open 20 packs.</li>
+                  <li>Tins: Open 1 tin.</li>
+                  <li>Structure/Starter Decks: Open 1 deck.</li>
+                </ul>
+                <p class="phase-note">All cards opened are added to the player’s binder/card pool.</p>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Round II – Draft Packs</h4>
+                <ul class="phase-list">
+                  <li>Players perform a draft using unlocked sets.</li>
+                  <li>Draft Packs: Open 20 draft packs of your choice.</li>
+                  <li>Players may choose these packs from any previously unlocked packs.</li>
+                  <li>3 Promo Boxes.</li>
+                  <li>1 previously unlocked Tin of your choice.</li>
+                </ul>
+                <p class="phase-note">All cards obtained during this round are added to the player’s card pool.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="phase-card phase-card-wide">
+            <div class="phase-card-header">
+              <span class="phase-number">Phase 5</span>
+              <h3>Deck Building &amp; Dueling</h3>
+            </div>
+
+            <div class="phase-card-body">
+              <div class="phase-subsection">
+                <h4>Deck Building Rules</h4>
+                <ul class="phase-list">
+                  <li>Players must ensure that all cards removed from their binder are also removed from their deck.</li>
+                  <li>If a player uses a card that is no longer in their binder, it is considered an automatic forfeit.</li>
+                  <li>The same rule applies to banned cards. Using a banned card results in an automatic forfeit.</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Duel Format</h4>
+                <ul class="phase-list">
+                  <li>All matches are played in Match Format (Best of 3 duels).</li>
+                </ul>
+              </div>
+
+              <div class="phase-subsection">
+                <h4>Tournament Structure</h4>
+                <ul class="phase-list">
+                  <li>Opponents are determined randomly through a bracket system.</li>
+                  <li>The tournament uses a Single Elimination Bracket.</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="phase-card phase-card-wide">
+            <div class="phase-card-header">
+              <span class="phase-number">Phase 6</span>
+              <h3>End Phase Rewards</h3>
+            </div>
+
+            <div class="phase-card-body">
+              <div class="phase-subsection">
+                <h4>Placement Rewards</h4>
+                <ul class="phase-list">
+                  <li><strong>1st Place:</strong> Receive 1 Promo Box of your choice.</li>
+                  <li><strong>2nd Place:</strong> Receive 1 Drafted Feature Card of your choice.</li>
+                  <li><strong>3rd Place:</strong> Receive 1 Card on the Banlist of your choice.</li>
+                  <li><strong>4th Place:</strong> Steal 1 Card from a random opponent’s deck.</li>
+                  <li><strong>5th Place:</strong> Ban 1 Card until the next duel is complete.</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="sponsor-strip">
+      <div class="sponsor-item">
+        <img src="../assets/logos/gentlemens-gaming.png" alt="Gentlemen's Gaming" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoprog.png" alt="YGOprog.com" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/ygoomega.png" alt="YGOOmega" />
+      </div>
+
+      <div class="sponsor-item">
+        <img src="../assets/logos/progression-series.png" alt="Progression Series Logo" />
+      </div>
+    </footer>
+  </div>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

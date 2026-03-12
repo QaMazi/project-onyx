@@ -1,0 +1,53 @@
+[
+  {
+    "version": "0.0.4",
+    "channel": "Alpha",
+    "title": "Initial Launcher Build",
+    "date": "2026-03-12",
+    "changes": [
+      "Mode Select launcher interface completed.",
+      "Progression (Ranked Mode) panel introduced.",
+      "Casual / Deck Game panel placeholder added.",
+      "Image-based mode cards implemented with hover zoom effects.",
+      "Active user profile card added to Mode Select.",
+      "Launcher footer added with version display and patch notes access.",
+      "Patch Notes modal system introduced with JSON-driven rendering."
+    ]
+  },
+  {
+    "version": "0.0.3",
+    "channel": "Alpha",
+    "title": "User & Mode Systems",
+    "date": "2026-03-11",
+    "changes": [
+      "UserContext system added for managing user state.",
+      "Role badge system implemented (Admin+, Admin, Duelist, Applicant).",
+      "Mode access logic implemented for progression states.",
+      "Progression access states added (accepted, pending, restricted)."
+    ]
+  },
+  {
+    "version": "0.0.2",
+    "channel": "Alpha",
+    "title": "Navigation & Layout Framework",
+    "date": "2026-03-11",
+    "changes": [
+      "Router navigation system implemented.",
+      "Routes created for /, /mode, /mode/progression, and /mode/deckgame.",
+      "LauncherLayout system created for shared background, overlay, and footer.",
+      "Application page structure established."
+    ]
+  },
+  {
+    "version": "0.0.1",
+    "channel": "Alpha",
+    "title": "Project Initialization",
+    "date": "2026-03-10",
+    "changes": [
+      "Project Onyx web application framework created.",
+      "React + Vite development environment established.",
+      "Initial project structure created.",
+      "Login splash screen UI implemented."
+    ]
+  }
+]

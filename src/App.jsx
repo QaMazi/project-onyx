@@ -1,53 +1,59 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
-import "./App.css"
+import "./App.css";
+import { useState } from "react";
+import ModeSelectPage from "./pages/ModeSelect/ModeSelectPage";
 
-function Login() {
+function App() {
+  const [page, setPage] = useState("login");
+
+  if (page === "modeSelect") {
+    return (
+      <ModeSelectPage
+        goToLogin={() => setPage("login")}
+      />
+    );
+  }
+
   return (
-    <div className="onyx-page">
-      <div className="onyx-overlay" />
-      <div className="onyx-card">
-        <h1 className="onyx-title">PROJECT ONYX</h1>
-        <p className="onyx-subtitle">GentlemensGaming.org</p>
+    <div className="launcher-root">
 
-        <button className="onyx-button">Login with Discord</button>
+      <img
+        src="/ui/login_background.png"
+        className="launcher-bg"
+        alt="background"
+      />
 
-        <div className="onyx-links">
-          <Link to="/mode">Go to Mode Select</Link>
+      <div className="launcher-overlay"></div>
+
+      <div className="launcher-center">
+
+        <img
+          src="/ui/project_onyx_logo.png"
+          className="launcher-logo"
+          alt="Project Onyx"
+        />
+
+        <div className="login-card">
+
+          <button className="discord-button">
+            <img
+              src="/ui/discord_icon.svg"
+              className="discord-icon"
+            />
+            Login with Discord
+          </button>
+
+          <div
+            className="dev-link"
+            onClick={() => setPage("modeSelect")}
+          >
+            Go to Mode Select (Testing)
+          </div>
+
         </div>
+
       </div>
     </div>
-  )
+  );
 }
 
-function ModeSelect() {
-  return (
-    <div className="simple-page">
-      <h1>Select Game Mode</h1>
-      <div className="mode-links">
-        <Link to="/mode/progression">Progression</Link>
-        <Link to="/mode/deckgame">Deck Game</Link>
-      </div>
-    </div>
-  )
-}
-
-function Progression() {
-  return <h1>Progression Mode</h1>
-}
-
-function DeckGame() {
-  return <h1>Deck Game Mode</h1>
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/mode" element={<ModeSelect />} />
-        <Route path="/mode/progression" element={<Progression />} />
-        <Route path="/mode/deckgame" element={<DeckGame />} />
-      </Routes>
-    </BrowserRouter>
-  )
-}
+export default App;

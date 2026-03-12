@@ -1,95 +1,124 @@
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #050505;
-  color: white;
-}
-
-a {
-  color: #d6b35f;
-  text-decoration: none;
-}
-
-.onyx-page {
+.launcher-root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.75)),
-    url("/onyx-bg.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: black;
 }
 
-.onyx-overlay {
+/* background image */
+
+.launcher-bg {
   position: absolute;
-  inset: 0;
-  backdrop-filter: blur(2px);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.onyx-card {
+/* gradient overlay */
+
+.launcher-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+
+  background: radial-gradient(
+    circle at center,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.75) 65%,
+    rgba(0,0,0,0.9) 100%
+  );
+}
+
+/* center container */
+
+.launcher-center {
   position: relative;
-  z-index: 1;
-  width: min(560px, 90vw);
-  padding: 48px 32px;
-  border: 1px solid rgba(214, 179, 95, 0.45);
-  border-radius: 24px;
-  background: rgba(10, 10, 10, 0.72);
-  box-shadow: 0 0 30px rgba(214, 179, 95, 0.14);
-  text-align: center;
-}
+  z-index: 2;
 
-.onyx-title {
-  margin: 0 0 10px;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  letter-spacing: 0.08em;
-}
+  height: 100%;
+  width: 100%;
 
-.onyx-subtitle {
-  margin: 0 0 28px;
-  font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.onyx-button {
-  min-width: 240px;
-  min-height: 54px;
-  padding: 0 24px;
-  border: 1px solid rgba(214, 179, 95, 0.7);
-  border-radius: 999px;
-  background: rgba(20, 20, 20, 0.9);
-  color: white;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.onyx-button:hover {
-  box-shadow: 0 0 20px rgba(214, 179, 95, 0.18);
-}
-
-.onyx-links {
-  margin-top: 22px;
-}
-
-.simple-page {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  background: #0b0b0b;
 }
 
-.mode-links {
+/* logo */
+
+.launcher-logo {
+  height: 320px;
+  margin-bottom: 30px;
+}
+
+/* login card */
+
+.login-card {
+  backdrop-filter: blur(12px);
+  background: rgba(15,15,15,0.55);
+
+  border: 1px solid rgba(255,215,120,0.15);
+  border-radius: 14px;
+
+  padding: 40px;
+  width: 420px;
+
+  text-align: center;
+}
+
+/* subtitle */
+
+.site-subtitle {
+  font-size: 16px;
+  margin-bottom: 24px;
+  opacity: 0.85;
+}
+
+/* discord button */
+
+.discord-button {
+  width: 100%;
+  height: 52px;
+
+  background: #5865F2;
+  color: white;
+
+  border: none;
+  border-radius: 8px;
+
+  font-size: 16px;
+  font-weight: 600;
+
   display: flex;
-  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  cursor: pointer;
+
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.discord-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+
+  box-shadow: 0 8px 20px rgba(88,101,242,0.35);
+}
+
+/* discord icon */
+
+.discord-icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* dev link */
+
+.dev-link {
+  margin-top: 16px;
+  font-size: 13px;
+  opacity: 0.7;
+  cursor: pointer;
 }

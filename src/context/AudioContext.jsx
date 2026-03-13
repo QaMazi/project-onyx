@@ -21,12 +21,15 @@ export function useAudio() {
   return context;
 }
 
-function getInitialVolume() {
-  const saved = localStorage.getItem("musicVolume");
-  const parsed = saved !== null ? Number(saved) : 0.5;
-
+function clampVolume(value) {
+  const parsed = Number(value);
   if (Number.isNaN(parsed)) return 0.5;
   return Math.min(1, Math.max(0, parsed));
+}
+
+function getInitialVolume() {
+  const saved = localStorage.getItem("musicVolume");
+  return clampVolume(saved ?? 0.5);
 }
 
 function getInitialMuted() {
@@ -40,38 +43,42 @@ export function AudioProvider({ children }) {
   const unlockBoundRef = useRef(false);
 
   const [volume, setVolumeState] = useState(getInitialVolume);
-  const [muted, setMuted] = useState(getInitialMuted);
+  const [muted, setMutedState] = useState(getInitialMuted);
   const [isReady, setIsReady] = useState(false);
 
-  /* ---------- helpers ---------- */
+  const getTargetVolume = useCallback(() => {
+    return muted ? 0 : clampVolume(volume);
+  }, [muted, volume]);
 
   const applyVolume = useCallback(() => {
     if (!audioRef.current) return;
-    audioRef.current.volume = muted ? 0 : volume;
-  }, [muted, volume]);
+    audioRef.current.volume = clampVolume(getTargetVolume());
+  }, [getTargetVolume]);
 
   const tryPlay = useCallback(async () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current) return false;
 
     try {
       await audioRef.current.play();
       setIsReady(true);
+      return true;
     } catch {
       setIsReady(false);
+      return false;
     }
   }, []);
 
-  /* ---------- fade helpers ---------- */
+  const fadeVolume = useCallback((audio, target, duration = 800) => {
+    const safeTarget = clampVolume(target);
 
-  const fadeVolume = (audio, target, duration = 800) =>
-    new Promise((resolve) => {
-      const start = audio.volume;
-      const diff = target - start;
+    return new Promise((resolve) => {
+      const start = clampVolume(audio.volume);
+      const diff = safeTarget - start;
       const startTime = performance.now();
 
       function step(now) {
         const progress = Math.min((now - startTime) / duration, 1);
-        audio.volume = start + diff * progress;
+        audio.volume = clampVolume(start + diff * progress);
 
         if (progress < 1) {
           requestAnimationFrame(step);
@@ -82,8 +89,7 @@ export function AudioProvider({ children }) {
 
       requestAnimationFrame(step);
     });
-
-  /* ---------- autoplay unlock ---------- */
+  }, []);
 
   const bindUnlockListeners = useCallback(() => {
     if (unlockBoundRef.current) return;
@@ -104,27 +110,23 @@ export function AudioProvider({ children }) {
     window.addEventListener("pointerdown", unlock, { once: true });
   }, [tryPlay]);
 
-  /* ---------- create audio instance ---------- */
-
   useEffect(() => {
     const audio = new Audio();
     audio.loop = true;
     audio.preload = "auto";
+    audio.volume = clampVolume(getTargetVolume());
 
     audioRef.current = audio;
-    applyVolume();
 
     return () => {
       audio.pause();
       audio.src = "";
       audioRef.current = null;
     };
-  }, [applyVolume]);
-
-  /* ---------- volume persistence ---------- */
+  }, [getTargetVolume]);
 
   useEffect(() => {
-    localStorage.setItem("musicVolume", String(volume));
+    localStorage.setItem("musicVolume", String(clampVolume(volume)));
     applyVolume();
   }, [volume, applyVolume]);
 
@@ -132,8 +134,6 @@ export function AudioProvider({ children }) {
     localStorage.setItem("musicMuted", String(muted));
     applyVolume();
   }, [muted, applyVolume]);
-
-  /* ---------- theme music change ---------- */
 
   useEffect(() => {
     if (!audioRef.current || !currentTheme?.music) return;
@@ -143,50 +143,56 @@ export function AudioProvider({ children }) {
 
     if (audio.src === nextSrc) {
       applyVolume();
-      tryPlay().catch(() => {});
+      tryPlay();
+      bindUnlockListeners();
       return;
     }
 
     const switchTrack = async () => {
-      /* fade out old track */
-
       if (!audio.paused) {
         await fadeVolume(audio, 0, 600);
       }
 
       audio.pause();
-
-      /* switch source */
-
-      audio.src = currentTheme.music;
+      audio.src = nextSrc;
       audio.load();
-
-      /* start silent */
-
       audio.volume = 0;
 
-      await tryPlay();
+      const played = await tryPlay();
 
-      /* fade in */
+      if (!played) {
+        bindUnlockListeners();
+        return;
+      }
 
-      const target = muted ? 0 : volume;
-      await fadeVolume(audio, target, 1000);
+      await fadeVolume(audio, getTargetVolume(), 1000);
     };
 
     switchTrack();
-
-    bindUnlockListeners();
-  }, [currentTheme, volume, muted, applyVolume, tryPlay, bindUnlockListeners]);
-
-  /* ---------- API ---------- */
+  }, [
+    currentTheme,
+    applyVolume,
+    tryPlay,
+    bindUnlockListeners,
+    fadeVolume,
+    getTargetVolume,
+  ]);
 
   const setVolume = useCallback((nextValue) => {
-    const safeValue = Math.min(1, Math.max(0, Number(nextValue) || 0));
-    setVolumeState(safeValue);
+    setVolumeState(clampVolume(nextValue));
+  }, []);
+
+  const setMuted = useCallback((nextValue) => {
+    if (typeof nextValue === "boolean") {
+      setMutedState(nextValue);
+      return;
+    }
+
+    setMutedState((prev) => !prev);
   }, []);
 
   const toggleMuted = useCallback(() => {
-    setMuted((prev) => !prev);
+    setMutedState((prev) => !prev);
   }, []);
 
   const value = useMemo(
@@ -198,7 +204,7 @@ export function AudioProvider({ children }) {
       toggleMuted,
       isReady,
     }),
-    [volume, setVolume, muted, toggleMuted, isReady]
+    [volume, setVolume, muted, setMuted, toggleMuted, isReady]
   );
 
   return <AudioContext.Provider value={value}>{children}</AudioContext.Provider>;

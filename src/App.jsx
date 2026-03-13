@@ -13,16 +13,13 @@ import { useUser } from "./context/UserContext";
 import "./App.css";
 
 function canonicalizeRole(role) {
-  const normalized = String(role || "")
-    .trim()
-    .toLowerCase();
+  const r = String(role || "").toLowerCase();
 
-  if (normalized === "admin+") return "Admin+";
-  if (normalized === "adminplus") return "Admin+";
-  if (normalized === "admin") return "Admin";
-  if (normalized === "blocked") return "Blocked";
-  if (normalized === "duelist") return "Duelist";
-  if (normalized === "applicant") return "Applicant";
+  if (r === "admin+" || r === "adminplus") return "Admin+";
+  if (r === "admin") return "Admin";
+  if (r === "blocked") return "Blocked";
+  if (r === "duelist") return "Duelist";
+  if (r === "applicant") return "Applicant";
 
   return "Applicant";
 }
@@ -51,11 +48,7 @@ function LoginSplash() {
   }
 
   if (authLoading) {
-    return (
-      <LauncherLayout>
-        <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
-      </LauncherLayout>
-    );
+    return <div className="loading-screen">Loading...</div>;
   }
 
   return (
@@ -70,11 +63,6 @@ function LoginSplash() {
       </div>
 
       <button className="discord-button" onClick={loginWithDiscord}>
-        <img
-          src="/ui/discord_icon.svg"
-          className="discord-icon"
-          alt="Discord"
-        />
         Login with Discord
       </button>
     </LauncherLayout>
@@ -83,17 +71,16 @@ function LoginSplash() {
 
 function ProtectedRoute({ children }) {
   const { user, authLoading } = useUser();
-  const resolvedRole = canonicalizeRole(user?.role);
 
   if (authLoading) {
     return (
       <LauncherLayout>
-        <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
+        <div style={{ color: "white" }}>Loading...</div>
       </LauncherLayout>
     );
   }
 
-  if (!user || resolvedRole === "Blocked") {
+  if (!user || user.role === "Blocked") {
     return <Navigate to="/" replace />;
   }
 
@@ -102,21 +89,20 @@ function ProtectedRoute({ children }) {
 
 function AdminRoute({ children }) {
   const { user, authLoading } = useUser();
-  const resolvedRole = canonicalizeRole(user?.role);
 
   if (authLoading) {
     return (
       <LauncherLayout>
-        <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
+        <div style={{ color: "white" }}>Loading...</div>
       </LauncherLayout>
     );
   }
 
-  if (!user || resolvedRole === "Blocked") {
+  if (!user || user.role === "Blocked") {
     return <Navigate to="/" replace />;
   }
 
-  if (resolvedRole !== "Admin" && resolvedRole !== "Admin+") {
+  if (user.role !== "Admin" && user.role !== "Admin+") {
     return <Navigate to="/mode" replace />;
   }
 
@@ -125,17 +111,16 @@ function AdminRoute({ children }) {
 
 function HomeRoute() {
   const { user, authLoading } = useUser();
-  const resolvedRole = canonicalizeRole(user?.role);
 
   if (authLoading) {
     return (
       <LauncherLayout>
-        <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
+        <div style={{ color: "white" }}>Loading...</div>
       </LauncherLayout>
     );
   }
 
-  if (user && resolvedRole !== "Blocked") {
+  if (user && user.role !== "Blocked") {
     return <Navigate to="/mode" replace />;
   }
 
@@ -146,97 +131,6 @@ function App() {
   const { setUser, setAuthLoading } = useUser();
 
   useEffect(() => {
-    async function syncProfileInBackground(session, baseUser) {
-      try {
-        const discordUser = session.user.user_metadata || {};
-        const discordUserId =
-          discordUser.provider_id ||
-          discordUser.sub ||
-          session.user.user_metadata?.sub ||
-          null;
-
-        const profilePayload = {
-          id: session.user.id,
-          discord_user_id: discordUserId,
-          username: baseUser.username,
-          avatar: baseUser.avatar,
-        };
-
-        const { error: upsertError } = await supabase
-          .from("profiles")
-          .upsert(profilePayload, { onConflict: "id" });
-
-        if (upsertError) {
-          console.error("Profile upsert failed:", upsertError);
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select(
-            "id, discord_user_id, username, avatar, role, progression_state, active_series_id"
-          )
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (profileError || !profile) {
-          console.error("Profile fetch failed:", profileError);
-          return;
-        }
-
-        const { data: activeSeries, error: activeSeriesError } = await supabase
-          .from("game_series")
-          .select("id")
-          .eq("is_current", true)
-          .maybeSingle();
-
-        if (activeSeriesError) {
-          console.error("Active series fetch failed:", activeSeriesError);
-          return;
-        }
-
-        let computedRole = canonicalizeRole(profile.role);
-        let computedActiveSeriesId = profile.active_series_id || null;
-        let isMemberOfActiveSeries = false;
-
-        if (activeSeries?.id) {
-          const { data: membership, error: membershipError } = await supabase
-            .from("series_players")
-            .select("id")
-            .eq("series_id", activeSeries.id)
-            .eq("user_id", profile.id)
-            .maybeSingle();
-
-          if (membershipError) {
-            console.error("Series membership fetch failed:", membershipError);
-            return;
-          }
-
-          isMemberOfActiveSeries = !!membership;
-
-          if (isMemberOfActiveSeries) {
-            computedActiveSeriesId = activeSeries.id;
-          }
-        }
-
-        if (!isAuthorityRole(computedRole)) {
-          computedRole = isMemberOfActiveSeries ? "Duelist" : "Applicant";
-        }
-
-        setUser({
-          username: profile.username || baseUser.username,
-          avatar: profile.avatar || baseUser.avatar,
-          id: profile.id,
-          discordUserId: profile.discord_user_id || discordUserId,
-          role: computedRole,
-          progressionState: profile.progression_state || "default",
-          activeSeriesId: computedActiveSeriesId,
-        });
-      } catch (error) {
-        console.error("Background profile sync crashed:", error);
-      }
-    }
-
     async function loadSession() {
       setAuthLoading(true);
 
@@ -247,83 +141,77 @@ function App() {
 
         if (!session) {
           setUser(null);
+          setAuthLoading(false);
           return;
         }
 
         const discordUser = session.user.user_metadata || {};
 
         const baseUser = {
+          id: session.user.id,
           username:
             discordUser.full_name ||
             discordUser.name ||
-            discordUser.preferred_username ||
             "Unknown User",
           avatar: discordUser.avatar_url || "",
-          id: session.user.id,
-          discordUserId:
-            discordUser.provider_id ||
-            discordUser.sub ||
-            session.user.user_metadata?.sub ||
-            null,
-          role: "Applicant",
-          progressionState: "default",
-          activeSeriesId: null,
         };
 
-        setUser(baseUser);
-        await syncProfileInBackground(session, baseUser);
-      } catch (error) {
-        console.error("Session load failed:", error);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        const normalizedRole = canonicalizeRole(profile?.role);
+
+        let finalRole = normalizedRole;
+
+        if (!isAuthorityRole(normalizedRole)) {
+          const { data: activeSeries } = await supabase
+            .from("game_series")
+            .select("id")
+            .eq("is_current", true)
+            .maybeSingle();
+
+          if (activeSeries) {
+            const { data: membership } = await supabase
+              .from("series_players")
+              .select("id")
+              .eq("series_id", activeSeries.id)
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+
+            finalRole = membership ? "Duelist" : "Applicant";
+          }
+        }
+
+        setUser({
+          ...baseUser,
+          role: finalRole,
+          progressionState: profile?.progression_state || "default",
+          activeSeriesId: profile?.active_series_id || null,
+        });
+      } catch (err) {
+        console.error("Session load error", err);
         setUser(null);
-      } finally {
-        setAuthLoading(false);
       }
+
+      setAuthLoading(false);
     }
 
     loadSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!session) {
-        setUser(null);
-        setAuthLoading(false);
-        return;
-      }
-
-      const discordUser = session.user.user_metadata || {};
-
-      const baseUser = {
-        username:
-          discordUser.full_name ||
-          discordUser.name ||
-          discordUser.preferred_username ||
-          "Unknown User",
-        avatar: discordUser.avatar_url || "",
-        id: session.user.id,
-        discordUserId:
-          discordUser.provider_id ||
-          discordUser.sub ||
-          session.user.user_metadata?.sub ||
-          null,
-        role: "Applicant",
-        progressionState: "default",
-        activeSeriesId: null,
-      };
-
-      setUser(baseUser);
-      setAuthLoading(false);
-      await syncProfileInBackground(session, baseUser);
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      loadSession();
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => data.subscription.unsubscribe();
   }, [setUser, setAuthLoading]);
 
   return (
     <Routes>
       <Route path="/" element={<HomeRoute />} />
+
       <Route
         path="/mode"
         element={
@@ -332,6 +220,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/mode/progression"
         element={
@@ -340,6 +229,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/mode/deckgame"
         element={
@@ -348,6 +238,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin"
         element={

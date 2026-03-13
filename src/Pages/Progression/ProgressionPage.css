@@ -279,6 +279,7 @@
   width: calc((100% - 10px) / 2);
 }
 
+
 /* ===============================
    PLAYER LIST
 ================================ */
@@ -316,6 +317,13 @@
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
+}
+
+.progression-player-avatar img,
+.progression-series-player-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .progression-player-avatar-placeholder {
@@ -478,6 +486,307 @@
 
 
 /* ===============================
+   SERIES INFO MODAL
+================================ */
+
+.progression-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 28px;
+
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.progression-modal-content {
+  position: relative;
+  width: min(760px, 94vw);
+  max-height: min(82vh, 860px);
+  overflow-y: auto;
+
+  padding: 26px 24px 24px;
+  border-radius: 18px;
+
+  background: rgba(15, 15, 15, 0.94);
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, rgba(255, 255, 255, 0.1));
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.62),
+    0 0 28px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+
+  color: white;
+}
+
+.progression-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.progression-modal-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.progression-modal-content::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--theme-accent) 24%, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+}
+
+.progression-modal-content::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--theme-accent) 36%, rgba(255, 255, 255, 0.14));
+}
+
+.progression-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 38px;
+  height: 38px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.progression-modal-close:hover {
+  background: color-mix(in srgb, var(--theme-accent) 14%, rgba(255, 255, 255, 0.03));
+  border-color: color-mix(in srgb, var(--theme-accent) 34%, rgba(255, 255, 255, 0.1));
+  transform: translateY(-1px);
+}
+
+.progression-modal-title {
+  margin: 0 0 8px;
+  padding-right: 46px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: white;
+}
+
+.progression-modal-description {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.78);
+
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.progression-series-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.progression-series-meta-card {
+  padding: 12px 13px;
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.progression-series-meta-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--theme-accent) 78%, white);
+  text-transform: uppercase;
+}
+
+.progression-series-meta-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+
+.progression-series-section {
+  margin-top: 18px;
+}
+
+.progression-series-section-title {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: white;
+}
+
+.progression-series-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progression-series-player-card,
+.progression-series-empty-slot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 54px;
+  padding: 11px 12px;
+
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.progression-series-player-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(
+    180deg,
+    var(--theme-accent) 0%,
+    color-mix(in srgb, var(--theme-accent) 60%, black) 100%
+  );
+
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.progression-series-player-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+
+.progression-series-player-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.progression-series-player-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+}
+
+.progression-series-player-role {
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.progression-series-player-role-applicant {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.progression-series-player-role-duelist {
+  background: rgba(88, 101, 242, 0.18);
+  border: 1px solid rgba(88, 101, 242, 0.35);
+  color: #a7b5ff;
+}
+
+.progression-series-player-role-admin {
+  background: color-mix(in srgb, var(--theme-accent) 20%, transparent);
+  border: 1px solid var(--theme-accent);
+  color: color-mix(in srgb, var(--theme-accent) 80%, white);
+}
+
+.progression-series-player-role-adminplus {
+  background: linear-gradient(
+    180deg,
+    var(--theme-accent) 0%,
+    color-mix(in srgb, var(--theme-accent) 60%, black) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 70%, white);
+  color: white;
+}
+
+.progression-series-player-subtext,
+.progression-series-empty-slot-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.progression-series-empty-slot {
+  justify-content: flex-start;
+}
+
+.progression-series-empty-slot-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.progression-series-empty-state {
+  padding: 12px 2px 0;
+}
+
+.progression-series-empty-state-title {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+  color: white;
+}
+
+.progression-series-empty-state-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+
+/* ===============================
    PLACEHOLDER / FALLBACK
 ================================ */
 
@@ -514,6 +823,7 @@
 .progression-root::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--theme-accent) 36%, rgba(255, 255, 255, 0.14));
 }
+
 
 /* ===============================
    RESPONSIVE
@@ -555,5 +865,23 @@
 
   .progression-panel-body {
     overflow-y: visible;
+  }
+
+  .progression-series-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .progression-modal {
+    padding: 16px;
+  }
+
+  .progression-modal-content {
+    padding: 22px 18px 18px;
+  }
+
+  .progression-modal-title {
+    font-size: 24px;
   }
 }

@@ -148,6 +148,10 @@ function AdminPlayersPanel() {
                 const isBusy = actionLoadingId === player.id;
                 const editable = canEditTarget(player);
 
+                const safeValue = roleOptions.includes(player.role)
+                  ? player.role
+                  : "";
+
                 return (
                   <div className="admin-player-card" key={player.id}>
                     <div className="admin-player-left">
@@ -189,19 +193,19 @@ function AdminPlayersPanel() {
                     <div className="admin-player-actions">
                       <select
                         className="admin-role-select"
-                        value={player.role}
+                        value={safeValue}
                         disabled={!editable || isBusy}
                         onChange={(e) => handleRoleChange(player, e.target.value)}
                       >
-                        {editable ? (
-                          roleOptions.map((role) => (
-                            <option key={role} value={role}>
-                              {role}
-                            </option>
-                          ))
-                        ) : (
+                        {!roleOptions.includes(player.role) && (
                           <option value={player.role}>{player.role}</option>
                         )}
+
+                        {roleOptions.map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>

@@ -1,8 +1,10 @@
 import { useAudio } from "../context/AudioContext";
+import { useTheme } from "../context/ThemeContext";
 import "./SettingsModal.css";
 
 function SettingsModal({ open, onClose }) {
   const { volume, setVolume, muted, setMuted } = useAudio();
+  const { themes, themeMode, setThemeMode } = useTheme();
 
   if (!open) return null;
 
@@ -18,11 +20,29 @@ function SettingsModal({ open, onClose }) {
         </div>
 
         <div className="settings-body">
+          <div className="settings-row">
+            <label htmlFor="theme-select">Theme</label>
+
+            <select
+              id="theme-select"
+              value={themeMode}
+              onChange={(e) => setThemeMode(e.target.value)}
+            >
+              <option value="random">Random on Launch</option>
+
+              {themes.map((theme) => (
+                <option key={theme.name} value={theme.name}>
+                  {theme.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="settings-row">
-            <label>Music Volume</label>
+            <label htmlFor="music-volume">Music Volume</label>
 
             <input
+              id="music-volume"
               type="range"
               min="0"
               max="1"
@@ -33,15 +53,15 @@ function SettingsModal({ open, onClose }) {
           </div>
 
           <div className="settings-row">
-            <label>Mute</label>
+            <label htmlFor="mute-toggle">Mute</label>
 
             <input
+              id="mute-toggle"
               type="checkbox"
               checked={muted}
               onChange={() => setMuted(!muted)}
             />
           </div>
-
         </div>
       </div>
     </div>

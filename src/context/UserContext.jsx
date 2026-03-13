@@ -3,16 +3,13 @@ import { createContext, useContext, useState } from "react";
 const UserContext = createContext();
 
 export function UserProvider({ children }) {
-  const [user, setUser] = useState({
-    username: "Qamazi",
-    avatarInitial: "Q",
-    authStatus: "Authenticated User",
-    role: "Applicant",
-    progressionState: "accepted",
-  });
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider
+      value={{ user, setUser, authLoading, setAuthLoading }}
+    >
       {children}
     </UserContext.Provider>
   );

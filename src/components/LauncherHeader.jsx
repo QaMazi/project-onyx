@@ -1,12 +1,18 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
+import { supabase } from "../lib/supabase";
 import "./LauncherHeader.css";
 
-function LauncherHeader({ openSettings }) {
+function LauncherHeader({ openSettings, openProfile = () => {} }) {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, setUser } = useUser();
   const [isOpen, setIsOpen] = useState(false);
+
+  if (!user) return null;
+
+  const isAdmin = user.role === "Admin" || user.role === "Admin+";
+  const avatarInitial = user.username?.charAt(0)?.toUpperCase() || "G";
 
   const roleClass = useMemo(() => {
     switch (user.role) {
@@ -16,20 +22,34 @@ function LauncherHeader({ openSettings }) {
         return "launcher-header-role role-admin";
       case "Duelist":
         return "launcher-header-role role-duelist";
+      case "Blocked":
+        return "launcher-header-role role-blocked";
       case "Applicant":
       default:
         return "launcher-header-role role-applicant";
     }
   }, [user.role]);
 
-  const handleLogout = () => {
-    setIsOpen(false);
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      setIsOpen(false);
+      setUser(null);
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout crashed:", error);
+      window.location.href = "/";
+    }
   };
 
   const handleOpenSettings = () => {
     setIsOpen(false);
     openSettings();
+  };
+
+  const handleOpenProfile = () => {
+    setIsOpen(false);
+    openProfile();
   };
 
   return (
@@ -54,7 +74,15 @@ function LauncherHeader({ openSettings }) {
             aria-expanded={isOpen}
           >
             <div className="launcher-header-avatar">
-              {user.avatarInitial}
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.username}
+                  className="launcher-header-avatar-image"
+                />
+              ) : (
+                avatarInitial
+              )}
             </div>
 
             <div className="launcher-header-usertext">
@@ -70,7 +98,7 @@ function LauncherHeader({ openSettings }) {
             <div className="launcher-header-menu" role="menu">
               <button
                 className="launcher-header-menu-item"
-                onClick={() => setIsOpen(false)}
+                onClick={handleOpenProfile}
               >
                 Profile
               </button>
@@ -81,6 +109,18 @@ function LauncherHeader({ openSettings }) {
               >
                 Settings
               </button>
+
+              {isAdmin && (
+                <button
+                  className="launcher-header-menu-item"
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate("/admin");
+                  }}
+                >
+                  Admin Panel
+                </button>
+              )}
 
               <button
                 className="launcher-header-menu-item"

@@ -1,5 +1,42 @@
 [
   {
+    "version": "0.0.5",
+    "channel": "Alpha",
+    "title": "Launcher Atmosphere & Theme Systems",
+    "date": "2026-03-12",
+    "changes": [
+      "Theme system introduced with multiple selectable launcher themes.",
+      "Theme-based background images implemented.",
+      "Theme-based soundtrack system added.",
+      "Music fade-in and fade-out system implemented.",
+      "Smooth music transition when switching themes.",
+      "Volume and mute settings now persist via localStorage.",
+
+      "Theme accent color system added (--theme-accent).",
+      "UI glow colors now change automatically per theme.",
+      "Header accents react to theme color.",
+      "Footer border reacts to active theme.",
+
+      "Launcher logo aura glow added.",
+      "Slow breathing glow animation added to launcher logo.",
+      "Logo glow color adapts to theme accent color.",
+
+      "Background motion system added.",
+      "Slow zoom and horizontal drift applied to launcher backgrounds.",
+
+      "Ambient atmosphere system introduced.",
+      "Animated fog layer added.",
+      "Floating particle system added.",
+      "Particles tinted with theme accent color.",
+      "Particle density increased and distributed across full screen.",
+
+      "Header UI polish improvements.",
+      "Theme-based hover glow for profile button.",
+      "Logo hover glow effect added.",
+      "Dropdown menu glow styling improved."
+    ]
+  },
+  {
     "version": "0.0.4",
     "channel": "Alpha",
     "title": "Initial Launcher Build",

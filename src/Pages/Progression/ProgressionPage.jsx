@@ -2,14 +2,17 @@ import { Navigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 
+import ProgressionPlayerMenuPanel from "./components/ProgressionPlayerMenuPanel";
+import ProgressionSeriesMenuPanel from "./components/ProgressionSeriesMenuPanel";
+import ProgressionAdminMenuPanel from "./components/ProgressionAdminMenuPanel";
+import ProgressionOnlinePlayersPanel from "./components/ProgressionOnlinePlayersPanel";
+import ProgressionSchedulePanel from "./components/ProgressionSchedulePanel";
+import ProgressionScoreboardPanel from "./components/ProgressionScoreboardPanel";
+
 import "./ProgressionPage.css";
 
 function ProgressionPage() {
   const { user, authLoading } = useUser();
-
-  /* ===============================
-     Access protection
-  =============================== */
 
   if (authLoading) return null;
 
@@ -21,16 +24,11 @@ function ProgressionPage() {
     return <Navigate to="/mode" replace />;
   }
 
-  /* ===============================
-     Page
-  =============================== */
+  const isAdmin = user.role === "Admin" || user.role === "Admin+";
 
   return (
     <LauncherLayout>
       <div className="progression-root">
-
-        {/* HERO LOGO */}
-
         <div className="progression-hero">
           <img
             src="/ui/progression_logo.png"
@@ -39,55 +37,17 @@ function ProgressionPage() {
           />
         </div>
 
-        {/* TOP PANEL ROW */}
-
         <div className="progression-row progression-row-top">
-
-          <div className="progression-panel">
-            <h3>Player Menu</h3>
-            <p>Decks, Binder, Inventory, Store</p>
-          </div>
-
-          <div className="progression-panel">
-            <h3>Series Menu</h3>
-            <p>Series info, phase, packs</p>
-          </div>
-
-          {user.role === "Admin" || user.role === "Admin+" ? (
-            <div className="progression-panel">
-              <h3>Admin Menu</h3>
-              <p>Admin progression controls</p>
-            </div>
-          ) : (
-            <div className="progression-panel progression-panel-placeholder">
-              <h3>Series Info</h3>
-              <p>General series info</p>
-            </div>
-          )}
-
+          <ProgressionPlayerMenuPanel />
+          <ProgressionSeriesMenuPanel />
+          {isAdmin ? <ProgressionAdminMenuPanel /> : null}
         </div>
-
-        {/* BOTTOM PANEL ROW */}
 
         <div className="progression-row progression-row-bottom">
-
-          <div className="progression-panel">
-            <h3>Online Players</h3>
-            <p>Who's online</p>
-          </div>
-
-          <div className="progression-panel">
-            <h3>Schedule</h3>
-            <p>Round schedule</p>
-          </div>
-
-          <div className="progression-panel">
-            <h3>Scoreboard</h3>
-            <p>Series standings</p>
-          </div>
-
+          <ProgressionOnlinePlayersPanel />
+          <ProgressionSchedulePanel />
+          <ProgressionScoreboardPanel />
         </div>
-
       </div>
     </LauncherLayout>
   );

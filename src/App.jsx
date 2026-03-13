@@ -12,6 +12,25 @@ import { useUser } from "./context/UserContext";
 
 import "./App.css";
 
+function canonicalizeRole(role) {
+  const normalized = String(role || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "admin+") return "Admin+";
+  if (normalized === "adminplus") return "Admin+";
+  if (normalized === "admin") return "Admin";
+  if (normalized === "blocked") return "Blocked";
+  if (normalized === "duelist") return "Duelist";
+  if (normalized === "applicant") return "Applicant";
+
+  return "Applicant";
+}
+
+function isAuthorityRole(role) {
+  return role === "Admin" || role === "Admin+" || role === "Blocked";
+}
+
 function LoginSplash() {
   const { user, authLoading } = useUser();
   const navigate = useNavigate();
@@ -64,6 +83,7 @@ function LoginSplash() {
 
 function ProtectedRoute({ children }) {
   const { user, authLoading } = useUser();
+  const resolvedRole = canonicalizeRole(user?.role);
 
   if (authLoading) {
     return (
@@ -73,7 +93,7 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  if (!user || user.role === "Blocked") {
+  if (!user || resolvedRole === "Blocked") {
     return <Navigate to="/" replace />;
   }
 
@@ -82,6 +102,7 @@ function ProtectedRoute({ children }) {
 
 function AdminRoute({ children }) {
   const { user, authLoading } = useUser();
+  const resolvedRole = canonicalizeRole(user?.role);
 
   if (authLoading) {
     return (
@@ -91,11 +112,11 @@ function AdminRoute({ children }) {
     );
   }
 
-  if (!user || user.role === "Blocked") {
+  if (!user || resolvedRole === "Blocked") {
     return <Navigate to="/" replace />;
   }
 
-  if (user.role !== "Admin" && user.role !== "Admin+") {
+  if (resolvedRole !== "Admin" && resolvedRole !== "Admin+") {
     return <Navigate to="/mode" replace />;
   }
 
@@ -104,6 +125,7 @@ function AdminRoute({ children }) {
 
 function HomeRoute() {
   const { user, authLoading } = useUser();
+  const resolvedRole = canonicalizeRole(user?.role);
 
   if (authLoading) {
     return (
@@ -113,7 +135,7 @@ function HomeRoute() {
     );
   }
 
-  if (user && user.role !== "Blocked") {
+  if (user && resolvedRole !== "Blocked") {
     return <Navigate to="/mode" replace />;
   }
 
@@ -173,9 +195,8 @@ function App() {
           return;
         }
 
-        let computedRole = profile.role || "Applicant";
+        let computedRole = canonicalizeRole(profile.role);
         let computedActiveSeriesId = profile.active_series_id || null;
-
         let isMemberOfActiveSeries = false;
 
         if (activeSeries?.id) {
@@ -198,10 +219,7 @@ function App() {
           }
         }
 
-        const authorityRoles = ["Admin", "Admin+", "Blocked"];
-        const shouldDeriveProgressionRole = !authorityRoles.includes(computedRole);
-
-        if (shouldDeriveProgressionRole) {
+        if (!isAuthorityRole(computedRole)) {
           computedRole = isMemberOfActiveSeries ? "Duelist" : "Applicant";
         }
 

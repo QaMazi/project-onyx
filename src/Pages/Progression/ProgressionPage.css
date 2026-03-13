@@ -1,17 +1,22 @@
 /* ===============================
-   ROOT
+   ROOT / PAGE LAYOUT
 ================================ */
 
 .progression-root {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: min(1180px, calc(100vw - 64px));
+  height: calc(100vh - 106px);
+  box-sizing: border-box;
 
-  padding: 10px 20px 30px;
+  margin: 0 auto;
+  padding: 16px 0;
 
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 
@@ -21,101 +26,459 @@
 
 .progression-hero {
   width: 100%;
-
   display: flex;
   justify-content: center;
   align-items: center;
 
-  margin-top: -10px;
-  margin-bottom: 40px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
 .progression-hero-logo {
-  width: 720px;
-  max-width: 70vw;
-
+  width: 420px;
+  max-width: 44vw;
   object-fit: contain;
 
   filter:
-    drop-shadow(0 0 30px rgba(255,215,0,0.35))
-    drop-shadow(0 0 70px rgba(255,215,0,0.20));
+    drop-shadow(0 0 24px rgba(255, 215, 0, 0.28))
+    drop-shadow(0 0 50px rgba(255, 215, 0, 0.18));
 }
 
 
 /* ===============================
-   ROWS
+   GRID ROWS
 ================================ */
 
 .progression-row {
   width: 100%;
-
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
 
-  gap: 18px;
-  margin-bottom: 28px;
+.progression-row-top {
+  flex: 0 0 390px;
+  min-height: 390px;
+  margin-bottom: 16px;
 }
 
 .progression-row-bottom {
-  margin-top: 10px;
+  flex: 0 0 390px;
+  min-height: 390px;
 }
 
 
 /* ===============================
-   PANELS
+   PANEL BASE
 ================================ */
 
 .progression-panel {
-  background: rgba(15,15,15,0.65);
+  background: rgba(15, 15, 15, 0.68);
   backdrop-filter: blur(12px);
 
   border-radius: 14px;
-
   border: 1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent);
 
-  padding: 22px;
-
-  min-height: 140px;
+  padding: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   box-shadow:
-    0 10px 28px rgba(0,0,0,0.45),
+    0 10px 28px rgba(0, 0, 0, 0.45),
     0 0 20px color-mix(in srgb, var(--theme-accent) 12%, transparent);
 
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .progression-panel:hover {
-  transform: translateY(-3px);
-
+  transform: translateY(-2px);
   border-color: var(--theme-accent);
 
   box-shadow:
-    0 12px 30px rgba(0,0,0,0.55),
-    0 0 25px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+    0 12px 30px rgba(0, 0, 0, 0.55),
+    0 0 25px color-mix(in srgb, var(--theme-accent) 24%, transparent);
 }
 
+/* fallback */
 .progression-panel h3 {
   margin: 0 0 8px;
-
   font-size: 18px;
   font-weight: 700;
-
   letter-spacing: 0.05em;
 }
 
 .progression-panel p {
   margin: 0;
-
   opacity: 0.75;
   font-size: 14px;
 }
 
 
 /* ===============================
-   PLACEHOLDER PANEL
+   PANEL SHELL
+================================ */
+
+.progression-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.progression-panel-kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--theme-accent) 78%, white);
+}
+
+.progression-panel-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.1;
+  color: white;
+}
+
+.progression-panel-meta {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.progression-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.progression-panel-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.progression-panel-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.progression-panel-body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--theme-accent) 24%, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+}
+
+.progression-panel-body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--theme-accent) 36%, rgba(255, 255, 255, 0.14));
+}
+
+
+/* ===============================
+   ACTION MENUS
+================================ */
+
+.progression-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.progression-action-grid-series {
+  grid-template-columns: 1fr;
+}
+
+.progression-action-btn {
+  min-height: 40px;
+  padding: 9px 12px;
+
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.9);
+
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+
+  cursor: default;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.progression-action-btn:hover {
+  background: color-mix(
+    in srgb,
+    var(--theme-accent) 14%,
+    rgba(255, 255, 255, 0.03)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--theme-accent) 34%,
+    rgba(255, 255, 255, 0.1)
+  );
+  box-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.progression-action-btn-primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--theme-accent) 32%, rgba(255, 255, 255, 0.08)) 0%,
+    color-mix(in srgb, var(--theme-accent) 18%, rgba(0, 0, 0, 0.18)) 100%
+  );
+  border-color: color-mix(in srgb, var(--theme-accent) 52%, transparent);
+  color: white;
+
+  box-shadow:
+    inset 0 0 14px color-mix(in srgb, var(--theme-accent) 10%, transparent),
+    0 0 16px color-mix(in srgb, var(--theme-accent) 14%, transparent);
+}
+
+.progression-player-menu-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+.progression-player-menu-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.progression-player-menu-back-btn {
+  width: calc((100% - 10px) / 2);
+}
+
+/* ===============================
+   PLAYER LIST
+================================ */
+
+.progression-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progression-player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 12px;
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.progression-player-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.progression-player-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.progression-player-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(
+    180deg,
+    var(--theme-accent) 0%,
+    color-mix(in srgb, var(--theme-accent) 60%, black) 100%
+  );
+
+  color: white;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.progression-player-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.progression-player-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.progression-player-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+
+
+/* ===============================
+   PLAYER ROLE PILLS
+================================ */
+
+.progression-player-role {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.progression-player-role-applicant {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.progression-player-role-duelist {
+  background: rgba(88, 101, 242, 0.18);
+  border: 1px solid rgba(88, 101, 242, 0.35);
+  color: #a7b5ff;
+}
+
+.progression-player-role-admin {
+  background: color-mix(in srgb, var(--theme-accent) 20%, transparent);
+  border: 1px solid var(--theme-accent);
+  color: color-mix(in srgb, var(--theme-accent) 80%, white);
+}
+
+.progression-player-role-adminplus {
+  background: linear-gradient(
+    180deg,
+    var(--theme-accent) 0%,
+    color-mix(in srgb, var(--theme-accent) 60%, black) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 70%, white);
+  color: white;
+}
+
+
+/* ===============================
+   PLAYER STATUS
+================================ */
+
+.progression-player-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progression-player-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.progression-player-status-dot-online {
+  background: #45d483;
+  color: #45d483;
+}
+
+.progression-player-status-dot-offline {
+  background: #7d7d7d;
+  color: #7d7d7d;
+}
+
+.progression-player-status-dot-away {
+  background: #f0c24b;
+  color: #f0c24b;
+}
+
+.progression-player-status-dot-dueling {
+  background: #ff5f5f;
+  color: #ff5f5f;
+}
+
+.progression-player-status-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+
+/* ===============================
+   INFO LISTS
+================================ */
+
+.progression-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.progression-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px 12px;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.progression-info-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.progression-info-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  text-align: right;
+}
+
+
+/* ===============================
+   PLACEHOLDER / FALLBACK
 ================================ */
 
 .progression-panel-placeholder {
@@ -124,17 +487,73 @@
 
 
 /* ===============================
+   NON-ADMIN TOP ROW
+================================ */
+
+.progression-row-top:has(.progression-panel:nth-child(2):last-child) {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.progression-root::-webkit-scrollbar {
+  width: 8px;
+}
+
+.progression-root::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.progression-root::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--theme-accent) 24%, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+}
+
+.progression-root::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--theme-accent) 36%, rgba(255, 255, 255, 0.14));
+}
+
+/* ===============================
    RESPONSIVE
 ================================ */
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .progression-root {
+    height: auto;
+    min-height: calc(100vh - 106px);
+    overflow: visible;
+    padding: 12px 20px 24px;
+  }
 
-  .progression-row {
+  .progression-hero {
+    margin-top: 0;
+    margin-bottom: 18px;
+  }
+
+  .progression-hero-logo {
+    width: 520px;
+    max-width: 78vw;
+  }
+
+  .progression-row,
+  .progression-row-top:has(.progression-panel:nth-child(2):last-child) {
     grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .progression-row-top,
+  .progression-row-bottom {
+    flex-basis: auto;
+    min-height: 0;
   }
 
   .progression-panel {
     min-height: 120px;
   }
 
+  .progression-panel-body {
+    overflow-y: visible;
+  }
 }

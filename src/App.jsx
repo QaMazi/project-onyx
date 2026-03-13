@@ -162,14 +162,57 @@ function App() {
           return;
         }
 
+        const { data: activeSeries, error: activeSeriesError } = await supabase
+          .from("game_series")
+          .select("id")
+          .eq("is_current", true)
+          .maybeSingle();
+
+        if (activeSeriesError) {
+          console.error("Active series fetch failed:", activeSeriesError);
+          return;
+        }
+
+        let computedRole = profile.role || "Applicant";
+        let computedActiveSeriesId = profile.active_series_id || null;
+
+        let isMemberOfActiveSeries = false;
+
+        if (activeSeries?.id) {
+          const { data: membership, error: membershipError } = await supabase
+            .from("series_players")
+            .select("id")
+            .eq("series_id", activeSeries.id)
+            .eq("user_id", profile.id)
+            .maybeSingle();
+
+          if (membershipError) {
+            console.error("Series membership fetch failed:", membershipError);
+            return;
+          }
+
+          isMemberOfActiveSeries = !!membership;
+
+          if (isMemberOfActiveSeries) {
+            computedActiveSeriesId = activeSeries.id;
+          }
+        }
+
+        const authorityRoles = ["Admin", "Admin+", "Blocked"];
+        const shouldDeriveProgressionRole = !authorityRoles.includes(computedRole);
+
+        if (shouldDeriveProgressionRole) {
+          computedRole = isMemberOfActiveSeries ? "Duelist" : "Applicant";
+        }
+
         setUser({
           username: profile.username || baseUser.username,
           avatar: profile.avatar || baseUser.avatar,
           id: profile.id,
           discordUserId: profile.discord_user_id || discordUserId,
-          role: profile.role || "Applicant",
+          role: computedRole,
           progressionState: profile.progression_state || "default",
-          activeSeriesId: profile.active_series_id || null,
+          activeSeriesId: computedActiveSeriesId,
         });
       } catch (error) {
         console.error("Background profile sync crashed:", error);
@@ -210,7 +253,7 @@ function App() {
         };
 
         setUser(baseUser);
-        syncProfileInBackground(session, baseUser);
+        await syncProfileInBackground(session, baseUser);
       } catch (error) {
         console.error("Session load failed:", error);
         setUser(null);
@@ -223,7 +266,7 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
         setUser(null);
         setAuthLoading(false);
@@ -252,7 +295,7 @@ function App() {
 
       setUser(baseUser);
       setAuthLoading(false);
-      syncProfileInBackground(session, baseUser);
+      await syncProfileInBackground(session, baseUser);
     });
 
     return () => {

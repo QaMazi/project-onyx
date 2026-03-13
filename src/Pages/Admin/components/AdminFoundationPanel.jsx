@@ -10,22 +10,27 @@ function AdminFoundationPanel() {
 
       <div className="admin-side-list">
         <div className="admin-side-item">
-          <span className="admin-side-item-title">Series Management</span>
-          <span className="admin-side-item-status">Planned</span>
-        </div>
-
-        <div className="admin-side-item">
-          <span className="admin-side-item-title">Player Role Management</span>
-          <span className="admin-side-item-status">Planned</span>
-        </div>
-
-        <div className="admin-side-item">
-          <span className="admin-side-item-title">Application Approval</span>
-          <span className="admin-side-item-status">Planned</span>
-        </div>
-
-        <div className="admin-side-item">
           <span className="admin-side-item-title">Moderation Tools</span>
+          <span className="admin-side-item-status">Planned</span>
+        </div>
+
+        <div className="admin-side-item">
+          <span className="admin-side-item-title">Series Statistics</span>
+          <span className="admin-side-item-status">Planned</span>
+        </div>
+
+        <div className="admin-side-item">
+          <span className="admin-side-item-title">Series Archives</span>
+          <span className="admin-side-item-status">Planned</span>
+        </div>
+
+        <div className="admin-side-item">
+          <span className="admin-side-item-title">Ranked Lock Controls</span>
+          <span className="admin-side-item-status">Planned</span>
+        </div>
+
+        <div className="admin-side-item">
+          <span className="admin-side-item-title">System Logs</span>
           <span className="admin-side-item-status">Planned</span>
         </div>
       </div>

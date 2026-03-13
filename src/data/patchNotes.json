@@ -1,5 +1,50 @@
 [
   {
+    "version": "0.0.6",
+    "channel": "Alpha",
+    "title": "Platform Foundation & Series Management Systems",
+    "date": "2026-03-13",
+    "changes": [
+      "Admin Panel foundation completed.",
+      "Admin-only route protection implemented.",
+      "Admin dropdown access connected through launcher header.",
+      "Admin dashboard sections added for applications, reviewed decisions, players, and foundation tools.",
+      "Back-navigation support added to Admin Panel.",
+
+      "Profile modal system added.",
+      "Settings modal system added.",
+      "Launcher layout now manages profile, settings, and patch notes modals globally.",
+      "Header dropdown expanded with Profile, Settings, Logout, and Admin Panel visibility logic.",
+
+      "Series Management system implemented.",
+      "Admins can now create and own series.",
+      "Only one globally active series can exist at a time.",
+      "Series can now be activated, paused, resumed, and deleted.",
+      "Admins can only manage their own series.",
+
+      "Series membership system implemented using series_players.",
+      "Owner slot logic added.",
+      "Membership now drives slot counting and progression access dependency.",
+      "Application approvals now create real series membership entries.",
+
+      "Application system upgraded.",
+      "Applications now attach to specific series.",
+      "Duplicate applications prevented.",
+      "Approve / deny / ban outcomes implemented.",
+      "Reviewed decision history added.",
+
+      "Role synchronization improved.",
+      "Login now correctly maps users based on active series membership.",
+      "Active-series members resolve as Duelist.",
+      "Non-members resolve as Applicant.",
+      "Admin and blocked role handling preserved.",
+
+      "Progression access dependency upgraded.",
+      "Progression access now depends on active series + series membership.",
+      "Foundation prepared for future binders, decks, inventory, and progression-linked systems."
+    ]
+  },
+  {
     "version": "0.0.5",
     "channel": "Alpha",
     "title": "Launcher Atmosphere & Theme Systems",

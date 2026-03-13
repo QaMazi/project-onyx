@@ -114,9 +114,13 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
                 <button
                   className="launcher-header-menu-item"
                   onClick={() => {
-                    setIsOpen(false);
-                    navigate("/admin");
-                  }}
+  setIsOpen(false);
+  navigate("/admin", {
+    state: {
+      from: window.location.pathname,
+    },
+  });
+}}
                 >
                   Admin Panel
                 </button>

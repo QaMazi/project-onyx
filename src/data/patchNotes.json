@@ -1,5 +1,51 @@
 [
   {
+    "version": "0.0.7",
+    "channel": "Alpha",
+    "title": "Card Database & Gameplay Data Layer",
+    "date": "2026-03-13",
+    "changes": [
+      "Card Database system implemented.",
+      "Connected to live Supabase cards table (14,524 cards).",
+      "Full Yu-Gi-Oh card library now searchable in the app.",
+      "Server-side pagination implemented for large dataset performance.",
+      "Default grid layout set to 50 cards per page (5 columns × 10 rows).",
+
+      "Advanced search system added.",
+      "Toggle between name search and description search.",
+      "Partial match and case-insensitive search supported.",
+
+      "Full filter panel system implemented including:",
+
+      "Card category filters: Monster, Spell, Trap.",
+
+      "Monster subtype filters: Normal, Effect, Fusion, Synchro, Xyz, Pendulum, Link, Token.",
+
+      "Spell / Trap subtype filters implemented.",
+
+      "Monster trait filters: Tuner, Flip, Gemini, Union, Spirit, Toon.",
+
+      "Additional filters implemented including Attribute, Race / Type, OT pool, Level / Rank range, Link rating range, Pendulum scale range, ATK range, and DEF range.",
+
+      "Type-index caching system created for fast subtype filtering.",
+      "Supabase queries optimized for large dataset performance.",
+
+      "Card grid UI implemented.",
+      "Lazy loading card images implemented.",
+      "Automatic fallback image handling for missing art.",
+      "Grid hover preview system added.",
+      "Click-lock card preview behavior added.",
+
+      "Card preview panel implemented displaying full card image, name, description, and card identifiers (type, race, attribute, etc.).",
+
+      "Conditional identifier rendering implemented (only relevant fields displayed).",
+      "BBCode parsing implemented for card description formatting ([b], [i], [u]).",
+
+      "Fullscreen card art viewer implemented.",
+      "Page jump navigation added to pagination system."
+    ]
+  },
+  {
     "version": "0.0.6",
     "channel": "Alpha",
     "title": "Platform Foundation & Series Management Systems",

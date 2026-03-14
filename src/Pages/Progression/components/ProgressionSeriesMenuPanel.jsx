@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProgressionPanelShell from "./ProgressionPanelShell";
 import { supabase } from "../../../lib/supabase";
 
@@ -27,6 +28,8 @@ function getInitial(name) {
 }
 
 function ProgressionSeriesMenuPanel() {
+  const navigate = useNavigate();
+
   const [seriesData, setSeriesData] = useState(null);
   const [players, setPlayers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,6 +103,17 @@ function ProgressionSeriesMenuPanel() {
     setModalOpen(true);
   }
 
+  function handleSeriesMenuClick(label) {
+    if (label === "Series Info") {
+      openSeriesInfo();
+      return;
+    }
+
+    if (label === "Card Database") {
+      navigate("/mode/progression/cards");
+    }
+  }
+
   const owner = players.find((player) => player.is_owner) || null;
   const duelists = players.filter((player) => !player.is_owner);
   const emptySlotCount = Math.max(
@@ -120,7 +134,7 @@ function ProgressionSeriesMenuPanel() {
               key={item.label}
               type="button"
               className="progression-action-btn"
-              onClick={item.label === "Series Info" ? openSeriesInfo : undefined}
+              onClick={() => handleSeriesMenuClick(item.label)}
             >
               {item.label}
             </button>

@@ -4,6 +4,7 @@ import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import LauncherLayout from "./components/LauncherLayout";
 import ModeSelectPage from "./Pages/ModeSelect/ModeSelectPage";
 import ProgressionPage from "./Pages/Progression/ProgressionPage";
+import CardDatabasePage from "./Pages/CardDatabase/CardDatabasePage";
 import DeckGamePage from "./Pages/DeckGame/DeckGamePage";
 import AdminPanelPage from "./Pages/Admin/AdminPanelPage";
 
@@ -226,6 +227,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ProgressionPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/cards"
+        element={
+          <ProtectedRoute>
+            <CardDatabasePage />
           </ProtectedRoute>
         }
       />

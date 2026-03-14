@@ -45,7 +45,7 @@ function LauncherLayout({ children }) {
           borderTop: `1px solid var(--theme-accent)`,
         }}
       >
-        <div className="launcher-footer-left">v0.0.6 Alpha</div>
+        <div className="launcher-footer-left">v0.0.7 Alpha</div>
 
         <div className="launcher-footer-center">
           © Gentlemen&apos;s Gaming 2026

@@ -3,6 +3,10 @@ import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
+import CardFilters from "./Components/CardFilters";
+import CardGrid from "./Components/CardGrid";
+import CardDetailPanel from "./Components/CardDetailPanel";
+import Pagination from "./Components/Pagination";
 import "./CardDatabasePage.css";
 
 const PAGE_SIZE = 50;
@@ -39,7 +43,7 @@ const TYPE_FLAGS = {
 
 const SEARCH_MODE_OPTIONS = [
   { label: "Name", value: "name" },
-  { label: "Description", value: "description" },
+  { label: "Description", value: "desc" },
 ];
 
 const CARD_KIND_OPTIONS = [
@@ -80,6 +84,8 @@ const MONSTER_TRAIT_OPTIONS = [
   { label: "Union", value: "union" },
   { label: "Spirit", value: "spirit" },
   { label: "Toon", value: "toon" },
+  { label: "Pre-Errata", value: "pre_errata" },
+  { label: "Token", value: "token_exact" },
 ];
 
 const ATTRIBUTE_OPTIONS = [
@@ -124,14 +130,12 @@ const RACE_OPTIONS = [
 
 const OT_OPTIONS = [
   { label: "All", value: "all" },
-  { label: "OCG", value: "0" },
-  { label: "TCG", value: "1" },
-  { label: "Shared Pool", value: "2" },
-  { label: "Anime", value: "3" },
-  { label: "Illegal / Custom", value: "4" },
-  { label: "Video Game", value: "5" },
-  { label: "Rush", value: "6" },
-  { label: "Skill Cards", value: "7" },
+  { label: "Unknown / Unspecified", value: "0" },
+  { label: "OCG", value: "1" },
+  { label: "TCG", value: "2" },
+  { label: "Shared Pool", value: "3" },
+  { label: "Anime", value: "4" },
+  { label: "Pre-Errata Pool", value: "8" },
 ];
 
 const TRAIT_FLAG_MAP = {
@@ -202,7 +206,17 @@ function decodeRace(value) {
 
 function decodeOt(value) {
   const normalized = String(value ?? "");
-  return OT_OPTIONS.find((option) => option.value === normalized)?.label || "Unknown";
+  return OT_OPTIONS.find((option) => option.value === normalized)?.label || `OT ${normalized || "Unknown"}`;
+}
+
+function isPreErrataCard(card) {
+  const name = String(card?.name || "");
+  return /\(pre-errata\)/i.test(name) || Number(card?.ot || 0) === 8;
+}
+
+function isTokenMonster(card) {
+  const typeValue = Number(card?.type || 0);
+  return (typeValue & TYPE_FLAGS.TOKEN) === TYPE_FLAGS.TOKEN;
 }
 
 function getCardKind(typeValue) {
@@ -251,9 +265,10 @@ function getMonsterTraits(typeValue) {
 
   if (!isMonster) return [];
 
-  return MONSTER_TRAIT_OPTIONS.filter(
-    (trait) => (normalized & TRAIT_FLAG_MAP[trait.value]) === TRAIT_FLAG_MAP[trait.value]
-  ).map((trait) => trait.label);
+  return MONSTER_TRAIT_OPTIONS.filter((trait) => {
+    if (trait.value === "pre_errata" || trait.value === "token_exact") return false;
+    return (normalized & TRAIT_FLAG_MAP[trait.value]) === TRAIT_FLAG_MAP[trait.value];
+  }).map((trait) => trait.label);
 }
 
 function formatType(typeValue) {
@@ -320,10 +335,6 @@ function getDisplayLevelOrRank(typeValue, levelValue) {
     return null;
   }
 
-  if ((normalizedType & TYPE_FLAGS.XYZ) === TYPE_FLAGS.XYZ) {
-    return rawLevel & 0xff;
-  }
-
   return rawLevel & 0xff;
 }
 
@@ -360,11 +371,21 @@ function createTypeIndexBuckets(typeRows) {
     trait_union: new Set(),
     trait_spirit: new Set(),
     trait_toon: new Set(),
+    trait_pre_errata: new Set(),
+    trait_token_exact: new Set(),
   };
 
   for (const row of typeRows || []) {
     const typeValue = Number(row.type || 0);
     const id = row.id;
+
+    if (isPreErrataCard(row)) {
+      buckets.trait_pre_errata.add(id);
+    }
+
+    if (isTokenMonster(row)) {
+      buckets.trait_token_exact.add(id);
+    }
 
     if ((typeValue & TYPE_FLAGS.MONSTER) === TYPE_FLAGS.MONSTER) {
       buckets.monster.add(id);
@@ -440,6 +461,9 @@ function getMatchingIdsFromTypeIndex(
   if (!typeIndex) return null;
 
   const filters = [];
+  const standardMonsterTraits = monsterTraits.filter(
+    (trait) => trait !== "pre_errata" && trait !== "token_exact"
+  );
 
   if (cardKind === "monster") filters.push(Array.from(typeIndex.monster));
   if (cardKind === "spell") filters.push(Array.from(typeIndex.spell));
@@ -462,10 +486,18 @@ function getMatchingIdsFromTypeIndex(
       filters.push(Array.from(map[monsterSubtype] || []));
     }
 
-    for (const trait of monsterTraits) {
+    for (const trait of standardMonsterTraits) {
       const setKey = `trait_${trait}`;
       filters.push(Array.from(typeIndex[setKey] || []));
     }
+  }
+
+  if (monsterTraits.includes("pre_errata")) {
+    filters.push(Array.from(typeIndex.trait_pre_errata || []));
+  }
+
+  if (monsterTraits.includes("token_exact")) {
+    filters.push(Array.from(typeIndex.trait_token_exact || []));
   }
 
   if (cardKind === "spell") {
@@ -620,6 +652,74 @@ function matchesPendulumScaleRange(card, minValue, maxValue) {
   return leftMatches || rightMatches;
 }
 
+function matchesMonsterTraits(card, selectedTraits) {
+  if (!selectedTraits.length) return true;
+
+  const typeValue = Number(card.type || 0);
+
+  for (const trait of selectedTraits) {
+    if (trait === "pre_errata") {
+      if (!isPreErrataCard(card)) return false;
+      continue;
+    }
+
+    if (trait === "token_exact") {
+      if (!isTokenMonster(card)) return false;
+      continue;
+    }
+
+    const traitFlag = TRAIT_FLAG_MAP[trait];
+    if (!traitFlag) continue;
+
+    if ((typeValue & TYPE_FLAGS.MONSTER) !== TYPE_FLAGS.MONSTER) return false;
+    if ((typeValue & traitFlag) !== traitFlag) return false;
+  }
+
+  return true;
+}
+
+function matchesStrictFilters(
+  card,
+  cardKind,
+  monsterSubtype,
+  spellTrapSubtype,
+  monsterTraits,
+  levelMin,
+  levelMax,
+  linkMin,
+  linkMax,
+  pendulumMin,
+  pendulumMax
+) {
+  const typeValue = Number(card.type || 0);
+  const kind = getCardKind(typeValue);
+
+  if (cardKind === "monster" && kind !== "Monster") return false;
+  if (cardKind === "spell" && kind !== "Spell") return false;
+  if (cardKind === "trap" && kind !== "Trap") return false;
+
+  if (monsterSubtype !== "all") {
+    if (kind !== "Monster") return false;
+    if (getMonsterSubtype(typeValue)?.toLowerCase() !== monsterSubtype) return false;
+  }
+
+  if (spellTrapSubtype !== "all") {
+    if (kind === "Spell" || kind === "Trap") {
+      const subtype = (getSpellTrapSubtype(typeValue) || "Normal").toLowerCase();
+      if (subtype !== spellTrapSubtype) return false;
+    } else {
+      return false;
+    }
+  }
+
+  if (!matchesMonsterTraits(card, monsterTraits)) return false;
+  if (!matchesLevelRange(card, levelMin, levelMax)) return false;
+  if (!matchesLinkRange(card, linkMin, linkMax)) return false;
+  if (!matchesPendulumScaleRange(card, pendulumMin, pendulumMax)) return false;
+
+  return true;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -665,6 +765,14 @@ function getPreviewRows(card) {
 
   if (isMonster && monsterTraits.length > 0) {
     rows.push({ label: "Monster Traits", value: monsterTraits.join(", ") });
+  }
+
+  if (isPreErrataCard(card)) {
+    rows.push({ label: "Version", value: "Pre-Errata" });
+  }
+
+  if (isTokenMonster(card)) {
+    rows.push({ label: "Token", value: "Yes" });
   }
 
   if ((isSpell || isTrap) && spellTrapSubtype) {
@@ -775,7 +883,7 @@ function CardDatabasePage() {
 
   const showMonsterSubtypeFilter = cardKind !== "spell" && cardKind !== "trap";
   const showSpellTrapSubtypeFilter = cardKind !== "monster";
-  const showMonsterTraitsFilter = cardKind !== "spell" && cardKind !== "trap";
+  const showMonsterTraitsFilter = true;
 
   useEffect(() => {
     setPageJumpInput(String(page));
@@ -826,12 +934,6 @@ function CardDatabasePage() {
   }, [showSpellTrapSubtypeFilter, spellTrapSubtype]);
 
   useEffect(() => {
-    if (!showMonsterTraitsFilter && monsterTraits.length > 0) {
-      setMonsterTraits([]);
-    }
-  }, [showMonsterTraitsFilter, monsterTraits]);
-
-  useEffect(() => {
     async function loadTypeIndex() {
       if (typeIndexRef.current) return;
 
@@ -840,7 +942,7 @@ function CardDatabasePage() {
       try {
         const { data, error } = await supabase
           .from("cards")
-          .select("id, type")
+          .select("id, type, name, ot")
           .not("type", "is", null);
 
         if (error) {
@@ -871,7 +973,7 @@ function CardDatabasePage() {
           cardKind,
           showMonsterSubtypeFilter ? monsterSubtype : "all",
           showSpellTrapSubtypeFilter ? spellTrapSubtype : "all",
-          showMonsterTraitsFilter ? monsterTraits : []
+          monsterTraits
         );
 
         if (Array.isArray(matchingIds) && matchingIds.length === 0) {
@@ -882,6 +984,9 @@ function CardDatabasePage() {
           setLoadingCards(false);
           return;
         }
+
+        let fetchedRows = [];
+        let resolvedTotalCount = 0;
 
         if (!hasComputedFilters && !Array.isArray(matchingIds)) {
           let countQuery = supabase
@@ -902,12 +1007,9 @@ function CardDatabasePage() {
           );
 
           const { count, error: countError } = await countQuery;
+          if (countError) throw countError;
 
-          if (countError) {
-            throw countError;
-          }
-
-          const resolvedTotalCount = count || 0;
+          resolvedTotalCount = count || 0;
           const resolvedTotalPages = Math.max(1, Math.ceil(resolvedTotalCount / PAGE_SIZE));
           const resolvedPage = clampPage(page, resolvedTotalPages);
 
@@ -923,9 +1025,7 @@ function CardDatabasePage() {
 
           let query = supabase
             .from("cards")
-            .select(
-              "id, ot, name, description, type, race, attribute, level, atk, def, setcode, image_url"
-            );
+            .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url");
 
           query = applySharedFilters(
             query,
@@ -944,123 +1044,17 @@ function CardDatabasePage() {
             .order("name", { ascending: true })
             .range(start, end);
 
-          if (error) {
-            throw error;
-          }
+          if (error) throw error;
 
-          const nextCards = data || [];
-
-          setCards(nextCards);
+          fetchedRows = data || [];
           setTotalCount(resolvedTotalCount);
-          setLockedCard((currentLockedCard) => {
-            if (currentLockedCard) {
-              const stillExists = nextCards.find((card) => card.id === currentLockedCard.id);
-              if (stillExists) return stillExists;
-            }
-
-            return nextCards[0] || null;
-          });
-          setHoveredCard(null);
-          return;
-        }
-
-        let baseCountQuery = supabase
-          .from("cards")
-          .select("id", { count: "exact", head: true });
-
-        baseCountQuery = applySharedFilters(
-          baseCountQuery,
-          searchMode,
-          searchTerm,
-          attribute,
-          race,
-          otValue,
-          atkMin,
-          atkMax,
-          defMin,
-          defMax
-        );
-
-        if (Array.isArray(matchingIds)) {
-          baseCountQuery = baseCountQuery.in("id", matchingIds);
-        }
-
-        const { count, error: countError } = await baseCountQuery;
-
-        if (countError) {
-          throw countError;
-        }
-
-        const resolvedTotalCount = count || 0;
-        const resolvedTotalPages = Math.max(1, Math.ceil(resolvedTotalCount / PAGE_SIZE));
-        const resolvedPage = clampPage(page, resolvedTotalPages);
-
-        if (resolvedPage !== page) {
-          setPage(resolvedPage);
-          setTotalCount(resolvedTotalCount);
-          setLoadingCards(false);
-          return;
-        }
-
-        let fetchedRows = [];
-        const start = (resolvedPage - 1) * PAGE_SIZE;
-        const end = start + PAGE_SIZE - 1;
-
-        if (Array.isArray(matchingIds) && matchingIds.length > 0) {
-          const chunks = chunkArray(matchingIds, 500);
-          const collectedRows = [];
-
-          for (const chunk of chunks) {
-            let chunkQuery = supabase
-              .from("cards")
-              .select(
-                "id, ot, name, description, type, race, attribute, level, atk, def, setcode, image_url"
-              )
-              .in("id", chunk);
-
-            chunkQuery = applySharedFilters(
-              chunkQuery,
-              searchMode,
-              searchTerm,
-              attribute,
-              race,
-              otValue,
-              atkMin,
-              atkMax,
-              defMin,
-              defMax
-            );
-
-            const { data: chunkRows, error: chunkError } = await chunkQuery.order("name", {
-              ascending: true,
-            });
-
-            if (chunkError) {
-              throw chunkError;
-            }
-
-            collectedRows.push(...(chunkRows || []));
-          }
-
-          const filteredRows = collectedRows.filter(
-            (card) =>
-              matchesLevelRange(card, levelMin, levelMax) &&
-              matchesLinkRange(card, linkMin, linkMax) &&
-              matchesPendulumScaleRange(card, pendulumMin, pendulumMax)
-          );
-
-          filteredRows.sort((a, b) => a.name.localeCompare(b.name));
-          fetchedRows = filteredRows.slice(start, end + 1);
-          setTotalCount(filteredRows.length);
         } else {
-          let query = supabase
+          let baseCountQuery = supabase
             .from("cards")
-            .select(
-              "id, ot, name, description, type, race, attribute, level, atk, def, setcode, image_url"
-            );
+            .select("id", { count: "exact", head: true });
 
-          query = applySharedFilters(
-            query,
+          baseCountQuery = applySharedFilters(
+            baseCountQuery,
             searchMode,
             searchTerm,
             attribute,
@@ -1072,25 +1066,123 @@ function CardDatabasePage() {
             defMax
           );
 
-          const { data, error } = await query.order("name", { ascending: true });
-
-          if (error) {
-            throw error;
+          if (Array.isArray(matchingIds)) {
+            baseCountQuery = baseCountQuery.in("id", matchingIds);
           }
 
-          const filteredRows = (data || []).filter(
-            (card) =>
-              matchesLevelRange(card, levelMin, levelMax) &&
-              matchesLinkRange(card, linkMin, linkMax) &&
-              matchesPendulumScaleRange(card, pendulumMin, pendulumMax)
-          );
+          const { count, error: countError } = await baseCountQuery;
+          if (countError) throw countError;
 
-          setTotalCount(filteredRows.length);
-          fetchedRows = filteredRows.slice(start, end + 1);
+          const roughCount = count || 0;
+          const resolvedTotalPages = Math.max(1, Math.ceil(roughCount / PAGE_SIZE));
+          const resolvedPage = clampPage(page, resolvedTotalPages);
+
+          if (resolvedPage !== page) {
+            setPage(resolvedPage);
+            setTotalCount(roughCount);
+            setLoadingCards(false);
+            return;
+          }
+
+          const start = (resolvedPage - 1) * PAGE_SIZE;
+          const end = start + PAGE_SIZE - 1;
+
+          if (Array.isArray(matchingIds) && matchingIds.length > 0) {
+            const chunks = chunkArray(matchingIds, 500);
+            const collectedRows = [];
+
+            for (const chunk of chunks) {
+              let chunkQuery = supabase
+                .from("cards")
+                .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url")
+                .in("id", chunk);
+
+              chunkQuery = applySharedFilters(
+                chunkQuery,
+                searchMode,
+                searchTerm,
+                attribute,
+                race,
+                otValue,
+                atkMin,
+                atkMax,
+                defMin,
+                defMax
+              );
+
+              const { data: chunkRows, error: chunkError } = await chunkQuery.order("name", {
+                ascending: true,
+              });
+
+              if (chunkError) throw chunkError;
+
+              collectedRows.push(...(chunkRows || []));
+            }
+
+            const filteredRows = collectedRows.filter((card) =>
+              matchesStrictFilters(
+                card,
+                cardKind,
+                monsterSubtype,
+                spellTrapSubtype,
+                monsterTraits,
+                levelMin,
+                levelMax,
+                linkMin,
+                linkMax,
+                pendulumMin,
+                pendulumMax
+              )
+            );
+
+            filteredRows.sort((a, b) => a.name.localeCompare(b.name));
+            resolvedTotalCount = filteredRows.length;
+            fetchedRows = filteredRows.slice(start, end + 1);
+            setTotalCount(resolvedTotalCount);
+          } else {
+            let query = supabase
+              .from("cards")
+              .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url");
+
+            query = applySharedFilters(
+              query,
+              searchMode,
+              searchTerm,
+              attribute,
+              race,
+              otValue,
+              atkMin,
+              atkMax,
+              defMin,
+              defMax
+            );
+
+            const { data, error } = await query.order("name", { ascending: true });
+            if (error) throw error;
+
+            const filteredRows = (data || []).filter((card) =>
+              matchesStrictFilters(
+                card,
+                cardKind,
+                monsterSubtype,
+                spellTrapSubtype,
+                monsterTraits,
+                levelMin,
+                levelMax,
+                linkMin,
+                linkMax,
+                pendulumMin,
+                pendulumMax
+              )
+            );
+
+            resolvedTotalCount = filteredRows.length;
+            fetchedRows = filteredRows.slice(start, end + 1);
+            setTotalCount(resolvedTotalCount);
+          }
         }
 
         setCards(fetchedRows);
-
         setLockedCard((currentLockedCard) => {
           if (currentLockedCard) {
             const stillExists = fetchedRows.find((card) => card.id === currentLockedCard.id);
@@ -1099,7 +1191,6 @@ function CardDatabasePage() {
 
           return fetchedRows[0] || null;
         });
-
         setHoveredCard(null);
       } catch (error) {
         console.error("Failed to fetch cards:", error);
@@ -1142,7 +1233,6 @@ function CardDatabasePage() {
     hasComputedFilters,
     showMonsterSubtypeFilter,
     showSpellTrapSubtypeFilter,
-    showMonsterTraitsFilter,
   ]);
 
   function handleMonsterTraitToggle(traitValue) {
@@ -1223,421 +1313,88 @@ function CardDatabasePage() {
         </div>
 
         <div className="card-database-layout">
-          <aside className="card-database-filter-panel">
-            <div className="card-database-filter-panel-header">
-              <h2 className="card-database-filter-title">Filters</h2>
-              <span className="card-database-filter-count">
-                {totalCount.toLocaleString()} Cards
-              </span>
-            </div>
-
-            <div className="card-database-filter-scroll">
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Card Category</label>
-                <select
-                  className="card-database-filter-input"
-                  value={cardKind}
-                  onChange={(event) => setCardKind(event.target.value)}
-                >
-                  {CARD_KIND_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Monster Type</label>
-                <select
-                  className="card-database-filter-input"
-                  value={monsterSubtype}
-                  onChange={(event) => setMonsterSubtype(event.target.value)}
-                  disabled={!showMonsterSubtypeFilter}
-                >
-                  {MONSTER_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Spell / Trap Type</label>
-                <select
-                  className="card-database-filter-input"
-                  value={spellTrapSubtype}
-                  onChange={(event) => setSpellTrapSubtype(event.target.value)}
-                  disabled={!showSpellTrapSubtypeFilter}
-                >
-                  {SPELL_TRAP_SUBTYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Monster Traits</label>
-                <div className="card-database-checkbox-grid">
-                  {MONSTER_TRAIT_OPTIONS.map((trait) => (
-                    <label
-                      key={trait.value}
-                      className={`card-database-checkbox-pill ${
-                        monsterTraits.includes(trait.value) ? "is-active" : ""
-                      } ${!showMonsterTraitsFilter ? "is-disabled" : ""}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={monsterTraits.includes(trait.value)}
-                        disabled={!showMonsterTraitsFilter}
-                        onChange={() => handleMonsterTraitToggle(trait.value)}
-                      />
-                      <span>{trait.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Attribute</label>
-                <select
-                  className="card-database-filter-input"
-                  value={attribute}
-                  onChange={(event) => setAttribute(event.target.value)}
-                >
-                  {ATTRIBUTE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Type / Race</label>
-                <select
-                  className="card-database-filter-input"
-                  value={race}
-                  onChange={(event) => setRace(event.target.value)}
-                >
-                  {RACE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">OT / Pool</label>
-                <select
-                  className="card-database-filter-input"
-                  value={otValue}
-                  onChange={(event) => setOtValue(event.target.value)}
-                >
-                  {OT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Level / Rank</label>
-                <div className="card-database-range-row">
-                  <input
-                    type="number"
-                    min="0"
-                    max="13"
-                    className="card-database-filter-input"
-                    value={levelMin}
-                    onChange={(event) => setLevelMin(event.target.value)}
-                    placeholder="Min"
-                  />
-                  <span className="card-database-range-divider">-</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="13"
-                    className="card-database-filter-input"
-                    value={levelMax}
-                    onChange={(event) => setLevelMax(event.target.value)}
-                    placeholder="Max"
-                  />
-                </div>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Link Rating</label>
-                <div className="card-database-range-row">
-                  <input
-                    type="number"
-                    min="1"
-                    max="8"
-                    className="card-database-filter-input"
-                    value={linkMin}
-                    onChange={(event) => setLinkMin(event.target.value)}
-                    placeholder="Min"
-                  />
-                  <span className="card-database-range-divider">-</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="8"
-                    className="card-database-filter-input"
-                    value={linkMax}
-                    onChange={(event) => setLinkMax(event.target.value)}
-                    placeholder="Max"
-                  />
-                </div>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">Pendulum Scale</label>
-                <div className="card-database-range-row">
-                  <input
-                    type="number"
-                    min="0"
-                    max="13"
-                    className="card-database-filter-input"
-                    value={pendulumMin}
-                    onChange={(event) => setPendulumMin(event.target.value)}
-                    placeholder="Min"
-                  />
-                  <span className="card-database-range-divider">-</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="13"
-                    className="card-database-filter-input"
-                    value={pendulumMax}
-                    onChange={(event) => setPendulumMax(event.target.value)}
-                    placeholder="Max"
-                  />
-                </div>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">ATK</label>
-                <div className="card-database-range-row">
-                  <input
-                    type="number"
-                    className="card-database-filter-input"
-                    value={atkMin}
-                    onChange={(event) => setAtkMin(event.target.value)}
-                    placeholder="Min ATK"
-                  />
-                  <span className="card-database-range-divider">-</span>
-                  <input
-                    type="number"
-                    className="card-database-filter-input"
-                    value={atkMax}
-                    onChange={(event) => setAtkMax(event.target.value)}
-                    placeholder="Max ATK"
-                  />
-                </div>
-              </div>
-
-              <div className="card-database-filter-group">
-                <label className="card-database-filter-label">DEF</label>
-                <div className="card-database-range-row">
-                  <input
-                    type="number"
-                    className="card-database-filter-input"
-                    value={defMin}
-                    onChange={(event) => setDefMin(event.target.value)}
-                    placeholder="Min DEF"
-                  />
-                  <span className="card-database-range-divider">-</span>
-                  <input
-                    type="number"
-                    className="card-database-filter-input"
-                    value={defMax}
-                    onChange={(event) => setDefMax(event.target.value)}
-                    placeholder="Max DEF"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="card-database-clear-btn"
-                onClick={handleClearFilters}
-              >
-                Clear Filters
-              </button>
-            </div>
-          </aside>
+          <CardFilters
+            totalCount={totalCount}
+            cardKind={cardKind}
+            setCardKind={setCardKind}
+            monsterSubtype={monsterSubtype}
+            setMonsterSubtype={setMonsterSubtype}
+            spellTrapSubtype={spellTrapSubtype}
+            setSpellTrapSubtype={setSpellTrapSubtype}
+            monsterTraits={monsterTraits}
+            handleMonsterTraitToggle={handleMonsterTraitToggle}
+            attribute={attribute}
+            setAttribute={setAttribute}
+            race={race}
+            setRace={setRace}
+            otValue={otValue}
+            setOtValue={setOtValue}
+            levelMin={levelMin}
+            levelMax={levelMax}
+            setLevelMin={setLevelMin}
+            setLevelMax={setLevelMax}
+            linkMin={linkMin}
+            linkMax={linkMax}
+            setLinkMin={setLinkMin}
+            setLinkMax={setLinkMax}
+            pendulumMin={pendulumMin}
+            pendulumMax={pendulumMax}
+            setPendulumMin={setPendulumMin}
+            setPendulumMax={setPendulumMax}
+            atkMin={atkMin}
+            atkMax={atkMax}
+            setAtkMin={setAtkMin}
+            setAtkMax={setAtkMax}
+            defMin={defMin}
+            defMax={defMax}
+            setDefMin={setDefMin}
+            setDefMax={setDefMax}
+            handleClearFilters={handleClearFilters}
+            showMonsterSubtypeFilter={showMonsterSubtypeFilter}
+            showSpellTrapSubtypeFilter={showSpellTrapSubtypeFilter}
+            showMonsterTraitsFilter={showMonsterTraitsFilter}
+            CARD_KIND_OPTIONS={CARD_KIND_OPTIONS}
+            MONSTER_TYPE_OPTIONS={MONSTER_TYPE_OPTIONS}
+            SPELL_TRAP_SUBTYPE_OPTIONS={SPELL_TRAP_SUBTYPE_OPTIONS}
+            MONSTER_TRAIT_OPTIONS={MONSTER_TRAIT_OPTIONS}
+            ATTRIBUTE_OPTIONS={ATTRIBUTE_OPTIONS}
+            RACE_OPTIONS={RACE_OPTIONS}
+            OT_OPTIONS={OT_OPTIONS}
+          />
 
           <main className="card-database-center-panel">
-            <div className="card-database-grid-card">
-              {loadError ? (
-                <div className="card-database-empty-state">{loadError}</div>
-              ) : loadingCards || typeIndexLoading ? (
-                <div className="card-database-empty-state">Loading cards...</div>
-              ) : cards.length === 0 ? (
-                <div className="card-database-empty-state">No cards found.</div>
-              ) : (
-                <div className="card-database-grid">
-                  {cards.map((card) => {
-                    const isLocked = lockedCard?.id === card.id;
-                    const isHovered = hoveredCard?.id === card.id;
+            <CardGrid
+              loadError={loadError}
+              loadingCards={loadingCards}
+              typeIndexLoading={typeIndexLoading}
+              cards={cards}
+              lockedCard={lockedCard}
+              hoveredCard={hoveredCard}
+              setHoveredCard={setHoveredCard}
+              setLockedCard={setLockedCard}
+              buildCardImageUrl={buildCardImageUrl}
+              CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
+            />
 
-                    return (
-                      <button
-                        key={card.id}
-                        type="button"
-                        className={`card-database-tile ${
-                          isLocked ? "is-selected" : ""
-                        } ${isHovered ? "is-hovered" : ""}`}
-                        onMouseEnter={() => setHoveredCard(card)}
-                        onMouseLeave={() => setHoveredCard(null)}
-                        onClick={() => setLockedCard(card)}
-                      >
-                        <div className="card-database-tile-image-shell">
-                          <img
-                            src={buildCardImageUrl(card)}
-                            alt={card.name}
-                            className="card-database-tile-image"
-                            loading="lazy"
-                            decoding="async"
-                            onError={(event) => {
-                              if (event.currentTarget.src !== CARD_IMAGE_FALLBACK) {
-                                event.currentTarget.src = CARD_IMAGE_FALLBACK;
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="card-database-tile-name">{card.name}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="card-database-pagination-bar">
-              <button
-                type="button"
-                className="card-database-page-btn"
-                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </button>
-
-              <div className="card-database-page-list">
-                {visiblePages.map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    className={`card-database-page-btn ${
-                      page === pageNumber ? "is-active" : ""
-                    }`}
-                    onClick={() => setPage(pageNumber)}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-              </div>
-
-              <div className="card-database-page-jump">
-                <span className="card-database-page-jump-label">Page</span>
-                <input
-                  type="number"
-                  min="1"
-                  max={totalPages}
-                  className="card-database-page-jump-input"
-                  value={pageJumpInput}
-                  onChange={(event) => setPageJumpInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      const nextPage = clampPage(Number(pageJumpInput || 1), totalPages);
-                      setPage(nextPage);
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="card-database-page-btn"
-                  onClick={() => {
-                    const nextPage = clampPage(Number(pageJumpInput || 1), totalPages);
-                    setPage(nextPage);
-                  }}
-                >
-                  Go
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className="card-database-page-btn"
-                onClick={() =>
-                  setPage((currentPage) => Math.min(totalPages, currentPage + 1))
-                }
-                disabled={page === totalPages}
-              >
-                Next
-              </button>
-            </div>
+            <Pagination
+              page={page}
+              setPage={setPage}
+              totalPages={totalPages}
+              visiblePages={visiblePages}
+              pageJumpInput={pageJumpInput}
+              setPageJumpInput={setPageJumpInput}
+              clampPage={clampPage}
+            />
           </main>
 
-          <aside className="card-database-preview-panel">
-            <div className="card-database-preview-card">
-              {!previewCard ? (
-                <div className="card-database-empty-state">
-                  Hover or click a card to preview it.
-                </div>
-              ) : (
-                <>
-                  <div className="card-database-preview-image-shell">
-                    <img
-                      src={buildCardImageUrl(previewCard)}
-                      alt={previewCard.name}
-                      className="card-database-preview-image"
-                      loading="lazy"
-                      decoding="async"
-                      onClick={() => setImageModalOpen(true)}
-                      onError={(event) => {
-                        if (event.currentTarget.src !== CARD_IMAGE_FALLBACK) {
-                          event.currentTarget.src = CARD_IMAGE_FALLBACK;
-                        }
-                      }}
-                    />
-                  </div>
-
-                  <div className="card-database-preview-content">
-                    <h2 className="card-database-preview-title">{previewCard.name}</h2>
-
-                    <div className="card-database-preview-description-shell">
-                      <h3 className="card-database-preview-subtitle">Description</h3>
-                      <p
-                        className="card-database-preview-description"
-                        dangerouslySetInnerHTML={{
-                          __html: formatCardTextToHtml(previewCard.description),
-                        }}
-                      />
-                    </div>
-                    
-                    <h3 className="card-database-preview-subtitle">Details</h3>
-                    <div className="card-database-preview-list">
-                      {previewRows.map((row) => (
-                        <div className="card-database-preview-row" key={row.label}>
-                          <span className="card-database-preview-label">{row.label}</span>
-                          <span className="card-database-preview-value">{row.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-                    </aside>
+          <CardDetailPanel
+            previewCard={previewCard}
+            previewRows={previewRows}
+            buildCardImageUrl={buildCardImageUrl}
+            CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
+            setImageModalOpen={setImageModalOpen}
+            formatCardTextToHtml={formatCardTextToHtml}
+          />
         </div>
       </div>
 
@@ -1653,7 +1410,6 @@ function CardDatabasePage() {
           />
         </div>
       )}
-
     </LauncherLayout>
   );
 }

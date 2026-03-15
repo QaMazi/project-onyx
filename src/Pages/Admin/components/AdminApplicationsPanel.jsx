@@ -3,7 +3,7 @@ import { supabase } from "../../../lib/supabase";
 import { useUser } from "../../../context/UserContext";
 
 function AdminApplicationsPanel() {
-  const { user, setUser } = useUser();
+  const { user, setUser, reloadUser } = useUser();
 
   const [applications, setApplications] = useState([]);
   const [activeSeries, setActiveSeries] = useState(null);
@@ -53,20 +53,20 @@ function AdminApplicationsPanel() {
         uniqueUserIds.length > 0
           ? supabase
               .from("profiles")
-              .select("id, username, avatar, role, progression_state, active_series_id")
+              .select("id, username, avatar, role")
               .in("id", uniqueUserIds)
           : Promise.resolve({ data: [], error: null }),
 
         uniqueSeriesIds.length > 0
           ? supabase
-              .from("game_series")
-              .select("id, name, status, is_current, created_by, max_players")
+              .from("series_summary_view")
+              .select("*")
               .in("id", uniqueSeriesIds)
           : Promise.resolve({ data: [], error: null }),
 
         supabase
-          .from("game_series")
-          .select("id, name, status, is_current, created_by, max_players")
+          .from("series_summary_view")
+          .select("*")
           .eq("is_current", true)
           .maybeSingle(),
       ]);
@@ -108,7 +108,6 @@ function AdminApplicationsPanel() {
 
   function isApplicationForGlobalActiveSeries(application) {
     if (!activeSeries?.id) return false;
-    if (activeSeries.status !== "active") return false;
     return application.series_id === activeSeries.id;
   }
 
@@ -125,17 +124,17 @@ function AdminApplicationsPanel() {
     return count || 0;
   }
 
-  async function isAlreadySeriesMember(seriesId, userId) {
+  async function getExistingMembership(seriesId, userId) {
     const { data, error } = await supabase
       .from("series_players")
-      .select("id")
+      .select("id, role, is_owner")
       .eq("series_id", seriesId)
       .eq("user_id", userId)
       .maybeSingle();
 
     if (error) throw error;
 
-    return !!data;
+    return data || null;
   }
 
   async function handleReview(application, action) {
@@ -149,7 +148,7 @@ function AdminApplicationsPanel() {
 
     if (isBan) {
       const confirmed = window.confirm(
-        `Ban ${application.profile?.username || "this user"}? This will set their role to Blocked.`
+        `Ban ${application.profile?.username || "this user"}? This will set their global role to Blocked.`
       );
       if (!confirmed) return;
     }
@@ -160,20 +159,20 @@ function AdminApplicationsPanel() {
       const reviewStatus = isApprove
         ? "approved"
         : isDeny
-          ? "denied"
-          : "banned";
+        ? "denied"
+        : "banned";
 
       if (isApprove) {
         if (!application.series) {
           throw new Error("Application series could not be loaded.");
         }
 
-        const alreadyMember = await isAlreadySeriesMember(
+        const existingMembership = await getExistingMembership(
           application.series_id,
           application.user_id
         );
 
-        if (!alreadyMember) {
+        if (!existingMembership) {
           const filledSlots = await getFilledSeriesSlots(application.series_id);
           const maxPlayers = application.series.max_players || 6;
 
@@ -199,35 +198,23 @@ function AdminApplicationsPanel() {
       if (applicationUpdateError) throw applicationUpdateError;
 
       if (isApprove) {
-        const alreadyMember = await isAlreadySeriesMember(
+        const existingMembership = await getExistingMembership(
           application.series_id,
           application.user_id
         );
 
-        if (!alreadyMember) {
+        if (!existingMembership) {
           const { error: membershipInsertError } = await supabase
             .from("series_players")
             .insert({
               series_id: application.series_id,
               user_id: application.user_id,
               is_owner: false,
+              role: "duelist",
             });
 
           if (membershipInsertError) throw membershipInsertError;
         }
-
-        const shouldBecomeDuelist =
-          isApplicationForGlobalActiveSeries(application);
-
-        const { error: profileUpdateError } = await supabase
-          .from("profiles")
-          .update({
-            active_series_id: application.series_id,
-            role: shouldBecomeDuelist ? "Duelist" : "Applicant",
-          })
-          .eq("id", application.user_id);
-
-        if (profileUpdateError) throw profileUpdateError;
       }
 
       if (isBan) {
@@ -243,12 +230,16 @@ function AdminApplicationsPanel() {
         if (application.user_id === user.id) {
           setUser({
             ...user,
+            globalRole: "Blocked",
             role: "Blocked",
+            activeSeriesId: null,
+            seriesMembershipRole: null,
           });
         }
       }
 
       await fetchApplications();
+      await reloadUser();
     } catch (error) {
       console.error("Application review failed:", error);
       window.alert("Application action failed. Check console for details.");
@@ -309,8 +300,7 @@ function AdminApplicationsPanel() {
             <div className="admin-application-list">
               {applications.map((application) => {
                 const isBusy = actionLoadingId === application.id;
-                const becomesDuelist =
-                  isApplicationForGlobalActiveSeries(application);
+                const joinsActiveSeries = isApplicationForGlobalActiveSeries(application);
 
                 return (
                   <div className="admin-application-card" key={application.id}>
@@ -340,13 +330,13 @@ function AdminApplicationsPanel() {
 
                         <div className="admin-application-meta">
                           <span>
-                            Current Role: {application.profile?.role || "Unknown"}
+                            Global Role: {application.profile?.role || "Unknown"}
                           </span>
                           <span>
                             Series: {application.series?.name || "Unknown Series"}
                           </span>
                           <span>
-                            On Approval: {becomesDuelist ? "Duelist" : "Applicant"}
+                            On Approval: {joinsActiveSeries ? "Duelist" : "Series Member"}
                           </span>
                         </div>
 

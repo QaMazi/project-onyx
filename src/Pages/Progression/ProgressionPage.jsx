@@ -6,7 +6,6 @@ import ProgressionPlayerMenuPanel from "./components/ProgressionPlayerMenuPanel"
 import ProgressionSeriesMenuPanel from "./components/ProgressionSeriesMenuPanel";
 import ProgressionAdminMenuPanel from "./components/ProgressionAdminMenuPanel";
 import ProgressionOnlinePlayersPanel from "./components/ProgressionOnlinePlayersPanel";
-import ProgressionSchedulePanel from "./components/ProgressionSchedulePanel";
 import ProgressionScoreboardPanel from "./components/ProgressionScoreboardPanel";
 
 import "./ProgressionPage.css";
@@ -21,10 +20,18 @@ function ProgressionPage() {
   }
 
   if (user.role === "Blocked") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (
+    user.role !== "Admin+" &&
+    user.role !== "Admin" &&
+    user.role !== "Duelist"
+  ) {
     return <Navigate to="/mode" replace />;
   }
 
-  const isAdmin = user.role === "Admin" || user.role === "Admin+";
+  const isSeriesAdmin = user.role === "Admin+" || user.role === "Admin";
 
   return (
     <LauncherLayout>
@@ -37,16 +44,34 @@ function ProgressionPage() {
           />
         </div>
 
-        <div className="progression-row progression-row-top">
-          <ProgressionPlayerMenuPanel />
-          <ProgressionSeriesMenuPanel />
-          {isAdmin ? <ProgressionAdminMenuPanel /> : null}
-        </div>
+        <div
+          className={`progression-dashboard ${
+            isSeriesAdmin
+              ? "progression-dashboard-with-admin"
+              : "progression-dashboard-no-admin"
+          }`}
+        >
+          <div className="progression-area progression-area-player">
+            <ProgressionPlayerMenuPanel />
+          </div>
 
-        <div className="progression-row progression-row-bottom">
-          <ProgressionOnlinePlayersPanel />
-          <ProgressionSchedulePanel />
-          <ProgressionScoreboardPanel />
+          {isSeriesAdmin ? (
+            <div className="progression-area progression-area-admin">
+              <ProgressionAdminMenuPanel />
+            </div>
+          ) : null}
+
+          <div className="progression-area progression-area-series-info">
+            <ProgressionOnlinePlayersPanel />
+          </div>
+
+          <div className="progression-area progression-area-future">
+            <ProgressionScoreboardPanel />
+          </div>
+
+          <div className="progression-area progression-area-series-menu">
+            <ProgressionSeriesMenuPanel />
+          </div>
         </div>
       </div>
     </LauncherLayout>

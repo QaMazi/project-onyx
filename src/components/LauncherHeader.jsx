@@ -11,7 +11,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
 
   if (!user) return null;
 
-  const isAdmin = user.role === "Admin" || user.role === "Admin+";
+  const hasGlobalAdminAccess = user.globalRole === "Admin+";
   const avatarInitial = user.username?.charAt(0)?.toUpperCase() || "G";
 
   const roleClass = useMemo(() => {
@@ -30,7 +30,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
     }
   }, [user.role]);
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     try {
       setIsOpen(false);
       setUser(null);
@@ -40,17 +40,26 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
       console.error("Logout crashed:", error);
       window.location.href = "/";
     }
-  };
+  }
 
-  const handleOpenSettings = () => {
+  function handleOpenSettings() {
     setIsOpen(false);
     openSettings();
-  };
+  }
 
-  const handleOpenProfile = () => {
+  function handleOpenProfile() {
     setIsOpen(false);
     openProfile();
-  };
+  }
+
+  function handleOpenAdminPanel() {
+    setIsOpen(false);
+    navigate("/admin", {
+      state: {
+        from: window.location.pathname,
+      },
+    });
+  }
 
   return (
     <div className="launcher-header">
@@ -110,17 +119,10 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
                 Settings
               </button>
 
-              {isAdmin && (
+              {hasGlobalAdminAccess && (
                 <button
                   className="launcher-header-menu-item"
-                  onClick={() => {
-  setIsOpen(false);
-  navigate("/admin", {
-    state: {
-      from: window.location.pathname,
-    },
-  });
-}}
+                  onClick={handleOpenAdminPanel}
                 >
                   Admin Panel
                 </button>

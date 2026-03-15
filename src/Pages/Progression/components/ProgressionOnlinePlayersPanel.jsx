@@ -1,134 +1,257 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProgressionPanelShell from "./ProgressionPanelShell";
 import { supabase } from "../../../lib/supabase";
 
 function getRoleClassName(role) {
-  const normalized = String(role || "").toLowerCase().replace("+", "plus");
-  return `progression-player-role progression-player-role-${normalized}`;
+  const normalized = String(role || "")
+    .toLowerCase()
+    .replace("+", "plus");
+
+  return `progression-series-player-role progression-series-player-role-${normalized}`;
 }
 
 function getInitial(name) {
   return (name || "?").charAt(0).toUpperCase();
 }
 
-function computeStatus(lastActiveAt, isDueling) {
-  if (isDueling) return "Dueling";
-  if (!lastActiveAt) return "Offline";
-
-  const last = new Date(lastActiveAt);
-  const now = new Date();
-  const diffMs = now - last;
-  const diffMinutes = diffMs / 1000 / 60;
-
-  if (diffMinutes <= 10) return "Online";
-  return "Away";
-}
-
-export default function ProgressionOnlinePlayersPanel({ currentUserId }) {
+export default function ProgressionOnlinePlayersPanel() {
+  const [seriesData, setSeriesData] = useState(null);
   const [players, setPlayers] = useState([]);
-  const [heartbeat, setHeartbeat] = useState(Date.now());
+  const [loading, setLoading] = useState(true);
 
-  // Heartbeat to refresh online/away status every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => setHeartbeat(Date.now()), 10000);
-    return () => clearInterval(interval);
-  }, []);
+  async function fetchSeriesInfo() {
+    setLoading(true);
 
-  // Fetch all users
-  useEffect(() => {
-    async function fetchPlayers() {
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, username, avatar, role, last_active_at")
-          .order("username");
+    try {
+      const { data: activeSeries, error: activeSeriesError } = await supabase
+        .from("series_summary_view")
+        .select("*")
+        .eq("is_current", true)
+        .maybeSingle();
 
-        if (error) {
-          console.error("Failed to fetch online players:", error);
-          setPlayers([]);
-          return;
-        }
-
-        // mark current user if they exist
-        const updatedPlayers = (data || []).map((p) => ({
-          ...p,
-          isDueling: false, // could be updated later per session
-        }));
-
-        // sort online first
-        updatedPlayers.sort((a, b) => {
-          const statusOrder = { Online: 0, Dueling: 1, Away: 2, Offline: 3 };
-          const aStatus = computeStatus(a.last_active_at, a.isDueling);
-          const bStatus = computeStatus(b.last_active_at, b.isDueling);
-          return statusOrder[aStatus] - statusOrder[bStatus];
-        });
-
-        setPlayers(updatedPlayers);
-      } catch (err) {
-        console.error("Error fetching players:", err);
+      if (activeSeriesError) {
+        console.error("Failed to fetch active series:", activeSeriesError);
+        setSeriesData(null);
+        setPlayers([]);
+        return;
       }
+
+      if (!activeSeries) {
+        setSeriesData(null);
+        setPlayers([]);
+        return;
+      }
+
+      const { data: members, error: membersError } = await supabase
+        .from("series_players_view")
+        .select("*")
+        .eq("series_id", activeSeries.id)
+        .order("is_owner", { ascending: false })
+        .order("username", { ascending: true });
+
+      if (membersError) {
+        console.error("Failed to fetch series players:", membersError);
+        setSeriesData(activeSeries);
+        setPlayers([]);
+        return;
+      }
+
+      setSeriesData(activeSeries);
+      setPlayers(members || []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchSeriesInfo();
+
+    function handlePhaseChange(event) {
+      const nextPhase = event?.detail?.phase;
+
+      if (!nextPhase) return;
+
+      setSeriesData((prev) =>
+        prev
+          ? {
+              ...prev,
+              current_phase: nextPhase,
+            }
+          : prev
+      );
     }
 
-    fetchPlayers();
-  }, [heartbeat]);
+    window.addEventListener("onyx-phase-changed", handlePhaseChange);
+
+    return () => {
+      window.removeEventListener("onyx-phase-changed", handlePhaseChange);
+    };
+  }, []);
+
+  const owner = useMemo(
+    () => players.find((player) => player.is_owner) || null,
+    [players]
+  );
+
+  const duelists = useMemo(
+    () => players.filter((player) => !player.is_owner),
+    [players]
+  );
+
+  const emptySlotCount = Math.max(
+    0,
+    Number(seriesData?.max_players || 0) - players.length
+  );
 
   return (
     <ProgressionPanelShell
-      kicker="PLAYERS"
-      title="Online Players"
-      meta={<span>{players.length} Listed</span>}
+      kicker="SERIES"
+      title="Series Info"
+      meta={
+        <span>
+          {seriesData ? `${players.length} / ${seriesData.max_players} Players` : "No Active Series"}
+        </span>
+      }
+      className="progression-panel-fill"
     >
-      <div className="progression-player-list">
-        {players.map((player) => {
-          const status = computeStatus(player.last_active_at, player.isDueling);
-          const statusDotClass = {
-            Online: "progression-player-status-dot-online",
-            Away: "progression-player-status-dot-away",
-            Dueling: "progression-player-status-dot-dueling",
-            Offline: "progression-player-status-dot-offline",
-          }[status];
+      {loading ? (
+        <div className="progression-series-empty-state">
+          <h2 className="progression-series-empty-state-title">Loading Series</h2>
+          <p className="progression-series-empty-state-text">
+            Pulling current progression series data.
+          </p>
+        </div>
+      ) : !seriesData ? (
+        <div className="progression-series-empty-state">
+          <h2 className="progression-series-empty-state-title">No Active Series</h2>
+          <p className="progression-series-empty-state-text">
+            There is currently no active progression series.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="progression-series-summary-header">
+            <h2 className="progression-series-summary-title">{seriesData.name}</h2>
 
-          return (
-            <div className="progression-player-card" key={player.id}>
-              <div className="progression-player-left">
-                <div className="progression-player-avatar">
-                  {player.avatar ? (
-                    <img src={player.avatar} alt={player.username} />
-                  ) : (
-                    getInitial(player.username)
-                  )}
-                </div>
+            <p className="progression-series-summary-description">
+              {seriesData.description || "No description provided."}
+            </p>
+          </div>
 
-                <div className="progression-player-info">
-                  <div className="progression-player-topline">
-                    <span className="progression-player-name">{player.username}</span>
-                    <span className={getRoleClassName(player.role)}>{player.role}</span>
-                  </div>
-
-                  <div className="progression-player-status-row">
-                    <span className={`progression-player-status-dot ${statusDotClass}`}></span>
-                    <span className="progression-player-status-text">{status}</span>
-                  </div>
-                </div>
-              </div>
+          <div className="progression-series-meta">
+            <div className="progression-series-meta-card">
+              <span className="progression-series-meta-label">Status</span>
+              <span className="progression-series-meta-value">
+                {seriesData.status || "Unknown"}
+              </span>
             </div>
-          );
-        })}
 
-        {/* Optional: empty slots placeholder */}
-        {/* Example for 6 slots minus current number of users */}
-        {Array.from({ length: Math.max(0, 6 - players.length) }).map((_, i) => (
-          <div className="progression-series-empty-slot" key={`empty-${i}`}>
-            <div className="progression-series-empty-slot-icon">+</div>
-            <div className="progression-player-info">
-              <span className="progression-player-name">Empty Slot</span>
-              <span className="progression-series-empty-slot-text">
-                Waiting for player
+            <div className="progression-series-meta-card">
+              <span className="progression-series-meta-label">Phase</span>
+              <span className="progression-series-meta-value">
+                {seriesData.current_phase || "Unknown"}
+              </span>
+            </div>
+
+            <div className="progression-series-meta-card">
+              <span className="progression-series-meta-label">Players</span>
+              <span className="progression-series-meta-value">
+                {players.length} / {seriesData.max_players}
               </span>
             </div>
           </div>
-        ))}
-      </div>
+
+          <div className="progression-series-section">
+            <h3 className="progression-series-section-title">ADMIN</h3>
+
+            <div className="progression-series-player-list">
+              {owner ? (
+                <div className="progression-series-player-card">
+                  <div className="progression-series-player-avatar">
+                    {owner.avatar ? (
+                      <img src={owner.avatar} alt={owner.username} />
+                    ) : (
+                      getInitial(owner.username)
+                    )}
+                  </div>
+
+                  <div className="progression-series-player-info">
+                    <div className="progression-series-player-name-row">
+                      <span className="progression-series-player-name">
+                        {owner.username}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className={getRoleClassName("admin")}>Owner</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="progression-series-empty-slot">
+                  <div className="progression-series-empty-slot-icon">—</div>
+                  <div className="progression-series-player-info">
+                    <span className="progression-series-player-name">
+                      No Series Admin
+                    </span>
+                    <span className="progression-series-empty-slot-text">
+                      No owner is currently assigned.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="progression-series-section">
+            <h3 className="progression-series-section-title">DUELISTS</h3>
+
+            <div className="progression-series-player-list">
+              {duelists.map((player) => (
+                <div className="progression-series-player-card" key={player.user_id}>
+                  <div className="progression-series-player-avatar">
+                    {player.avatar ? (
+                      <img src={player.avatar} alt={player.username} />
+                    ) : (
+                      getInitial(player.username)
+                    )}
+                  </div>
+
+                  <div className="progression-series-player-info">
+                    <div className="progression-series-player-name-row">
+                      <span className="progression-series-player-name">
+                        {player.username}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span
+                        className={getRoleClassName(
+                          player.role === "admin" ? "admin" : "duelist"
+                        )}
+                      >
+                        {player.role === "admin" ? "Admin" : "Duelist"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {Array.from({ length: emptySlotCount }).map((_, index) => (
+                <div className="progression-series-empty-slot" key={`empty-${index}`}>
+                  <div className="progression-series-empty-slot-icon">+</div>
+                  <div className="progression-series-player-info">
+                    <span className="progression-series-player-name">Empty Slot</span>
+                    <span className="progression-series-empty-slot-text">
+                      Waiting for player
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </ProgressionPanelShell>
   );
 }

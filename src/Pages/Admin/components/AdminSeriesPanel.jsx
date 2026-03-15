@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useUser } from "../../../context/UserContext";
 
-const MAX_OWNED_SERIES = 3;
+const MAX_OWNED_SERIES = 5;
 
 const DEFAULT_CREATE_FORM = {
   name: "",
@@ -11,7 +11,7 @@ const DEFAULT_CREATE_FORM = {
 };
 
 function AdminSeriesPanel() {
-  const { user } = useUser();
+  const { user, reloadUser } = useUser();
 
   const [seriesList, setSeriesList] = useState([]);
   const [globalActiveSeries, setGlobalActiveSeries] = useState(null);
@@ -35,42 +35,14 @@ function AdminSeriesPanel() {
       const [{ data: ownedSeries, error: ownedError }, { data: activeSeries, error: activeError }] =
         await Promise.all([
           supabase
-            .from("game_series")
-            .select(`
-              id,
-              name,
-              description,
-              status,
-              current_phase,
-              max_players,
-              is_current,
-              created_by,
-              created_at,
-              started_at,
-              paused_at,
-              ended_at,
-              last_used_at
-            `)
+            .from("series_summary_view")
+            .select("*")
             .eq("created_by", user.id)
             .order("created_at", { ascending: false }),
 
           supabase
-            .from("game_series")
-            .select(`
-              id,
-              name,
-              description,
-              status,
-              current_phase,
-              max_players,
-              is_current,
-              created_by,
-              created_at,
-              started_at,
-              paused_at,
-              ended_at,
-              last_used_at
-            `)
+            .from("series_summary_view")
+            .select("*")
             .eq("is_current", true)
             .maybeSingle(),
         ]);
@@ -107,10 +79,35 @@ function AdminSeriesPanel() {
     }));
   }
 
+  async function ensureCreatorMembership(seriesId) {
+    const { data: existingMembership, error: existingMembershipError } = await supabase
+      .from("series_players")
+      .select("id")
+      .eq("series_id", seriesId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existingMembershipError) throw existingMembershipError;
+
+    if (existingMembership) return;
+
+    const { error: membershipInsertError } = await supabase
+      .from("series_players")
+      .insert({
+        series_id: seriesId,
+        user_id: user.id,
+        is_owner: true,
+        role: "admin",
+      });
+
+    if (membershipInsertError) throw membershipInsertError;
+  }
+
   async function handleCreateSeries(event) {
     event.preventDefault();
 
     if (!user?.id) return;
+    if (user.globalRole !== "Admin+") return;
 
     if (!canCreateSeries) {
       window.alert(
@@ -140,12 +137,19 @@ function AdminSeriesPanel() {
         created_by: user.id,
       };
 
-      const { error } = await supabase.from("game_series").insert(payload);
+      const { data: createdSeries, error: createError } = await supabase
+        .from("game_series")
+        .insert(payload)
+        .select("id")
+        .single();
 
-      if (error) throw error;
+      if (createError) throw createError;
+
+      await ensureCreatorMembership(createdSeries.id);
 
       setCreateForm(DEFAULT_CREATE_FORM);
       await fetchSeriesData();
+      await reloadUser();
     } catch (error) {
       console.error("Failed to create series:", error);
       window.alert("Series creation failed. Check console for details.");
@@ -165,6 +169,7 @@ function AdminSeriesPanel() {
 
   async function handleStartSeries(series) {
     if (!user?.id || !series?.id) return;
+    if (user.globalRole !== "Admin+") return;
     if (series.created_by !== user.id) return;
     if (series.status !== "lobby") return;
 
@@ -177,6 +182,7 @@ function AdminSeriesPanel() {
     setActionLoadingId(series.id);
 
     try {
+      await ensureCreatorMembership(series.id);
       await clearGlobalActiveSeries();
 
       const now = new Date().toISOString();
@@ -197,6 +203,7 @@ function AdminSeriesPanel() {
       if (error) throw error;
 
       await fetchSeriesData();
+      await reloadUser();
     } catch (error) {
       console.error("Failed to start series:", error);
       window.alert("Failed to start series. Check console for details.");
@@ -207,6 +214,7 @@ function AdminSeriesPanel() {
 
   async function handlePauseSeries(series) {
     if (!user?.id || !series?.id) return;
+    if (user.globalRole !== "Admin+") return;
     if (series.created_by !== user.id) return;
     if (series.status !== "active") return;
 
@@ -226,6 +234,7 @@ function AdminSeriesPanel() {
       if (error) throw error;
 
       await fetchSeriesData();
+      await reloadUser();
     } catch (error) {
       console.error("Failed to pause series:", error);
       window.alert("Failed to pause series. Check console for details.");
@@ -236,6 +245,7 @@ function AdminSeriesPanel() {
 
   async function handleResumeSeries(series) {
     if (!user?.id || !series?.id) return;
+    if (user.globalRole !== "Admin+") return;
     if (series.created_by !== user.id) return;
     if (series.status !== "paused") return;
 
@@ -248,6 +258,7 @@ function AdminSeriesPanel() {
     setActionLoadingId(series.id);
 
     try {
+      await ensureCreatorMembership(series.id);
       await clearGlobalActiveSeries();
 
       const { error } = await supabase
@@ -264,6 +275,7 @@ function AdminSeriesPanel() {
       if (error) throw error;
 
       await fetchSeriesData();
+      await reloadUser();
     } catch (error) {
       console.error("Failed to resume series:", error);
       window.alert("Failed to resume series. Check console for details.");
@@ -274,6 +286,7 @@ function AdminSeriesPanel() {
 
   async function handleDeleteSeries(series) {
     if (!user?.id || !series?.id) return;
+    if (user.globalRole !== "Admin+") return;
     if (series.created_by !== user.id) return;
 
     const confirmed = window.confirm(
@@ -294,6 +307,7 @@ function AdminSeriesPanel() {
       if (error) throw error;
 
       await fetchSeriesData();
+      await reloadUser();
     } catch (error) {
       console.error("Failed to delete series:", error);
       window.alert("Failed to delete series. Check console for details.");
@@ -384,7 +398,7 @@ function AdminSeriesPanel() {
               <button
                 type="submit"
                 className="admin-action-btn admin-action-approve"
-                disabled={creating || !canCreateSeries}
+                disabled={creating || !canCreateSeries || user?.globalRole !== "Admin+"}
               >
                 {creating ? "Creating..." : "Create Series"}
               </button>
@@ -436,7 +450,7 @@ function AdminSeriesPanel() {
 
             {!canCreateSeries && (
               <p className="admin-loading-text">
-                You already own 3 series. Delete one before creating another.
+                You already own {MAX_OWNED_SERIES} series. Delete one before creating another.
               </p>
             )}
           </form>
@@ -486,7 +500,7 @@ function AdminSeriesPanel() {
 
                     <div className="admin-series-meta">
                       <span>Phase: {series.current_phase || "lobby"}</span>
-                      <span>Max Players: {series.max_players ?? "—"}</span>
+                      <span>Players: {series.player_count ?? "—"} / {series.max_players ?? "—"}</span>
                       <span>Created: {formatDate(series.created_at)}</span>
                       <span>Started: {formatDate(series.started_at)}</span>
                       <span>Paused: {formatDate(series.paused_at)}</span>

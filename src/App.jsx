@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { supabase } from "./lib/supabase";
 
 import LauncherLayout from "./components/LauncherLayout";
 import ModeSelectPage from "./Pages/ModeSelect/ModeSelectPage";
@@ -7,37 +7,37 @@ import ProgressionPage from "./Pages/Progression/ProgressionPage";
 import CardDatabasePage from "./Pages/CardDatabase/CardDatabasePage";
 import DeckGamePage from "./Pages/DeckGame/DeckGamePage";
 import AdminPanelPage from "./Pages/Admin/AdminPanelPage";
+import BinderPage from "./Pages/Binder/BinderPage";
+import DeckBuilderPage from "./Pages/DeckBuilder/DeckBuilderPage";
+import StorePage from "./Pages/Store/StorePage";
+import InventoryPage from "./Pages/Inventory/InventoryPage";
+import TradePage from "./Pages/Trade/TradePage";
+import BanlistPage from "./Pages/Banlist/BanlistPage";
+import StarterDeckEditorPage from "./Pages/Admin/StarterDeck/StarterDeckEditorPage";
+import RewardGiverPage from "./Pages/Admin/RewardGiver/RewardGiverPage";
 
-import { supabase } from "./lib/supabase";
 import { useUser } from "./context/UserContext";
 
 import "./App.css";
 
-function canonicalizeRole(role) {
-  const r = String(role || "").toLowerCase();
-
-  if (r === "admin+" || r === "adminplus") return "Admin+";
-  if (r === "admin") return "Admin";
-  if (r === "blocked") return "Blocked";
-  if (r === "duelist") return "Duelist";
-  if (r === "applicant") return "Applicant";
-
-  return "Applicant";
-}
-
-function isAuthorityRole(role) {
-  return role === "Admin" || role === "Admin+" || role === "Blocked";
+function LoadingScreen() {
+  return (
+    <LauncherLayout>
+      <div style={{ color: "white" }}>Loading...</div>
+    </LauncherLayout>
+  );
 }
 
 function LoginSplash() {
   const { user, authLoading } = useUser();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!authLoading && user) {
-      navigate("/mode", { replace: true });
-    }
-  }, [user, authLoading, navigate]);
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (user && user.role !== "Blocked") {
+    return <Navigate to="/mode" replace />;
+  }
 
   async function loginWithDiscord() {
     await supabase.auth.signInWithOAuth({
@@ -46,10 +46,6 @@ function LoginSplash() {
         redirectTo: `${window.location.origin}/mode`,
       },
     });
-  }
-
-  if (authLoading) {
-    return <div className="loading-screen">Loading...</div>;
   }
 
   return (
@@ -70,55 +66,11 @@ function LoginSplash() {
   );
 }
 
-function ProtectedRoute({ children }) {
-  const { user, authLoading } = useUser();
-
-  if (authLoading) {
-    return (
-      <LauncherLayout>
-        <div style={{ color: "white" }}>Loading...</div>
-      </LauncherLayout>
-    );
-  }
-
-  if (!user || user.role === "Blocked") {
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-}
-
-function AdminRoute({ children }) {
-  const { user, authLoading } = useUser();
-
-  if (authLoading) {
-    return (
-      <LauncherLayout>
-        <div style={{ color: "white" }}>Loading...</div>
-      </LauncherLayout>
-    );
-  }
-
-  if (!user || user.role === "Blocked") {
-    return <Navigate to="/" replace />;
-  }
-
-  if (user.role !== "Admin" && user.role !== "Admin+") {
-    return <Navigate to="/mode" replace />;
-  }
-
-  return children;
-}
-
 function HomeRoute() {
   const { user, authLoading } = useUser();
 
   if (authLoading) {
-    return (
-      <LauncherLayout>
-        <div style={{ color: "white" }}>Loading...</div>
-      </LauncherLayout>
-    );
+    return <LoadingScreen />;
   }
 
   if (user && user.role !== "Blocked") {
@@ -128,87 +80,94 @@ function HomeRoute() {
   return <LoginSplash />;
 }
 
+function ProtectedRoute({ children }) {
+  const { user, authLoading } = useUser();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user || user.role === "Blocked") {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+function ProgressionRoute({ children }) {
+  const { user, authLoading } = useUser();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user || user.role === "Blocked") {
+    return <Navigate to="/" replace />;
+  }
+
+  const hasProgressionAccess =
+    user.role === "Admin+" ||
+    user.role === "Admin" ||
+    user.role === "Duelist";
+
+  if (!hasProgressionAccess) {
+    return <Navigate to="/mode" replace />;
+  }
+
+  return children;
+}
+
+function AdminPlusProgressionRoute({ children }) {
+  const { user, authLoading } = useUser();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user || user.role === "Blocked") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (user.role !== "Admin+") {
+    return <Navigate to="/mode/progression" replace />;
+  }
+
+  return children;
+}
+
+function AdminRoute({ children }) {
+  const { user, authLoading } = useUser();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user || user.role === "Blocked") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (user.globalRole !== "Admin+") {
+    return <Navigate to="/mode" replace />;
+  }
+
+  return children;
+}
+
+function DeckGameBetaRoute() {
+  const { user, authLoading } = useUser();
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user || user.role === "Blocked") {
+    return <Navigate to="/mode" replace />;
+  }
+
+  return <Navigate to="/mode" replace />;
+}
+
 function App() {
-  const { setUser, setAuthLoading } = useUser();
-
-  useEffect(() => {
-    async function loadSession() {
-      setAuthLoading(true);
-
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          setUser(null);
-          setAuthLoading(false);
-          return;
-        }
-
-        const discordUser = session.user.user_metadata || {};
-
-        const baseUser = {
-          id: session.user.id,
-          username:
-            discordUser.full_name ||
-            discordUser.name ||
-            "Unknown User",
-          avatar: discordUser.avatar_url || "",
-        };
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        const normalizedRole = canonicalizeRole(profile?.role);
-
-        let finalRole = normalizedRole;
-
-        if (!isAuthorityRole(normalizedRole)) {
-          const { data: activeSeries } = await supabase
-            .from("game_series")
-            .select("id")
-            .eq("is_current", true)
-            .maybeSingle();
-
-          if (activeSeries) {
-            const { data: membership } = await supabase
-              .from("series_players")
-              .select("id")
-              .eq("series_id", activeSeries.id)
-              .eq("user_id", session.user.id)
-              .maybeSingle();
-
-            finalRole = membership ? "Duelist" : "Applicant";
-          }
-        }
-
-        setUser({
-          ...baseUser,
-          role: finalRole,
-          progressionState: profile?.progression_state || "default",
-          activeSeriesId: profile?.active_series_id || null,
-        });
-      } catch (err) {
-        console.error("Session load error", err);
-        setUser(null);
-      }
-
-      setAuthLoading(false);
-    }
-
-    loadSession();
-
-    const { data } = supabase.auth.onAuthStateChange(() => {
-      loadSession();
-    });
-
-    return () => data.subscription.unsubscribe();
-  }, [setUser, setAuthLoading]);
-
   return (
     <Routes>
       <Route path="/" element={<HomeRoute />} />
@@ -225,29 +184,94 @@ function App() {
       <Route
         path="/mode/progression"
         element={
-          <ProtectedRoute>
+          <ProgressionRoute>
             <ProgressionPage />
-          </ProtectedRoute>
+          </ProgressionRoute>
         }
       />
 
       <Route
         path="/mode/progression/cards"
         element={
-          <ProtectedRoute>
+          <ProgressionRoute>
             <CardDatabasePage />
-          </ProtectedRoute>
+          </ProgressionRoute>
         }
       />
 
       <Route
-        path="/mode/deckgame"
+        path="/mode/progression/binder"
         element={
-          <ProtectedRoute>
-            <DeckGamePage />
-          </ProtectedRoute>
+          <ProgressionRoute>
+            <BinderPage />
+          </ProgressionRoute>
         }
       />
+
+      <Route
+        path="/mode/progression/deck"
+        element={
+          <ProgressionRoute>
+            <DeckBuilderPage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/store"
+        element={
+          <ProgressionRoute>
+            <StorePage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/inventory"
+        element={
+          <ProgressionRoute>
+            <InventoryPage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/trade"
+        element={
+          <ProgressionRoute>
+            <TradePage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/banlist"
+        element={
+          <ProgressionRoute>
+            <BanlistPage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/starter-decks"
+        element={
+          <AdminPlusProgressionRoute>
+            <StarterDeckEditorPage />
+          </AdminPlusProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/reward-giver"
+        element={
+          <AdminPlusProgressionRoute>
+            <RewardGiverPage />
+          </AdminPlusProgressionRoute>
+        }
+      />
+
+      <Route path="/mode/deckgame" element={<DeckGameBetaRoute />} />
 
       <Route
         path="/admin"
@@ -257,6 +281,8 @@ function App() {
           </AdminRoute>
         }
       />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

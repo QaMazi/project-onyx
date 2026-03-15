@@ -1,296 +1,280 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ProgressionPanelShell from "./ProgressionPanelShell";
 import { supabase } from "../../../lib/supabase";
+import ProgressionPanelShell from "./ProgressionPanelShell";
 
 const SERIES_MENU_ITEMS = [
-  { label: "Series Info" },
   { label: "Banlist" },
   { label: "Starter Decks" },
   { label: "Phases & Rules" },
   { label: "Card Database" },
-  { label: "Pack Opener & Database" },
-  { label: "Deck Box Opener & Database" },
-  { label: "Promo Box Opener & Database" },
-  { label: "Roadmap" },
+  { label: "Pack Database" },
+  { label: "Deck Box Database" },
+  { label: "Promo Box Database" },
 ];
 
-function getRoleClassName(role) {
-  const normalized = String(role || "")
-    .toLowerCase()
-    .replace("+", "plus");
-
-  return `progression-series-player-role progression-series-player-role-${normalized}`;
-}
-
-function getInitial(name) {
-  return (name || "?").charAt(0).toUpperCase();
+function formatPhaseRulesText() {
+  return [
+    "Standby Phase",
+    "• Buy items from the store",
+    "• Sell cards from binder",
+    "• Trade with other players",
+    "• Use inventory items",
+    "• Open packs / boxes / feature slots",
+    "• Manage binder",
+    "• Manage decks",
+    "",
+    "Deckbuilding Phase",
+    "• Build decks using cards from binder",
+    "• Decks must follow the current banlist",
+    "• Decks must follow card ownership",
+    "• Decks are exported manually as .ydk files",
+    "",
+    "Dueling Phase",
+    "• Duel externally using exported decks",
+    "• No inventory actions",
+    "• No store access",
+    "• No trading",
+    "• No pack / box opening",
+    "• No item usage",
+    "",
+    "Reward Phase",
+    "• Admin enters final match results",
+    "• Rewards are distributed after placements are finalized",
+    "• Then the series returns to Standby Phase",
+  ].join("\n");
 }
 
 function ProgressionSeriesMenuPanel() {
   const navigate = useNavigate();
 
-  const [seriesData, setSeriesData] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [activeSeriesId, setActiveSeriesId] = useState(null);
+  const [starterDeckLoading, setStarterDeckLoading] = useState(true);
+  const [starterDeckBusy, setStarterDeckBusy] = useState(false);
+  const [starterDeckClaimed, setStarterDeckClaimed] = useState(false);
+  const [starterDeckClaimedName, setStarterDeckClaimedName] = useState("");
+  const [remainingDecks, setRemainingDecks] = useState(0);
+  const [starterDeckMessage, setStarterDeckMessage] = useState("");
 
-  async function openSeriesInfo() {
-    const { data: activeSeries, error: activeSeriesError } = await supabase
-      .from("game_series")
-      .select("*")
-      .eq("is_current", true)
-      .maybeSingle();
+  useEffect(() => {
+    let isMounted = true;
 
-    if (activeSeriesError) {
-      console.error("Failed to fetch active series:", activeSeriesError);
-      setSeriesData(null);
-      setPlayers([]);
-      setModalOpen(true);
-      return;
-    }
+    async function loadStarterDeckStatus() {
+      setStarterDeckLoading(true);
+      setStarterDeckMessage("");
 
-    if (!activeSeries) {
-      setSeriesData(null);
-      setPlayers([]);
-      setModalOpen(true);
-      return;
-    }
+      try {
+        const { data: activeSeries, error: activeSeriesError } = await supabase
+          .from("game_series")
+          .select("id")
+          .eq("is_current", true)
+          .maybeSingle();
 
-    const { data: members, error: membersError } = await supabase
-      .from("series_players")
-      .select("*")
-      .eq("series_id", activeSeries.id);
+        if (activeSeriesError) {
+          throw activeSeriesError;
+        }
 
-    if (membersError) {
-      console.error("Failed to fetch series members:", membersError);
-      setSeriesData(activeSeries);
-      setPlayers([]);
-      setModalOpen(true);
-      return;
-    }
+        if (!activeSeries?.id) {
+          if (isMounted) {
+            setActiveSeriesId(null);
+            setStarterDeckClaimed(false);
+            setStarterDeckClaimedName("");
+            setRemainingDecks(0);
+          }
+          return;
+        }
 
-    const userIds = (members || []).map((member) => member.user_id);
+        if (!isMounted) return;
 
-    let profiles = [];
+        setActiveSeriesId(activeSeries.id);
 
-    if (userIds.length > 0) {
-      const { data: profileRows, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, username, avatar, role")
-        .in("id", userIds);
+        const { data, error } = await supabase.rpc(
+          "get_my_starter_deck_claim_status",
+          {
+            p_series_id: activeSeries.id,
+          }
+        );
 
-      if (profilesError) {
-        console.error("Failed to fetch player profiles:", profilesError);
-      } else {
-        profiles = profileRows || [];
+        if (error) {
+          throw error;
+        }
+
+        if (!isMounted) return;
+
+        setStarterDeckClaimed(Boolean(data?.already_claimed));
+        setStarterDeckClaimedName(data?.claimed_deck_name || "");
+        setRemainingDecks(Number(data?.remaining_decks || 0));
+
+        if (data?.already_claimed && data?.claimed_deck_name) {
+          setStarterDeckMessage(`Claimed: ${data.claimed_deck_name}`);
+        } else if (Number(data?.remaining_decks || 0) <= 0) {
+          setStarterDeckMessage("No starter decks remain.");
+        } else {
+          setStarterDeckMessage("");
+        }
+      } catch (error) {
+        console.error("Failed to load starter deck claim status:", error);
+        if (isMounted) {
+          setStarterDeckMessage("Starter deck status unavailable.");
+        }
+      } finally {
+        if (isMounted) {
+          setStarterDeckLoading(false);
+        }
       }
     }
 
-    const mergedPlayers = (members || []).map((member) => {
-      const profile = profiles.find((p) => p.id === member.user_id);
+    loadStarterDeckStatus();
 
-      return {
-        id: member.user_id,
-        username: profile?.username || "Unknown User",
-        avatar: profile?.avatar || "",
-        role: profile?.role || "Applicant",
-        is_owner: member.is_owner,
-      };
-    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-    setSeriesData(activeSeries);
-    setPlayers(mergedPlayers);
-    setModalOpen(true);
+  async function handleClaimStarterDeck() {
+    if (!activeSeriesId || starterDeckBusy || starterDeckClaimed) {
+      return;
+    }
+
+    setStarterDeckBusy(true);
+    setStarterDeckMessage("");
+
+    try {
+      const { data, error } = await supabase.rpc("claim_random_starter_deck", {
+        p_series_id: activeSeriesId,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const claimedName = data?.starter_deck_name || "Starter Deck";
+
+      setStarterDeckClaimed(true);
+      setStarterDeckClaimedName(claimedName);
+      setRemainingDecks((prev) => Math.max(0, prev - 1));
+      setStarterDeckMessage(`Claimed: ${claimedName}`);
+
+      window.alert(
+        `Starter deck claim successful.\n\nYou received: ${claimedName}`
+      );
+    } catch (error) {
+      console.error("Failed to claim starter deck:", error);
+      const message = error?.message || "Failed to claim starter deck.";
+      setStarterDeckMessage(message);
+      window.alert(message);
+    } finally {
+      setStarterDeckBusy(false);
+    }
   }
 
   function handleSeriesMenuClick(label) {
-    if (label === "Series Info") {
-      openSeriesInfo();
+    if (label === "Banlist") {
+      navigate("/mode/progression/banlist");
       return;
     }
 
     if (label === "Card Database") {
       navigate("/mode/progression/cards");
+      return;
+    }
+
+    if (label === "Starter Decks") {
+      handleClaimStarterDeck();
+      return;
+    }
+
+    if (label === "Phases & Rules") {
+      window.alert(formatPhaseRulesText());
+      return;
+    }
+
+    if (label === "Pack Database") {
+      window.alert("Pack Database is not built yet.");
+      return;
+    }
+
+    if (label === "Deck Box Database") {
+      window.alert("Deck Box Database is not built yet.");
+      return;
+    }
+
+    if (label === "Promo Box Database") {
+      window.alert("Promo Box Database is not built yet.");
     }
   }
 
-  const owner = players.find((player) => player.is_owner) || null;
-  const duelists = players.filter((player) => !player.is_owner);
-  const emptySlotCount = Math.max(
-    0,
-    Number(seriesData?.max_players || 0) - players.length
-  );
+  function getStarterDeckButtonLabel() {
+    if (starterDeckLoading) {
+      return "Starter Decks";
+    }
+
+    if (starterDeckClaimed) {
+      return "Starter Deck Claimed";
+    }
+
+    if (remainingDecks <= 0) {
+      return "Starter Decks Unavailable";
+    }
+
+    if (starterDeckBusy) {
+      return "Claiming Starter Deck...";
+    }
+
+    return "Starter Decks";
+  }
 
   return (
-    <>
-      <ProgressionPanelShell
-        kicker="SERIES"
-        title="Series Menu"
-        meta={<span>{SERIES_MENU_ITEMS.length} Links</span>}
-      >
-        <div className="progression-action-grid progression-action-grid-series">
-          {SERIES_MENU_ITEMS.map((item) => (
+    <ProgressionPanelShell
+      kicker="SERIES"
+      title="Series Menu"
+      meta={<span>{SERIES_MENU_ITEMS.length} Links</span>}
+      className="progression-panel-fill"
+    >
+      <div className="progression-action-grid progression-action-grid-series">
+        {SERIES_MENU_ITEMS.map((item) => {
+          const isStarterDeckButton = item.label === "Starter Decks";
+          const starterDeckDisabled =
+            isStarterDeckButton &&
+            (starterDeckLoading ||
+              starterDeckBusy ||
+              starterDeckClaimed ||
+              remainingDecks <= 0);
+
+          return (
             <button
               key={item.label}
               type="button"
-              className="progression-action-btn"
+              className={`progression-action-btn ${
+                isStarterDeckButton && starterDeckClaimed
+                  ? "progression-action-btn-starter-claimed"
+                  : ""
+              }`}
               onClick={() => handleSeriesMenuClick(item.label)}
+              disabled={starterDeckDisabled}
             >
-              {item.label}
+              {isStarterDeckButton ? getStarterDeckButtonLabel() : item.label}
             </button>
-          ))}
-        </div>
-      </ProgressionPanelShell>
+          );
+        })}
+      </div>
 
-      {modalOpen && (
-        <div className="progression-modal" onClick={() => setModalOpen(false)}>
-          <div
-            className="progression-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="progression-modal-close"
-              onClick={() => setModalOpen(false)}
-              type="button"
-            >
-              ×
-            </button>
-
-            {!seriesData ? (
-              <div className="progression-series-empty-state">
-                <h2 className="progression-series-empty-state-title">
-                  No Active Series
-                </h2>
-                <p className="progression-series-empty-state-text">
-                  There is currently no active progression series.
-                </p>
-              </div>
-            ) : (
-              <>
-                <h2 className="progression-modal-title">{seriesData.name}</h2>
-
-                <p className="progression-modal-description">
-                  {seriesData.description || "No description provided."}
-                </p>
-
-                <div className="progression-series-meta">
-                  <div className="progression-series-meta-card">
-                    <span className="progression-series-meta-label">Status</span>
-                    <span className="progression-series-meta-value">
-                      {seriesData.status || "Unknown"}
-                    </span>
-                  </div>
-
-                  <div className="progression-series-meta-card">
-                    <span className="progression-series-meta-label">Phase</span>
-                    <span className="progression-series-meta-value">
-                      {seriesData.current_phase || "Unknown"}
-                    </span>
-                  </div>
-
-                  <div className="progression-series-meta-card">
-                    <span className="progression-series-meta-label">Players</span>
-                    <span className="progression-series-meta-value">
-                      {players.length} / {seriesData.max_players}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="progression-series-section">
-                  <h3 className="progression-series-section-title">ADMIN</h3>
-
-                  <div className="progression-series-player-list">
-                    {owner ? (
-                      <div className="progression-series-player-card">
-                        <div className="progression-series-player-avatar">
-                          {owner.avatar ? (
-                            <img src={owner.avatar} alt={owner.username} />
-                          ) : (
-                            getInitial(owner.username)
-                          )}
-                        </div>
-
-                        <div className="progression-series-player-info">
-                          <div className="progression-series-player-name-row">
-                            <span className="progression-series-player-name">
-                              {owner.username}
-                            </span>
-                          </div>
-
-                          <div>
-                            <span className={getRoleClassName(owner.role)}>
-                              {owner.role}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="progression-series-empty-slot">
-                        <div className="progression-series-empty-slot-icon">—</div>
-                        <div className="progression-series-player-info">
-                          <span className="progression-series-player-name">
-                            No Series Admin
-                          </span>
-                          <span className="progression-series-empty-slot-text">
-                            No owner is currently assigned.
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="progression-series-section">
-                  <h3 className="progression-series-section-title">DUELISTS</h3>
-
-                  <div className="progression-series-player-list">
-                    {duelists.map((player) => (
-                      <div className="progression-series-player-card" key={player.id}>
-                        <div className="progression-series-player-avatar">
-                          {player.avatar ? (
-                            <img src={player.avatar} alt={player.username} />
-                          ) : (
-                            getInitial(player.username)
-                          )}
-                        </div>
-
-                        <div className="progression-series-player-info">
-                          <div className="progression-series-player-name-row">
-                            <span className="progression-series-player-name">
-                              {player.username}
-                            </span>
-                          </div>
-
-                          <div>
-                            <span className={getRoleClassName(player.role)}>
-                              {player.role}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {Array.from({ length: emptySlotCount }).map((_, index) => (
-                      <div className="progression-series-empty-slot" key={index}>
-                        <div className="progression-series-empty-slot-icon">+</div>
-                        <div className="progression-series-player-info">
-                          <span className="progression-series-player-name">
-                            Empty Slot
-                          </span>
-                          <span className="progression-series-empty-slot-text">
-                            Waiting for player
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </>
+      <div className="progression-series-starterdeck-status">
+        {starterDeckClaimed ? (
+          <span className="progression-series-starterdeck-message">
+            Claimed starter deck: {starterDeckClaimedName || "Starter Deck"}
+          </span>
+        ) : starterDeckMessage ? (
+          <span className="progression-series-starterdeck-message">
+            {starterDeckMessage}
+          </span>
+        ) : (
+          <span className="progression-series-starterdeck-message">
+            Remaining starter decks in pool: {remainingDecks}
+          </span>
+        )}
+      </div>
+    </ProgressionPanelShell>
   );
 }
 

@@ -187,3 +187,43 @@
   color: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
+
+/* CTA line inside ranked tile */
+
+.mode-panel-cta {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: color-mix(in srgb, var(--theme-accent) 82%, white);
+
+  padding: 6px 10px;
+  border-radius: 8px;
+
+  background: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent);
+
+  display: inline-block;
+}
+
+/* disabled ranked tile state */
+
+.mode-panel-disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.mode-panel-disabled .mode-panel-cta {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75);
+}
+
+/* prevent hover zoom for disabled tile */
+
+.mode-panel-disabled:hover {
+  transform: none;
+  box-shadow: none;
+}

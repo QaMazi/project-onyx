@@ -3,33 +3,75 @@ import { supabase } from "../../../lib/supabase";
 import { useUser } from "../../../context/UserContext";
 
 function AdminPlayersPanel() {
-  const { user, setUser } = useUser();
+  const { user, setUser, reloadUser } = useUser();
 
   const [players, setPlayers] = useState([]);
+  const [activeSeries, setActiveSeries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  const isAdminPlus = user?.role === "Admin+";
-  const isAdmin = user?.role === "Admin";
-
   async function fetchPlayers() {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, username, avatar, role, progression_state, active_series_id")
-      .order("username", { ascending: true });
+    try {
+      const { data: currentSeries, error: currentSeriesError } = await supabase
+        .from("series_summary_view")
+        .select("*")
+        .eq("is_current", true)
+        .maybeSingle();
 
-    if (error) {
+      if (currentSeriesError) throw currentSeriesError;
+
+      setActiveSeries(currentSeries || null);
+
+      const [{ data: profiles, error: profilesError }, { data: memberships, error: membershipsError }] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, username, avatar, role")
+            .order("username", { ascending: true }),
+
+          currentSeries?.id
+            ? supabase
+                .from("series_players_view")
+                .select("*")
+                .eq("series_id", currentSeries.id)
+                .order("is_owner", { ascending: false })
+                .order("username", { ascending: true })
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+      if (profilesError) throw profilesError;
+      if (membershipsError) throw membershipsError;
+
+      const membershipMap = new Map(
+        (memberships || []).map((member) => [member.user_id, member])
+      );
+
+      const hydratedPlayers = (profiles || []).map((profile) => {
+        const membership = membershipMap.get(profile.id) || null;
+
+        return {
+          id: profile.id,
+          username: profile.username,
+          avatar: profile.avatar,
+          globalRole: profile.role,
+          isBlocked: profile.role === "Blocked",
+          inActiveSeries: !!membership,
+          membershipRole: membership?.role || null,
+          isOwner: Boolean(membership?.is_owner),
+        };
+      });
+
+      setPlayers(hydratedPlayers);
+    } catch (error) {
       console.error("Failed to fetch players:", error);
       setPlayers([]);
+      setActiveSeries(null);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setPlayers(data || []);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -38,85 +80,190 @@ function AdminPlayersPanel() {
 
   const loadedCount = useMemo(() => players.length, [players]);
 
-  function getRoleOptionsForCurrentUser() {
-    if (isAdminPlus) {
-      return ["Applicant", "Duelist", "Admin", "Blocked"];
-    }
+  async function updateGlobalRole(targetPlayerId, nextGlobalRole) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: nextGlobalRole })
+      .eq("id", targetPlayerId);
 
-    if (isAdmin) {
-      return ["Applicant", "Duelist", "Blocked"];
-    }
-
-    return [];
+    if (error) throw error;
   }
 
-  function canEditTarget(targetPlayer) {
-    if (!user) return false;
-
-    if (isAdminPlus) return true;
-
-    if (isAdmin) {
-      return targetPlayer.role !== "Admin" && targetPlayer.role !== "Admin+";
+  async function upsertSeriesMembership(targetPlayerId, nextMembershipRole) {
+    if (!activeSeries?.id) {
+      throw new Error("No active series available.");
     }
 
-    return false;
+    const { data: existingMembership, error: existingMembershipError } = await supabase
+      .from("series_players")
+      .select("id, is_owner")
+      .eq("series_id", activeSeries.id)
+      .eq("user_id", targetPlayerId)
+      .maybeSingle();
+
+    if (existingMembershipError) throw existingMembershipError;
+
+    if (existingMembership) {
+      if (existingMembership.is_owner) return;
+
+      const { error: updateError } = await supabase
+        .from("series_players")
+        .update({ role: nextMembershipRole })
+        .eq("id", existingMembership.id);
+
+      if (updateError) throw updateError;
+
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from("series_players")
+      .insert({
+        series_id: activeSeries.id,
+        user_id: targetPlayerId,
+        is_owner: false,
+        role: nextMembershipRole,
+      });
+
+    if (insertError) throw insertError;
   }
 
-  async function handleRoleChange(targetPlayer, nextRole) {
+  async function removeFromActiveSeries(targetPlayerId) {
+    if (!activeSeries?.id) {
+      throw new Error("No active series available.");
+    }
+
+    const { error } = await supabase
+      .from("series_players")
+      .delete()
+      .eq("series_id", activeSeries.id)
+      .eq("user_id", targetPlayerId)
+      .eq("is_owner", false);
+
+    if (error) throw error;
+  }
+
+  async function handleBlockToggle(player) {
     if (!user?.id) return;
-    if (!canEditTarget(targetPlayer)) return;
-    if (!getRoleOptionsForCurrentUser().includes(nextRole)) return;
-    if (targetPlayer.role === nextRole) return;
+    if (player.globalRole === "Admin+") return;
+
+    const nextGlobalRole = player.isBlocked ? "Applicant" : "Blocked";
 
     const confirmed = window.confirm(
-      `Change ${targetPlayer.username} from ${targetPlayer.role} to ${nextRole}?`
+      `${player.isBlocked ? "Unblock" : "Block"} ${player.username}?`
     );
 
     if (!confirmed) return;
 
-    setActionLoadingId(targetPlayer.id);
+    setActionLoadingId(player.id);
 
     try {
-      const updatePayload = {
-        role: nextRole,
-      };
+      await updateGlobalRole(player.id, nextGlobalRole);
 
-      if (nextRole !== "Duelist") {
-        updatePayload.active_series_id = null;
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update(updatePayload)
-        .eq("id", targetPlayer.id);
-
-      if (error) throw error;
-
-      if (targetPlayer.id === user.id) {
+      if (player.id === user.id && nextGlobalRole === "Blocked") {
         setUser({
           ...user,
-          role: nextRole,
-          activeSeriesId: nextRole === "Duelist" ? user.activeSeriesId : null,
+          globalRole: "Blocked",
+          role: "Blocked",
+          activeSeriesId: null,
+          seriesMembershipRole: null,
         });
       }
 
       await fetchPlayers();
+      await reloadUser();
     } catch (error) {
-      console.error("Role update failed:", error);
-      window.alert("Role update failed. Check console for details.");
+      console.error("Player moderation failed:", error);
+      window.alert("Player moderation failed. Check console for details.");
     } finally {
       setActionLoadingId(null);
     }
   }
 
-  const roleOptions = getRoleOptionsForCurrentUser();
+  async function handlePromoteToSeriesAdmin(player) {
+    if (!user?.id || player.isOwner || player.globalRole === "Admin+") return;
+
+    const confirmed = window.confirm(
+      `Promote ${player.username} to Admin in the active series?`
+    );
+
+    if (!confirmed) return;
+
+    setActionLoadingId(player.id);
+
+    try {
+      await upsertSeriesMembership(player.id, "admin");
+      await fetchPlayers();
+      await reloadUser();
+    } catch (error) {
+      console.error("Failed to promote series admin:", error);
+      window.alert("Series promotion failed. Check console for details.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function handleSetAsDuelist(player) {
+    if (!user?.id || player.isOwner || player.globalRole === "Admin+") return;
+
+    const confirmed = window.confirm(
+      player.inActiveSeries
+        ? `Set ${player.username} to Duelist in the active series?`
+        : `Add ${player.username} to the active series as a Duelist?`
+    );
+
+    if (!confirmed) return;
+
+    setActionLoadingId(player.id);
+
+    try {
+      await upsertSeriesMembership(player.id, "duelist");
+      await fetchPlayers();
+      await reloadUser();
+    } catch (error) {
+      console.error("Failed to set duelist role:", error);
+      window.alert("Series role update failed. Check console for details.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function handleRemoveFromSeries(player) {
+    if (!user?.id || !player.inActiveSeries || player.isOwner || player.globalRole === "Admin+") return;
+
+    const confirmed = window.confirm(
+      `Remove ${player.username} from the active series?`
+    );
+
+    if (!confirmed) return;
+
+    setActionLoadingId(player.id);
+
+    try {
+      await removeFromActiveSeries(player.id);
+      await fetchPlayers();
+      await reloadUser();
+    } catch (error) {
+      console.error("Failed to remove player from active series:", error);
+      window.alert("Failed to remove player from series. Check console for details.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  function getSeriesRoleLabel(player) {
+    if (player.isOwner) return "Owner";
+    if (player.membershipRole === "admin") return "Admin";
+    if (player.membershipRole === "duelist") return "Duelist";
+    return "Applicant";
+  }
 
   return (
     <section className="admin-panel">
       <div className="admin-panel-header">
         <div>
           <p className="admin-panel-kicker">PLAYERS</p>
-          <h2 className="admin-panel-title">User Role Overview</h2>
+          <h2 className="admin-panel-title">Active Series Player Control</h2>
         </div>
 
         <div className="admin-reviewed-header-actions">
@@ -134,6 +281,20 @@ function AdminPlayersPanel() {
 
       {isOpen && (
         <div className="admin-panel-body">
+          <div className="admin-series-active-banner">
+            <div className="admin-series-active-copy">
+              <span className="admin-series-active-label">Current Global Active Series</span>
+              <strong className="admin-series-active-name">
+                {activeSeries?.name || "No active series"}
+              </strong>
+              <span className="admin-series-active-meta">
+                {activeSeries
+                  ? `${activeSeries.player_count || 0}/${activeSeries.max_players || 0} players`
+                  : "Series-only Admin and Duelist controls activate when a global series is active."}
+              </span>
+            </div>
+          </div>
+
           {loading && <p className="admin-loading-text">Loading players...</p>}
 
           {!loading && players.length === 0 && (
@@ -146,11 +307,10 @@ function AdminPlayersPanel() {
             <div className="admin-player-list">
               {players.map((player) => {
                 const isBusy = actionLoadingId === player.id;
-                const editable = canEditTarget(player);
-
-                const safeValue = roleOptions.includes(player.role)
-                  ? player.role
-                  : "";
+                const canManageSeries =
+                  !player.isOwner && player.globalRole !== "Admin+";
+                const canModerateGlobal =
+                  player.globalRole !== "Admin+";
 
                 return (
                   <div className="admin-player-card" key={player.id}>
@@ -170,43 +330,65 @@ function AdminPlayersPanel() {
                       <div className="admin-player-info">
                         <div className="admin-player-topline">
                           <span className="admin-player-name">{player.username}</span>
+
                           <span
-                            className={`admin-player-role-pill admin-player-role-${player.role
+                            className={`admin-player-role-pill admin-player-role-${String(
+                              player.globalRole || "applicant"
+                            )
                               .toLowerCase()
                               .replace("+", "plus")}`}
                           >
-                            {player.role}
+                            {player.isBlocked ? "Blocked" : player.globalRole}
                           </span>
                         </div>
 
                         <div className="admin-player-meta">
                           <span>
-                            Progression State: {player.progression_state || "None"}
+                            Series Role: {getSeriesRoleLabel(player)}
                           </span>
                           <span>
-                            Active Series: {player.active_series_id ? "Assigned" : "None"}
+                            In Active Series: {player.inActiveSeries ? "Yes" : "No"}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="admin-player-actions">
-                      <select
-                        className="admin-role-select"
-                        value={safeValue}
-                        disabled={!editable || isBusy}
-                        onChange={(e) => handleRoleChange(player, e.target.value)}
+                    <div className="admin-application-actions">
+                      <button
+                        className="admin-action-btn"
+                        onClick={() => handleSetAsDuelist(player)}
+                        disabled={isBusy || !canManageSeries || player.isBlocked}
+                        type="button"
                       >
-                        {!roleOptions.includes(player.role) && (
-                          <option value={player.role}>{player.role}</option>
-                        )}
+                        {isBusy ? "Working..." : player.inActiveSeries ? "Set Duelist" : "Add Duelist"}
+                      </button>
 
-                        {roleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
+                      <button
+                        className="admin-action-btn admin-action-approve"
+                        onClick={() => handlePromoteToSeriesAdmin(player)}
+                        disabled={isBusy || !canManageSeries || player.isBlocked}
+                        type="button"
+                      >
+                        {isBusy ? "Working..." : "Promote Admin"}
+                      </button>
+
+                      <button
+                        className="admin-action-btn admin-action-deny"
+                        onClick={() => handleRemoveFromSeries(player)}
+                        disabled={isBusy || !canManageSeries || !player.inActiveSeries}
+                        type="button"
+                      >
+                        {isBusy ? "Working..." : "Remove"}
+                      </button>
+
+                      <button
+                        className="admin-action-btn admin-action-ban"
+                        onClick={() => handleBlockToggle(player)}
+                        disabled={isBusy || !canModerateGlobal}
+                        type="button"
+                      >
+                        {isBusy ? "Working..." : player.isBlocked ? "Unblock" : "Block"}
+                      </button>
                     </div>
                   </div>
                 );

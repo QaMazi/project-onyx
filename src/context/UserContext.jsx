@@ -1,10 +1,17 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { supabase } from "../lib/supabase";
 
 const UserContext = createContext(null);
 
 function normalizeGlobalRole(role) {
-  const normalized = String(role || "").toLowerCase();
+  const normalized = String(role || "").trim().toLowerCase();
 
   if (normalized === "admin+") return "Admin+";
   if (normalized === "adminplus") return "Admin+";
@@ -16,34 +23,110 @@ function normalizeGlobalRole(role) {
   return "Applicant";
 }
 
-function buildBaseIdentity(sessionUser, profile) {
+function getBestUsername(sessionUser, profile) {
   const metadata = sessionUser?.user_metadata || {};
 
+  return (
+    profile?.username ||
+    metadata.user_name ||
+    metadata.preferred_username ||
+    metadata.full_name ||
+    metadata.name ||
+    metadata.nickname ||
+    "Unknown User"
+  );
+}
+
+function getBestAvatar(sessionUser, profile) {
+  const metadata = sessionUser?.user_metadata || {};
+
+  return (
+    profile?.avatar ||
+    metadata.avatar_url ||
+    metadata.picture ||
+    metadata.image ||
+    ""
+  );
+}
+
+function getBestDiscordUserId(sessionUser, profile) {
+  const metadata = sessionUser?.user_metadata || {};
+  const identities = Array.isArray(sessionUser?.identities)
+    ? sessionUser.identities
+    : [];
+
+  const discordIdentity = identities.find(
+    (identity) => identity?.provider === "discord"
+  );
+
+  return (
+    profile?.discord_user_id ||
+    metadata.provider_id ||
+    metadata.sub ||
+    discordIdentity?.id ||
+    discordIdentity?.user_id ||
+    null
+  );
+}
+
+function buildBaseIdentity(sessionUser, profile) {
   return {
     id: sessionUser?.id || profile?.id || null,
-    username:
-      profile?.username ||
-      metadata.full_name ||
-      metadata.name ||
-      "Unknown User",
-    avatar:
-      profile?.avatar ||
-      metadata.avatar_url ||
-      "",
+    username: getBestUsername(sessionUser, profile),
+    avatar: getBestAvatar(sessionUser, profile),
+    discordUserId: getBestDiscordUserId(sessionUser, profile),
   };
 }
 
-async function resolveUserFromSession(sessionUser) {
-  const { data: profile, error: profileError } = await supabase
+async function ensureProfileExists(sessionUser) {
+  const { data: existingProfile, error: existingProfileError } = await supabase
     .from("profiles")
-    .select("id, username, avatar, role, active_series_id")
+    .select(
+      "id, discord_user_id, username, avatar, role, active_series_id"
+    )
     .eq("id", sessionUser.id)
     .maybeSingle();
 
-  if (profileError) {
-    throw profileError;
+  if (existingProfileError) {
+    throw existingProfileError;
   }
 
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  const insertPayload = {
+    id: sessionUser.id,
+    discord_user_id: getBestDiscordUserId(sessionUser, null),
+    username: getBestUsername(sessionUser, null),
+    avatar: getBestAvatar(sessionUser, null) || null,
+  };
+
+  const { error: insertProfileError } = await supabase
+    .from("profiles")
+    .insert(insertPayload);
+
+  if (insertProfileError) {
+    throw insertProfileError;
+  }
+
+  const { data: createdProfile, error: createdProfileError } = await supabase
+    .from("profiles")
+    .select(
+      "id, discord_user_id, username, avatar, role, active_series_id"
+    )
+    .eq("id", sessionUser.id)
+    .single();
+
+  if (createdProfileError) {
+    throw createdProfileError;
+  }
+
+  return createdProfile;
+}
+
+async function resolveUserFromSession(sessionUser) {
+  const profile = await ensureProfileExists(sessionUser);
   const baseIdentity = buildBaseIdentity(sessionUser, profile);
   const globalRole = normalizeGlobalRole(profile?.role);
 
@@ -135,7 +218,6 @@ export function UserProvider({ children }) {
 
       if (!session?.user) {
         setUser(null);
-        setAuthLoading(false);
         return;
       }
 
@@ -159,13 +241,15 @@ export function UserProvider({ children }) {
 
     safeLoad();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
       safeLoad();
     });
 
     return () => {
       mounted = false;
-      listener?.subscription?.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, [loadUser]);
 

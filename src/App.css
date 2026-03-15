@@ -46,12 +46,19 @@
   position: absolute;
   inset: 0;
 
-  background: radial-gradient(
-    circle at center,
-    rgba(0, 0, 0, 0.35) 0%,
-    rgba(0, 0, 0, 0.75) 65%,
-    rgba(0, 0, 0, 0.9) 100%
-  );
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.74) 65%,
+      rgba(0, 0, 0, 0.9) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(8, 6, 3, 0.18) 0%,
+      rgba(0, 0, 0, 0.08) 32%,
+      rgba(0, 0, 0, 0.28) 100%
+    );
 }
 
 /* center container */
@@ -67,6 +74,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
+  padding: 32px 20px 72px;
+  box-sizing: border-box;
 }
 
 /* logo */
@@ -76,7 +86,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
 .launcher-logo-aura {
@@ -122,10 +132,182 @@
   z-index: 2;
   height: 320px;
   margin-bottom: 0;
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+  filter:
+    drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 0 28px color-mix(in srgb, var(--theme-accent) 14%, transparent));
 }
 
-/* login card */
+/* login panel */
+
+.login-panel {
+  width: min(460px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+
+  padding: 32px 30px 28px;
+  box-sizing: border-box;
+
+  background:
+    linear-gradient(180deg, rgba(20, 20, 20, 0.74), rgba(8, 8, 8, 0.82)),
+    radial-gradient(
+      circle at top,
+      color-mix(in srgb, var(--theme-accent) 12%, transparent) 0%,
+      transparent 60%
+    );
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border: 1px solid rgba(255, 215, 120, 0.16);
+  border-radius: 18px;
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 22px color-mix(in srgb, var(--theme-accent) 8%, transparent);
+
+  text-align: center;
+}
+
+.login-panel-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #f6e9b9;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.login-field-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.login-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(247, 230, 177, 0.82);
+  padding-left: 2px;
+}
+
+.login-input {
+  width: 100%;
+  height: 50px;
+  box-sizing: border-box;
+
+  padding: 0 14px;
+
+  background:
+    linear-gradient(180deg, rgba(8, 8, 8, 0.94), rgba(16, 16, 16, 0.94));
+  color: #fff2ca;
+
+  border: 1px solid rgba(255, 215, 120, 0.16);
+  border-radius: 12px;
+
+  outline: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease,
+    background 0.16s ease;
+}
+
+.login-input::placeholder {
+  color: rgba(255, 241, 210, 0.34);
+}
+
+.login-input:hover {
+  border-color: rgba(255, 215, 120, 0.24);
+}
+
+.login-input:focus {
+  border-color: rgba(255, 215, 120, 0.42);
+  box-shadow:
+    0 0 0 3px rgba(255, 215, 120, 0.08),
+    0 0 18px color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.login-button {
+  width: 100%;
+  height: 50px;
+
+  margin-top: 2px;
+
+  border: 1px solid rgba(255, 215, 120, 0.22);
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--theme-accent) 62%, #f6d57b) 0%,
+      color-mix(in srgb, var(--theme-accent) 42%, #b6872b) 100%
+    );
+  color: #120d04;
+
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.26),
+    0 0 20px color-mix(in srgb, var(--theme-accent) 10%, transparent);
+
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease,
+    box-shadow 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.login-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.3),
+    0 0 24px color-mix(in srgb, var(--theme-accent) 14%, transparent);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-button:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-error {
+  margin: 2px 0 0;
+  min-height: 20px;
+  color: #ff8f8f;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* legacy launcher card kept in case other areas still reference it */
 
 .login-card {
   backdrop-filter: blur(12px);
@@ -148,7 +330,7 @@
   opacity: 0.85;
 }
 
-/* discord button */
+/* legacy discord button kept temporarily so old class usage does not break */
 
 .discord-button {
   width: 260px;
@@ -179,8 +361,6 @@
 
   box-shadow: 0 8px 20px rgba(88, 101, 242, 0.35);
 }
-
-/* discord icon */
 
 .discord-icon {
   width: 22px;
@@ -240,223 +420,36 @@
   color: white;
 }
 
-/* ===============================
-   Ambient Atmosphere
-================================ */
-
-.launcher-atmosphere {
-  position: absolute;
-  inset: 0;
-
-  pointer-events: none;
-  z-index: 1;
-
-  overflow: hidden;
-}
-
-/* fog layers */
-
-.fog-layer {
-  position: absolute;
-
-  width: 160%;
-  height: 160%;
-
-  top: -30%;
-  left: -30%;
-
-  background:
-    radial-gradient(
-      circle,
-      color-mix(in srgb, var(--theme-accent) 18%, transparent) 0%,
-      rgba(0,0,0,0) 65%
-    );
-
-  filter: blur(120px);
-  opacity: 0.25;
-}
-
-.fog-1 {
-  animation: fogDriftA 60s linear infinite;
-}
-
-.fog-2 {
-  animation: fogDriftB 90s linear infinite;
-  opacity: 0.18;
-}
-
-@keyframes fogDriftA {
-  0% {
-    transform: translateX(-10%) translateY(-6%);
-  }
-  50% {
-    transform: translateX(10%) translateY(8%);
-  }
-  100% {
-    transform: translateX(-10%) translateY(-6%);
-  }
-}
-
-@keyframes fogDriftB {
-  0% {
-    transform: translateX(8%) translateY(-8%);
-  }
-  50% {
-    transform: translateX(-10%) translateY(10%);
-  }
-  100% {
-    transform: translateX(8%) translateY(-8%);
-  }
-}
-
-/* ===============================
-   Particles
-================================ */
-
-.particles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.particles span {
-  position: absolute;
-  bottom: -12vh;
-
-  width: 2px;
-  height: 2px;
-
-  border-radius: 50%;
-  background: var(--theme-accent);
-
-  opacity: 0.38;
-
-  box-shadow:
-    0 0 6px color-mix(in srgb, var(--theme-accent) 55%, transparent),
-    0 0 14px color-mix(in srgb, var(--theme-accent) 30%, transparent);
-
-  animation-name: particleFloatDrift;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-/* size variation */
-
-.particles span:nth-child(2n) {
-  width: 2px;
-  height: 2px;
-}
-
-.particles span:nth-child(3n) {
-  width: 3px;
-  height: 3px;
-  opacity: 0.44;
-}
-
-.particles span:nth-child(5n) {
-  width: 4px;
-  height: 4px;
-  opacity: 0.5;
-}
-
-/* duration variation */
-
-.particles span:nth-child(2n) {
-  animation-duration: 20s;
-}
-
-.particles span:nth-child(3n) {
-  animation-duration: 24s;
-}
-
-.particles span:nth-child(4n) {
-  animation-duration: 28s;
-}
-
-.particles span:nth-child(5n) {
-  animation-duration: 34s;
-}
-
-.particles span:nth-child(7n) {
-  animation-duration: 40s;
-}
-
-/* delay variation so they don't all rise together */
-
-.particles span:nth-child(2n) {
-  animation-delay: -4s;
-}
-
-.particles span:nth-child(3n) {
-  animation-delay: -8s;
-}
-
-.particles span:nth-child(4n) {
-  animation-delay: -12s;
-}
-
-.particles span:nth-child(5n) {
-  animation-delay: -16s;
-}
-
-.particles span:nth-child(6n) {
-  animation-delay: -20s;
-}
-
-.particles span:nth-child(7n) {
-  animation-delay: -24s;
-}
-
-.particles span:nth-child(8n) {
-  animation-delay: -10s;
-}
-
-.particles span:nth-child(9n) {
-  animation-delay: -18s;
-}
-
-/* full-screen horizontal spread */
-
-.particles span:nth-child(9n + 1) { left: 3%; }
-.particles span:nth-child(9n + 2) { left: 14%; }
-.particles span:nth-child(9n + 3) { left: 25%; }
-.particles span:nth-child(9n + 4) { left: 36%; }
-.particles span:nth-child(9n + 5) { left: 47%; }
-.particles span:nth-child(9n + 6) { left: 58%; }
-.particles span:nth-child(9n + 7) { left: 69%; }
-.particles span:nth-child(9n + 8) { left: 80%; }
-.particles span:nth-child(9n + 9) { left: 91%; }
-
-/* slight offset pass so columns don't feel too rigid */
-
-.particles span:nth-child(10n + 1) { margin-left: -2%; }
-.particles span:nth-child(10n + 2) { margin-left: 1.5%; }
-.particles span:nth-child(10n + 3) { margin-left: -1%; }
-.particles span:nth-child(10n + 4) { margin-left: 2%; }
-.particles span:nth-child(10n + 5) { margin-left: -1.5%; }
-.particles span:nth-child(10n + 6) { margin-left: 1%; }
-.particles span:nth-child(10n + 7) { margin-left: -2.5%; }
-.particles span:nth-child(10n + 8) { margin-left: 1.25%; }
-.particles span:nth-child(10n + 9) { margin-left: -0.75%; }
-.particles span:nth-child(10n + 10) { margin-left: 2.25%; }
-
-@keyframes particleFloatDrift {
-  0% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0;
+@media (max-width: 760px) {
+  .launcher-center {
+    padding: 24px 16px 72px;
   }
 
-  10% {
-    opacity: 0.45;
+  .launcher-logo {
+    height: min(240px, 36vw);
   }
 
-  50% {
-    transform: translate3d(18px, -55vh, 0);
-    opacity: 0.5;
+  .launcher-logo-shell {
+    margin-bottom: 22px;
   }
 
-  100% {
-    transform: translate3d(-14px, -120vh, 0);
-    opacity: 0;
+  .login-panel {
+    padding: 24px 18px 22px;
+    gap: 16px;
+    border-radius: 16px;
+  }
+
+  .login-panel-title {
+    font-size: 1.18rem;
+  }
+
+  .login-input,
+  .login-button {
+    height: 48px;
+  }
+
+  .launcher-footer {
+    padding: 0 14px;
+    font-size: 12px;
   }
 }

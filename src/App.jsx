@@ -1,5 +1,5 @@
+import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "./lib/supabase";
 
 import LauncherLayout from "./components/LauncherLayout";
 import ModeSelectPage from "./Pages/ModeSelect/ModeSelectPage";
@@ -32,21 +32,24 @@ function LoadingScreen() {
 }
 
 function LoginSplash() {
-  const { user, authLoading } = useUser();
+  const { signInWithUsername, authLoading } = useUser();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorText, setErrorText] = useState("");
 
-  if (authLoading) return <LoadingScreen />;
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setErrorText("");
 
-  if (user && user.role !== "Blocked") {
-    return <Navigate to="/mode" replace />;
-  }
-
-  async function loginWithDiscord() {
-    await supabase.auth.signInWithOAuth({
-      provider: "discord",
-      options: {
-        redirectTo: `${window.location.origin}/mode`,
-      },
-    });
+    try {
+      await signInWithUsername(username, password);
+    } catch (error) {
+      setErrorText(error?.message || "Login failed.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -60,9 +63,41 @@ function LoginSplash() {
         />
       </div>
 
-      <button className="discord-button" onClick={loginWithDiscord}>
-        Login with Discord
-      </button>
+      <div className="login-panel">
+        <h2 className="login-panel-title">Project Onyx Login</h2>
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            className="login-input"
+            placeholder="Username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="username"
+            disabled={authLoading || submitting}
+          />
+
+          <input
+            type="password"
+            className="login-input"
+            placeholder="Password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            disabled={authLoading || submitting}
+          />
+
+          <button
+            className="login-button"
+            type="submit"
+            disabled={authLoading || submitting}
+          >
+            {submitting ? "Logging in..." : "Login"}
+          </button>
+        </form>
+
+        {errorText ? <p className="login-error">{errorText}</p> : null}
+      </div>
     </LauncherLayout>
   );
 }
@@ -72,7 +107,7 @@ function HomeRoute() {
 
   if (authLoading) return <LoadingScreen />;
 
-  if (user && user.role !== "Blocked") {
+  if (user && !user.isBlocked) {
     return <Navigate to="/mode" replace />;
   }
 
@@ -84,7 +119,7 @@ function ProtectedRoute({ children }) {
 
   if (authLoading) return <LoadingScreen />;
 
-  if (!user || user.role === "Blocked") {
+  if (!user || user.isBlocked) {
     return <Navigate to="/" replace />;
   }
 
@@ -96,32 +131,27 @@ function ProgressionRoute({ children }) {
 
   if (authLoading) return <LoadingScreen />;
 
-  if (!user || user.role === "Blocked") {
+  if (!user || user.isBlocked) {
     return <Navigate to="/" replace />;
   }
 
-  const hasProgressionAccess =
-    user.role === "Admin+" ||
-    user.role === "Admin" ||
-    user.role === "Duelist";
-
-  if (!hasProgressionAccess) {
+  if (!user.canAccessProgression) {
     return <Navigate to="/mode" replace />;
   }
 
   return children;
 }
 
-function AdminPlusProgressionRoute({ children }) {
+function ProgressionAdminRoute({ children }) {
   const { user, authLoading } = useUser();
 
   if (authLoading) return <LoadingScreen />;
 
-  if (!user || user.role === "Blocked") {
+  if (!user || user.isBlocked) {
     return <Navigate to="/" replace />;
   }
 
-  if (user.role !== "Admin+") {
+  if (!user.canAccessGameAdmin) {
     return <Navigate to="/mode/progression" replace />;
   }
 
@@ -133,27 +163,27 @@ function AdminRoute({ children }) {
 
   if (authLoading) return <LoadingScreen />;
 
-  if (!user || user.role === "Blocked") {
+  if (!user || user.isBlocked) {
     return <Navigate to="/" replace />;
   }
 
-  if (user.globalRole !== "Admin+") {
+  if (!user.canAccessHeaderAdmin) {
     return <Navigate to="/mode" replace />;
   }
 
   return children;
 }
 
-function DeckGameBetaRoute() {
+function DeckGameRoute({ children }) {
   const { user, authLoading } = useUser();
 
   if (authLoading) return <LoadingScreen />;
 
-  if (!user || user.role === "Blocked") {
-    return <Navigate to="/mode" replace />;
+  if (!user || user.isBlocked) {
+    return <Navigate to="/" replace />;
   }
 
-  return <Navigate to="/mode" replace />;
+  return children;
 }
 
 function App() {
@@ -263,31 +293,38 @@ function App() {
       <Route
         path="/mode/progression/admin/starter-decks"
         element={
-          <AdminPlusProgressionRoute>
+          <ProgressionAdminRoute>
             <StarterDeckEditorPage />
-          </AdminPlusProgressionRoute>
+          </ProgressionAdminRoute>
         }
       />
 
       <Route
         path="/mode/progression/admin/reward-giver"
         element={
-          <AdminPlusProgressionRoute>
+          <ProgressionAdminRoute>
             <RewardGiverPage />
-          </AdminPlusProgressionRoute>
+          </ProgressionAdminRoute>
         }
       />
 
       <Route
         path="/mode/progression/admin/container-maker"
         element={
-          <AdminPlusProgressionRoute>
+          <ProgressionAdminRoute>
             <ContainerMakerPage />
-          </AdminPlusProgressionRoute>
+          </ProgressionAdminRoute>
         }
       />
 
-      <Route path="/mode/deckgame" element={<DeckGameBetaRoute />} />
+      <Route
+        path="/mode/deckgame"
+        element={
+          <DeckGameRoute>
+            <DeckGamePage />
+          </DeckGameRoute>
+        }
+      />
 
       <Route
         path="/admin"

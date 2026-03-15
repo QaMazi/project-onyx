@@ -4,23 +4,49 @@ import { useUser } from "../context/UserContext";
 import { supabase } from "../lib/supabase";
 import "./LauncherHeader.css";
 
+function resolveDisplayedRole(user) {
+  return (
+    user?.effectiveRole ||
+    user?.role ||
+    user?.globalRole ||
+    "Duelist"
+  );
+}
+
+function resolveAvatar(user) {
+  return user?.avatarUrl || user?.avatar || "";
+}
+
+function resolveUsername(user) {
+  return user?.username || "Unknown User";
+}
+
 function LauncherHeader({ openSettings, openProfile = () => {} }) {
   const navigate = useNavigate();
-  const { user, setUser } = useUser();
+  const { user, reloadUser } = useUser();
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;
 
-  const hasGlobalAdminAccess = user.globalRole === "Admin+";
-  const avatarInitial = user.username?.charAt(0)?.toUpperCase() || "G";
+  const displayedRole = resolveDisplayedRole(user);
+  const displayedAvatar = resolveAvatar(user);
+  const displayedUsername = resolveUsername(user);
+
+  const hasGlobalAdminAccess =
+    user?.canAccessHeaderAdmin ||
+    user?.globalRole === "Admin+" ||
+    displayedRole === "Admin+";
+
+  const avatarInitial = displayedUsername.charAt(0).toUpperCase() || "G";
 
   const roleClass = useMemo(() => {
-    switch (user.role) {
+    switch (displayedRole) {
       case "Admin+":
         return "launcher-header-role role-adminplus";
       case "Admin":
         return "launcher-header-role role-admin";
       case "Duelist":
+      case "Duelist+":
         return "launcher-header-role role-duelist";
       case "Blocked":
         return "launcher-header-role role-blocked";
@@ -28,13 +54,15 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
       default:
         return "launcher-header-role role-applicant";
     }
-  }, [user.role]);
+  }, [displayedRole]);
 
   async function handleLogout() {
     try {
       setIsOpen(false);
-      setUser(null);
       await supabase.auth.signOut();
+      if (typeof reloadUser === "function") {
+        await reloadUser();
+      }
       window.location.href = "/";
     } catch (error) {
       console.error("Logout crashed:", error);
@@ -81,12 +109,13 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
             onClick={() => setIsOpen((prev) => !prev)}
             aria-haspopup="menu"
             aria-expanded={isOpen}
+            type="button"
           >
             <div className="launcher-header-avatar">
-              {user.avatar ? (
+              {displayedAvatar ? (
                 <img
-                  src={user.avatar}
-                  alt={user.username}
+                  src={displayedAvatar}
+                  alt={displayedUsername}
                   className="launcher-header-avatar-image"
                 />
               ) : (
@@ -95,10 +124,10 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
             </div>
 
             <div className="launcher-header-usertext">
-              <span className="launcher-header-username">{user.username}</span>
+              <span className="launcher-header-username">{displayedUsername}</span>
             </div>
 
-            <div className={roleClass}>{user.role}</div>
+            <div className={roleClass}>{displayedRole}</div>
 
             <span className="launcher-header-caret">▾</span>
           </button>
@@ -108,6 +137,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
               <button
                 className="launcher-header-menu-item"
                 onClick={handleOpenProfile}
+                type="button"
               >
                 Profile
               </button>
@@ -115,6 +145,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
               <button
                 className="launcher-header-menu-item"
                 onClick={handleOpenSettings}
+                type="button"
               >
                 Settings
               </button>
@@ -123,6 +154,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
                 <button
                   className="launcher-header-menu-item"
                   onClick={handleOpenAdminPanel}
+                  type="button"
                 >
                   Admin Panel
                 </button>
@@ -131,6 +163,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
               <button
                 className="launcher-header-menu-item"
                 onClick={handleLogout}
+                type="button"
               >
                 Logout
               </button>

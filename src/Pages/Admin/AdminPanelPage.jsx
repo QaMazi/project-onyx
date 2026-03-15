@@ -5,11 +5,14 @@ import AdminReviewedApplicationsPanel from "./components/AdminReviewedApplicatio
 import AdminSeriesPanel from "./components/AdminSeriesPanel";
 import AdminPlayersPanel from "./components/AdminPlayersPanel";
 import AdminFoundationPanel from "./components/AdminFoundationPanel";
+import AdminProfilesPanel from "./components/AdminProfilesPanel";
+import { useUser } from "../../context/UserContext";
 import "./AdminPanelPage.css";
 
 function AdminPanelPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useUser();
 
   const backTarget = location.state?.from || "/mode";
 
@@ -32,32 +35,35 @@ function AdminPanelPage() {
               <p className="admin-page-eyebrow">PROJECT ONYX CONTROL</p>
               <h1 className="admin-page-title">Admin Panel</h1>
               <p className="admin-page-subtitle">
-                Manage progression access, owned series, player roles, and future admin systems.
+                Manage site accounts, progression access, owned series, player roles,
+                and future admin systems.
               </p>
             </div>
 
             <div className="admin-page-status">
               <span className="admin-status-label">Access</span>
-              <span className="admin-status-pill">ADMIN ONLY</span>
+              <span className="admin-status-pill">
+                {user?.canAccessHeaderAdmin ? "ADMIN+" : "ADMIN"}
+              </span>
             </div>
           </div>
 
           <div className="admin-page-intro">
             <h2 className="admin-intro-title">Administration Overview</h2>
             <p className="admin-intro-text">
-              Create and manage your own series, control the one globally active
-              progression series, review access requests, and oversee player role
-              assignments. Series begin in Lobby and can later be started, paused,
-              resumed, or deleted by their owner.
+              Use this panel to control core account setup, manage the globally
+              active progression series, assign player access, and oversee game
+              administration systems.
             </p>
           </div>
 
           <div className="admin-layout">
             <div className="admin-main-column">
-              <AdminApplicationsPanel />
-              <AdminReviewedApplicationsPanel />
+              {user?.canAccessHeaderAdmin ? <AdminProfilesPanel /> : null}
               <AdminSeriesPanel />
               <AdminPlayersPanel />
+              <AdminApplicationsPanel />
+              <AdminReviewedApplicationsPanel />
             </div>
 
             <aside className="admin-side-column">

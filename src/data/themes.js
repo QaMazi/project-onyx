@@ -1,34 +1,102 @@
 const themes = [
   {
-    name: "Yu-Gi-Oh",
-    background: "/ui/backgrounds/yugioh_theme.png",
-    music: "/audio/yugioh_theme.mp3",
-    accent: "#ff3b3b"
-  },
-  {
-    name: "Rose Dragon",
-    background: "/ui/backgrounds/rose_dragon_theme.png",
-    music: "/audio/rose_dragon_theme.mp3",
-    accent: "#ff4d7a"
-  },
-  {
-    name: "Blue-Eyes",
-    background: "/ui/backgrounds/blue_eyes_theme.png",
-    music: "/audio/blue_eyes_theme.mp3",
-    accent: "#8ecbff"
-  },
-  {
-    name: "The Goblin",
-    background: "/ui/backgrounds/goblin_theme.png",
-    music: "/audio/goblin_theme.mp3",
-    accent: "#9b59ff"
-  },
-  {
+    id: "project-onyx",
     name: "Project Onyx",
     background: "/ui/backgrounds/project_onyx_theme.png",
-    music: "/audio/project_onyx_theme.mp3",
-    accent: "#d4af37"
-  }
+    accent: "#d7a63e",
+    accent2: "#f4d37a",
+    accent3: "#6f4c16",
+  },
+  {
+    id: "rose-dragon",
+    name: "Black Rose Dragon",
+    background: "/ui/backgrounds/rose_dragon_theme.png",
+    accent: "#d93a57",
+    accent2: "#ff6f8f",
+    accent3: "#7b1027",
+  },
+  {
+    id: "goblin",
+    name: "The Goblin",
+    background: "/ui/backgrounds/goblin_theme.png",
+    accent: "#9b5cff",
+    accent2: "#d56bff",
+    accent3: "#3d155f",
+  },
+  {
+    id: "yugioh",
+    name: "Yu-Gi-Oh",
+    background: "/ui/backgrounds/yugioh_theme.png",
+    accent: "#d8a247",
+    accent2: "#f0c56b",
+    accent3: "#7d4e17",
+  },
+  {
+    id: "blue-eyes",
+    name: "Blue-Eyes",
+    background: "/ui/backgrounds/blue_eyes_theme.png",
+    accent: "#7fc8ff",
+    accent2: "#dff3ff",
+    accent3: "#2b5f97",
+  },
+  {
+    id: "starving-venom",
+    name: "Starving Venom",
+    background: "/ui/backgrounds/starving_venom_theme.png",
+    accent: "#b44cff",
+    accent2: "#d9ff59",
+    accent3: "#4c1772",
+  },
+  {
+    id: "sacred-beasts",
+    name: "Sacred Beasts",
+    background: "/ui/backgrounds/sacred_beasts_theme.png",
+    accent: "#ff8b2c",
+    accent2: "#ffd257",
+    accent3: "#7a1f12",
+  },
+  {
+    id: "yami-yugi",
+    name: "Yami Yugi",
+    background: "/ui/backgrounds/yami_yugi_theme.png",
+    accent: "#d3a03d",
+    accent2: "#7f5cff",
+    accent3: "#6b3d14",
+  },
+  {
+    id: "kaiba",
+    name: "Kaiba",
+    background: "/ui/backgrounds/kaiba_theme.png",
+    accent: "#7db8ff",
+    accent2: "#e6f4ff",
+    accent3: "#365e9b",
+  },
+  {
+    id: "progression",
+    name: "Progression",
+    background: "/ui/backgrounds/progression_theme.png",
+    accent: "#f2bc56",
+    accent2: "#7bc4ff",
+    accent3: "#8a5d19",
+  },
+  {
+    id: "pots",
+    name: "The Pots",
+    background: "/ui/backgrounds/pots_theme.png",
+    accent: "#59d46b",
+    accent2: "#9b6cff",
+    accent3: "#2b7434",
+  },
+  {
+    id: "ghost-girls",
+    name: "Ghost Girls",
+    background: "/ui/backgrounds/ghost_girls_theme.png",
+    accent: "#b89cff",
+    accent2: "#ffb3d8",
+    accent3: "#5d4695",
+  },
 ];
+
+export const DEFAULT_THEME_ID = "project-onyx";
 
 export default themes;

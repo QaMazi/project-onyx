@@ -131,9 +131,7 @@ function ProgressionAdminMenuPanel() {
         p_series_id: activeSeriesId,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       const nextPhase = data?.current_phase || "";
       const nextRoundNumber = Number(data?.round_number || 0);
@@ -178,9 +176,7 @@ function ProgressionAdminMenuPanel() {
         p_series_id: activeSeriesId,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setPhaseMessage("Bracket generated successfully.");
 
@@ -226,7 +222,7 @@ function ProgressionAdminMenuPanel() {
     }
 
     if (label === "Container Maker") {
-      window.alert("Container Maker is not built yet.");
+      navigate("/mode/progression/admin/container-maker");
       return;
     }
 

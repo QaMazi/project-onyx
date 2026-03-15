@@ -15,6 +15,9 @@ import TradePage from "./Pages/Trade/TradePage";
 import BanlistPage from "./Pages/Banlist/BanlistPage";
 import StarterDeckEditorPage from "./Pages/Admin/StarterDeck/StarterDeckEditorPage";
 import RewardGiverPage from "./Pages/Admin/RewardGiver/RewardGiverPage";
+import ContainerMakerPage from "./Pages/Admin/ContainerMaker/ContainerMakerPage";
+import ContainerDatabasePage from "./Pages/Containers/ContainerDatabasePage";
+import ContainerOpenerPage from "./Pages/Containers/ContainerOpenerPage";
 
 import { useUser } from "./context/UserContext";
 
@@ -31,9 +34,7 @@ function LoadingScreen() {
 function LoginSplash() {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (user && user.role !== "Blocked") {
     return <Navigate to="/mode" replace />;
@@ -69,9 +70,7 @@ function LoginSplash() {
 function HomeRoute() {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (user && user.role !== "Blocked") {
     return <Navigate to="/mode" replace />;
@@ -83,9 +82,7 @@ function HomeRoute() {
 function ProtectedRoute({ children }) {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (!user || user.role === "Blocked") {
     return <Navigate to="/" replace />;
@@ -97,9 +94,7 @@ function ProtectedRoute({ children }) {
 function ProgressionRoute({ children }) {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (!user || user.role === "Blocked") {
     return <Navigate to="/" replace />;
@@ -120,9 +115,7 @@ function ProgressionRoute({ children }) {
 function AdminPlusProgressionRoute({ children }) {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (!user || user.role === "Blocked") {
     return <Navigate to="/" replace />;
@@ -138,9 +131,7 @@ function AdminPlusProgressionRoute({ children }) {
 function AdminRoute({ children }) {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (!user || user.role === "Blocked") {
     return <Navigate to="/" replace />;
@@ -156,9 +147,7 @@ function AdminRoute({ children }) {
 function DeckGameBetaRoute() {
   const { user, authLoading } = useUser();
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (!user || user.role === "Blocked") {
     return <Navigate to="/mode" replace />;
@@ -254,6 +243,24 @@ function App() {
       />
 
       <Route
+        path="/mode/progression/containers/:typeSlug"
+        element={
+          <ProgressionRoute>
+            <ContainerDatabasePage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/opener"
+        element={
+          <ProgressionRoute>
+            <ContainerOpenerPage />
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
         path="/mode/progression/admin/starter-decks"
         element={
           <AdminPlusProgressionRoute>
@@ -267,6 +274,15 @@ function App() {
         element={
           <AdminPlusProgressionRoute>
             <RewardGiverPage />
+          </AdminPlusProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/container-maker"
+        element={
+          <AdminPlusProgressionRoute>
+            <ContainerMakerPage />
           </AdminPlusProgressionRoute>
         }
       />

@@ -190,17 +190,17 @@ function ProgressionSeriesMenuPanel() {
     }
 
     if (label === "Pack Database") {
-      window.alert("Pack Database is not built yet.");
+      navigate("/mode/progression/containers/packs");
       return;
     }
 
     if (label === "Deck Box Database") {
-      window.alert("Deck Box Database is not built yet.");
+      navigate("/mode/progression/containers/deck-boxes");
       return;
     }
 
     if (label === "Promo Box Database") {
-      window.alert("Promo Box Database is not built yet.");
+      navigate("/mode/progression/containers/promo-boxes");
     }
   }
 

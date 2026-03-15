@@ -1,0 +1,312 @@
+.container-database-page {
+  width: min(1500px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 24px 0 32px;
+  color: #f5f7ff;
+}
+
+.container-database-topbar,
+.container-database-card {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(20, 24, 34, 0.88), rgba(9, 12, 18, 0.9));
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.container-database-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+}
+
+.container-database-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: #c8a85d;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.container-database-title {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.container-database-subtitle {
+  margin: 10px 0 0;
+  color: rgba(230, 235, 255, 0.72);
+  font-size: 14px;
+}
+
+.container-database-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.container-database-secondary-btn {
+  min-width: 110px;
+  height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  color: #f6f8ff;
+  font-weight: 800;
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(80, 92, 120, 0.75), rgba(45, 52, 70, 0.88));
+}
+
+.container-database-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.container-database-card {
+  padding: 18px;
+  min-width: 0;
+}
+
+.container-database-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.container-database-section-header h2,
+.container-database-section-header h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.container-database-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.container-database-field label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(235, 240, 255, 0.72);
+  text-transform: uppercase;
+}
+
+.container-database-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 12, 20, 0.72);
+  color: #f5f7ff;
+  outline: none;
+  font-size: 14px;
+}
+
+.container-database-list {
+  display: grid;
+  gap: 10px;
+}
+
+.container-database-list-row {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f7ff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.container-database-list-row.is-selected {
+  border-color: rgba(200, 168, 93, 0.5);
+  box-shadow: inset 0 0 12px rgba(200, 168, 93, 0.12);
+}
+
+.container-database-list-name {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.container-database-list-meta {
+  font-size: 12px;
+  color: rgba(231, 237, 255, 0.66);
+}
+
+.container-database-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.container-database-detail-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.container-database-detail-subtitle {
+  margin: 8px 0 0;
+  color: rgba(230, 235, 255, 0.72);
+  font-size: 14px;
+}
+
+.container-database-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.container-database-chip {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f7ff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.container-database-image-shell {
+  margin-bottom: 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.container-database-image {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  display: block;
+}
+
+.container-database-card-pool {
+  margin-top: 10px;
+}
+
+.container-database-card-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.container-database-card-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.container-database-card-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f5f7ff;
+  margin-bottom: 4px;
+}
+
+.container-database-card-meta {
+  font-size: 12px;
+  color: rgba(231, 237, 255, 0.66);
+}
+
+.container-database-card-odds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.container-database-tier-pill,
+.container-database-odds-pill {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.container-database-tier-pill {
+  background: rgba(200, 168, 93, 0.14);
+  color: #efd28c;
+}
+
+.container-database-odds-pill {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f7ff;
+}
+
+.container-database-odds-pill.subtle {
+  color: rgba(231, 237, 255, 0.72);
+}
+
+.container-database-empty,
+.container-database-error {
+  padding: 20px;
+  text-align: center;
+  color: rgba(231, 237, 255, 0.68);
+}
+
+.container-database-error {
+  color: #ffc0c0;
+}
+
+.container-database-empty.small {
+  padding: 14px;
+}
+
+@media (max-width: 1100px) {
+  .container-database-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .container-database-page {
+    width: min(100vw - 20px, 1500px);
+    padding-top: 14px;
+  }
+
+  .container-database-topbar {
+    padding: 18px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .container-database-card-row {
+    grid-template-columns: 1fr;
+  }
+
+  .container-database-card-odds {
+    justify-content: flex-start;
+  }
+}

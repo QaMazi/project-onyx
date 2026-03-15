@@ -18,7 +18,7 @@ function AdminSeriesPanel() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
 
   async function fetchSeriesData() {
@@ -350,7 +350,19 @@ function AdminSeriesPanel() {
   return (
     <section className="admin-panel">
       <div className="admin-panel-header">
-        <div>
+        <div
+          className="admin-panel-header-main"
+          onClick={() => setIsOpen((prev) => !prev)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setIsOpen((prev) => !prev);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-expanded={isOpen}
+        >
           <p className="admin-panel-kicker">SERIES</p>
           <h2 className="admin-panel-title">Series Management</h2>
         </div>
@@ -422,9 +434,7 @@ function AdminSeriesPanel() {
                 <select
                   className="admin-series-input"
                   value={createForm.maxPlayers}
-                  onChange={(e) =>
-                    handleCreateFormChange("maxPlayers", e.target.value)
-                  }
+                  onChange={(e) => handleCreateFormChange("maxPlayers", e.target.value)}
                 >
                   <option value="2">2</option>
                   <option value="3">3</option>
@@ -439,34 +449,32 @@ function AdminSeriesPanel() {
                 <textarea
                   className="admin-series-textarea"
                   value={createForm.description}
-                  onChange={(e) =>
-                    handleCreateFormChange("description", e.target.value)
-                  }
+                  onChange={(e) => handleCreateFormChange("description", e.target.value)}
                   placeholder="Optional notes for admins."
                   rows={3}
                 />
               </label>
             </div>
 
-            {!canCreateSeries && (
+            {!canCreateSeries ? (
               <p className="admin-loading-text">
                 You already own {MAX_OWNED_SERIES} series. Delete one before creating another.
               </p>
-            )}
+            ) : null}
           </form>
 
-          {loading && <p className="admin-loading-text">Loading series...</p>}
+          {loading ? <p className="admin-loading-text">Loading series...</p> : null}
 
-          {!loading && seriesList.length === 0 && (
+          {!loading && seriesList.length === 0 ? (
             <div className="admin-empty-state">
               <p className="admin-empty-title">No owned series found</p>
               <p className="admin-empty-text">
                 Create your first series to begin managing progression.
               </p>
             </div>
-          )}
+          ) : null}
 
-          {!loading && seriesList.length > 0 && (
+          {!loading && seriesList.length > 0 ? (
             <div className="admin-series-list">
               {seriesList.map((series) => {
                 const isBusy = actionLoadingId === series.id;
@@ -479,9 +487,9 @@ function AdminSeriesPanel() {
                         <div className="admin-series-title-row">
                           <span className="admin-series-name">{series.name}</span>
 
-                          {series.is_current && (
+                          {series.is_current ? (
                             <span className="admin-series-current-pill">GLOBAL ACTIVE</span>
-                          )}
+                          ) : null}
 
                           <span
                             className={`admin-series-status-pill ${getStatusClassName(
@@ -500,7 +508,9 @@ function AdminSeriesPanel() {
 
                     <div className="admin-series-meta">
                       <span>Phase: {series.current_phase || "lobby"}</span>
-                      <span>Players: {series.player_count ?? "—"} / {series.max_players ?? "—"}</span>
+                      <span>
+                        Players: {series.player_count ?? "—"} / {series.max_players ?? "—"}
+                      </span>
                       <span>Created: {formatDate(series.created_at)}</span>
                       <span>Started: {formatDate(series.started_at)}</span>
                       <span>Paused: {formatDate(series.paused_at)}</span>
@@ -557,7 +567,7 @@ function AdminSeriesPanel() {
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </section>

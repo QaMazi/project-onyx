@@ -43,6 +43,46 @@ export default function AdminProfilesPanel() {
 
   const isAdminPlus = user?.canAccessHeaderAdmin;
 
+  async function getAccessToken() {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      throw error;
+    }
+
+    const token = session?.access_token;
+
+    if (!token) {
+      throw new Error("No active session token found.");
+    }
+
+    return token;
+  }
+
+  async function invokeAuthedFunction(functionName, body) {
+    const token = await getAccessToken();
+
+    const { data, error } = await supabase.functions.invoke(functionName, {
+      body,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  }
+
   async function loadProfiles() {
     if (!isAdminPlus) return;
 
@@ -121,12 +161,7 @@ export default function AdminProfilesPanel() {
         throw new Error("Username, internal email, and password are required.");
       }
 
-      const { data, error } = await supabase.functions.invoke("admin-create-profile", {
-        body: payload,
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await invokeAuthedFunction("admin-create-profile", payload);
 
       setCreateForm(emptyForm());
       setStatusText("Profile created successfully.");
@@ -159,12 +194,7 @@ export default function AdminProfilesPanel() {
         throw new Error("Username and internal email are required.");
       }
 
-      const { data, error } = await supabase.functions.invoke("admin-update-profile", {
-        body: payload,
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await invokeAuthedFunction("admin-update-profile", payload);
 
       setStatusText("Profile updated successfully.");
       setEditingId(null);

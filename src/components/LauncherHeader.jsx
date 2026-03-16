@@ -5,12 +5,7 @@ import { supabase } from "../lib/supabase";
 import "./LauncherHeader.css";
 
 function resolveDisplayedRole(user) {
-  return (
-    user?.effectiveRole ||
-    user?.role ||
-    user?.globalRole ||
-    "Duelist"
-  );
+  return user?.effectiveRole || user?.role || user?.globalRole || "Duelist";
 }
 
 function resolveAvatar(user) {
@@ -90,7 +85,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
   }
 
   return (
-    <div className="launcher-header">
+    <header className="launcher-header">
       <div className="launcher-header-left">
         <div className="launcher-header-brand-group">
           <img
@@ -171,7 +166,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }
 

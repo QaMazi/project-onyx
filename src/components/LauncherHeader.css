@@ -1,19 +1,18 @@
 .launcher-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   z-index: 25;
 
-  height: 60px;
+  min-height: 60px;
   padding: 0 22px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
 
   background: rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 
   border-bottom: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent);
 
@@ -26,21 +25,25 @@
 .launcher-header-right {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
-/* brand area */
+.launcher-header-right {
+  position: relative;
+  justify-content: flex-end;
+}
 
 .launcher-header-brand-group {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .launcher-header-logo {
   height: 32px;
   width: 32px;
   object-fit: contain;
-
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 
@@ -55,24 +58,23 @@
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.14em;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
 }
-
-/* profile button */
 
 .launcher-header-profile-wrap {
   position: relative;
 }
 
 .launcher-header-profile {
-  height: 42px;
+  min-height: 42px;
   padding: 0 12px 0 6px;
 
   display: flex;
   align-items: center;
   gap: 10px;
 
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent);
   border-radius: 999px;
 
@@ -87,18 +89,13 @@
 }
 
 .launcher-header-profile:hover {
-  background: rgba(255,255,255,0.08);
-
+  background: rgba(255, 255, 255, 0.08);
   border-color: var(--theme-accent);
-
   box-shadow:
     0 0 10px color-mix(in srgb, var(--theme-accent) 40%, transparent),
     0 0 20px color-mix(in srgb, var(--theme-accent) 25%, transparent);
-
   transform: translateY(-1px);
 }
-
-/* avatar */
 
 .launcher-header-avatar {
   width: 30px;
@@ -123,17 +120,17 @@
   flex-shrink: 0;
 }
 
-.launcher-header-avatar img {
+.launcher-header-avatar img,
+.launcher-header-avatar-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* username */
-
 .launcher-header-usertext {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .launcher-header-username {
@@ -141,16 +138,17 @@
   font-weight: 700;
   color: white;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
-
-/* caret */
 
 .launcher-header-caret {
   font-size: 12px;
-  color: rgba(255,255,255,0.72);
+  color: rgba(255, 255, 255, 0.72);
+  flex-shrink: 0;
 }
-
-/* role badges */
 
 .launcher-header-role {
   min-width: 74px;
@@ -163,18 +161,19 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .role-applicant {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.82);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .role-duelist {
-  background: rgba(88,101,242,0.18);
+  background: rgba(88, 101, 242, 0.18);
   color: #a7b5ff;
-  border: 1px solid rgba(88,101,242,0.35);
+  border: 1px solid rgba(88, 101, 242, 0.35);
 }
 
 .role-admin {
@@ -194,11 +193,14 @@
 
   border: 1px solid color-mix(in srgb, var(--theme-accent) 70%, white);
 
-  box-shadow:
-    0 0 12px color-mix(in srgb, var(--theme-accent) 40%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 40%, transparent);
 }
 
-/* dropdown menu */
+.role-blocked {
+  background: rgba(255, 96, 96, 0.14);
+  color: #ffb3b3;
+  border: 1px solid rgba(255, 96, 96, 0.32);
+}
 
 .launcher-header-menu {
   position: absolute;
@@ -214,14 +216,15 @@
   flex-direction: column;
   gap: 6px;
 
-  background: rgba(15,15,15,0.94);
+  background: rgba(15, 15, 15, 0.94);
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 
   border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent);
   border-radius: 14px;
 
   box-shadow:
-    0 18px 40px rgba(0,0,0,0.45),
+    0 18px 40px rgba(0, 0, 0, 0.45),
     0 0 18px color-mix(in srgb, var(--theme-accent) 20%, transparent);
 }
 
@@ -233,7 +236,7 @@
   border: none;
   border-radius: 10px;
 
-  color: rgba(255,255,255,0.84);
+  color: rgba(255, 255, 255, 0.84);
   text-align: left;
   font-size: 14px;
   font-weight: 600;
@@ -248,9 +251,33 @@
 
 .launcher-header-menu-item:hover {
   background: color-mix(in srgb, var(--theme-accent) 18%, transparent);
-
   color: white;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+}
 
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+@media (max-width: 760px) {
+  .launcher-header {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .launcher-header-brand {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+  }
+
+  .launcher-header-profile {
+    padding-right: 10px;
+    gap: 8px;
+  }
+
+  .launcher-header-role {
+    min-width: 64px;
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+
+  .launcher-header-username {
+    max-width: 100px;
+  }
 }

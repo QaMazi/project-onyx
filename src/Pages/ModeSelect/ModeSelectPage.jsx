@@ -1,9 +1,22 @@
-import { useEffect, useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
-import { supabase } from "../../lib/supabase";
 import { useUser } from "../../context/UserContext";
+import { supabase } from "../../lib/supabase";
 import "./ModeSelectPage.css";
+
+function resolveRole(user) {
+  return user?.effectiveRole || user?.globalRole || user?.role || "Applicant";
+}
+
+function canEnterProgression(user) {
+  const role = resolveRole(user);
+  return role === "Admin+" || role === "Admin" || role === "Duelist";
+}
+
+function isBlockedUser(user) {
+  return user?.isBlocked || resolveRole(user) === "Blocked";
+}
 
 function ModeSelectPage() {
   const navigate = useNavigate();
@@ -17,7 +30,12 @@ function ModeSelectPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
 
     async function loadSeriesState() {
       try {
@@ -27,7 +45,13 @@ function ModeSelectPage() {
           .eq("is_current", true)
           .maybeSingle();
 
+        if (!isMounted) return;
+
         if (!series) {
+          setActiveSeries(null);
+          setPlayerCount(0);
+          setMaxPlayers(6);
+          setHasPendingApplication(false);
           setLoading(false);
           return;
         }
@@ -35,42 +59,49 @@ function ModeSelectPage() {
         setActiveSeries(series);
         setMaxPlayers(series.max_players || 6);
 
-        const { count } = await supabase
-          .from("series_players")
-          .select("*", { count: "exact", head: true })
-          .eq("series_id", series.id);
+        const [{ count }, { data: pending }] = await Promise.all([
+          supabase
+            .from("series_players")
+            .select("*", { count: "exact", head: true })
+            .eq("series_id", series.id),
+          supabase
+            .from("series_applications")
+            .select("id")
+            .eq("series_id", series.id)
+            .eq("user_id", user.id)
+            .eq("status", "pending")
+            .maybeSingle(),
+        ]);
+
+        if (!isMounted) return;
 
         setPlayerCount(count || 0);
-
-        const { data: pending } = await supabase
-          .from("series_applications")
-          .select("id")
-          .eq("series_id", series.id)
-          .eq("user_id", user.id)
-          .eq("status", "pending")
-          .maybeSingle();
-
         setHasPendingApplication(!!pending);
-      } catch (err) {
-        console.error("Series state load error:", err);
+      } catch (error) {
+        console.error("Series state load error:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-
-      setLoading(false);
     }
 
     loadSeriesState();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
+
+  const role = useMemo(() => resolveRole(user), [user]);
+  const authorized = useMemo(() => canEnterProgression(user), [user]);
+  const seriesFull = playerCount >= maxPlayers;
 
   if (authLoading || loading) return null;
 
-  if (!user || user.role === "Blocked") {
+  if (!user || isBlockedUser(user)) {
     return <Navigate to="/" replace />;
   }
-
-  const authorized =
-    user.role === "Admin+" || user.role === "Admin" || user.role === "Duelist";
-
-  const seriesFull = playerCount >= maxPlayers;
 
   let ctaText = "";
   let description =
@@ -93,7 +124,7 @@ function ModeSelectPage() {
   }
 
   async function submitApplication() {
-    if (!activeSeries) return;
+    if (!activeSeries || !user?.id) return;
 
     try {
       await supabase.from("series_applications").insert({
@@ -104,8 +135,8 @@ function ModeSelectPage() {
 
       setHasPendingApplication(true);
       setModalOpen(false);
-    } catch (err) {
-      console.error("Application failed:", err);
+    } catch (error) {
+      console.error("Application failed:", error);
     }
   }
 
@@ -122,93 +153,103 @@ function ModeSelectPage() {
 
   return (
     <LauncherLayout>
-      <div className="launcher-logo-shell mode-logo-shell">
-        <div className="launcher-logo-aura"></div>
+      <div className="mode-select-page">
+        <div className="launcher-logo-shell mode-logo-shell">
+          <div className="launcher-logo-aura"></div>
 
-        <img
-          src="/ui/project_onyx_logo.png"
-          className="launcher-logo mode-logo"
-          alt="Project Onyx"
-        />
-      </div>
-
-      <div className="mode-select-card">
-        <div className="mode-select-header">
-          <h1 className="mode-select-title">Mode Select</h1>
-          <p className="mode-select-subtitle">
-            Choose your Project Onyx experience
-          </p>
+          <img
+            src="/ui/project_onyx_logo.png"
+            className="launcher-logo mode-logo"
+            alt="Project Onyx"
+          />
         </div>
 
-        <div className="mode-grid">
-          <div
-            className={`mode-panel mode-panel-image ${
-              disabled ? "mode-panel-disabled" : "mode-panel-clickable"
-            }`}
-            onClick={!disabled ? handleRankedClick : undefined}
-          >
-            <img
-              src="/ui/progression_mode.png"
-              className="mode-panel-bg"
-              alt="Progression Mode"
-            />
-
-            <div className="mode-panel-overlay"></div>
-
-            <div className="mode-panel-content">
-              <div className="mode-panel-bottom">
-                <h2 className="mode-panel-title">RANKED MODE</h2>
-
-                <p className="mode-panel-description">{description}</p>
-
-                <div className="mode-panel-cta">{ctaText}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mode-panel mode-panel-image mode-panel-locked-card">
-            <img
-              src="/ui/deckgame_mode.png"
-              className="mode-panel-bg"
-              alt="Casual Mode"
-            />
-
-            <div className="mode-panel-overlay"></div>
-
-            <div className="mode-panel-content">
-              <div className="mode-panel-bottom">
-                <h2 className="mode-panel-title">CASUAL MODE</h2>
-
-                <p className="mode-panel-description">
-                  Coming Soon. Available in a future update.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {modalOpen && (
-        <div className="progression-modal" onClick={() => setModalOpen(false)}>
-          <div
-            className="progression-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>Apply to Active Series</h2>
-
-            <p>
-              Submit your request to join the currently active progression
-              series. Approval is required before you can enter ranked mode.
+        <div className="mode-select-card">
+          <div className="mode-select-header">
+            <h1 className="mode-select-title">Mode Select</h1>
+            <p className="mode-select-subtitle">
+              Choose your Project Onyx experience
             </p>
+          </div>
 
-            <div className="progression-modal-actions">
-              <button onClick={submitApplication}>Submit Application</button>
+          <div className="mode-grid">
+            <div
+              className={`mode-panel mode-panel-image ${
+                disabled ? "mode-panel-disabled" : "mode-panel-clickable"
+              }`}
+              onClick={!disabled ? handleRankedClick : undefined}
+              role={!disabled ? "button" : undefined}
+              tabIndex={!disabled ? 0 : undefined}
+              onKeyDown={
+                !disabled
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleRankedClick();
+                      }
+                    }
+                  : undefined
+              }
+            >
+              <img
+                src="/ui/progression_mode.png"
+                className="mode-panel-bg"
+                alt="Progression Mode"
+              />
 
-              <button onClick={() => setModalOpen(false)}>Cancel</button>
+              <div className="mode-panel-overlay"></div>
+
+              <div className="mode-panel-content">
+                <div className="mode-panel-bottom">
+                  <h2 className="mode-panel-title">RANKED MODE</h2>
+                  <p className="mode-panel-description">{description}</p>
+                  <div className="mode-panel-cta">{ctaText}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mode-panel mode-panel-image mode-panel-locked-card">
+              <img
+                src="/ui/deckgame_mode.png"
+                className="mode-panel-bg"
+                alt="Casual Mode"
+              />
+
+              <div className="mode-panel-overlay"></div>
+
+              <div className="mode-panel-content">
+                <div className="mode-panel-bottom">
+                  <h2 className="mode-panel-title">CASUAL MODE</h2>
+                  <p className="mode-panel-description">
+                    Coming Soon. Available in a future update.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
+
+        {modalOpen && (
+          <div className="progression-modal" onClick={() => setModalOpen(false)}>
+            <div
+              className="progression-modal-content"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2>Apply to Active Series</h2>
+
+              <p>
+                Submit your request to join the currently active progression
+                series. Approval is required before you can enter ranked mode.
+              </p>
+
+              <div className="progression-modal-actions">
+                <button onClick={submitApplication}>Submit Application</button>
+                <button onClick={() => setModalOpen(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </LauncherLayout>
   );
 }

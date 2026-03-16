@@ -1,89 +1,3 @@
-.launcher-root {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  background: black;
-}
-
-/* background image */
-
-.launcher-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-
-  width: 100%;
-  height: 100%;
-
-  object-fit: cover;
-  object-position: center center;
-
-  transform: scale(1.02);
-  animation: launcherBackgroundDrift 34s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-/* premium slow zoom + sideways drift */
-
-@keyframes launcherBackgroundDrift {
-  0% {
-    transform: scale(1.02) translate3d(-1.5%, 0, 0);
-  }
-
-  50% {
-    transform: scale(1.05) translate3d(0.5%, 0, 0);
-  }
-
-  100% {
-    transform: scale(1.08) translate3d(1.5%, 0, 0);
-  }
-}
-
-/* gradient overlay */
-
-.launcher-overlay {
-  position: absolute;
-  inset: 0;
-
-  background:
-    radial-gradient(
-      circle at center,
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.74) 65%,
-      rgba(0, 0, 0, 0.9) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(8, 6, 3, 0.18) 0%,
-      rgba(0, 0, 0, 0.08) 32%,
-      rgba(0, 0, 0, 0.28) 100%
-    );
-}
-
-/* center container */
-
-.launcher-center {
-  position: relative;
-  z-index: 2;
-
-  width: 100%;
-  height: calc(100vh - 110px);
-  margin-top: 64px;
-  margin-bottom: 46px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-
-  padding: 20px;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* logo */
-
 .launcher-logo-shell {
   position: relative;
   display: inline-flex;
@@ -100,14 +14,12 @@
   transform: translate(-50%, -50%);
   border-radius: 50%;
   pointer-events: none;
-
   background: radial-gradient(
     circle,
     color-mix(in srgb, var(--theme-accent) 26%, transparent) 0%,
     color-mix(in srgb, var(--theme-accent) 14%, transparent) 38%,
     rgba(0, 0, 0, 0) 72%
   );
-
   filter: blur(34px);
   opacity: 0.8;
   animation: launcherLogoAuraPulse 7.5s ease-in-out infinite;
@@ -140,19 +52,14 @@
     drop-shadow(0 0 28px color-mix(in srgb, var(--theme-accent) 14%, transparent));
 }
 
-/* login panel */
-
 .login-panel {
-  width: min(460px, calc(100vw - 32px));
+  width: min(460px, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 18px;
-
   padding: 32px 30px 28px;
-  box-sizing: border-box;
-
   background:
     linear-gradient(180deg, rgba(20, 20, 20, 0.74), rgba(8, 8, 8, 0.82)),
     radial-gradient(
@@ -160,18 +67,14 @@
       color-mix(in srgb, var(--theme-accent) 12%, transparent) 0%,
       transparent 60%
     );
-
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-
   border: 1px solid rgba(255, 215, 120, 0.16);
   border-radius: 18px;
-
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 0 22px color-mix(in srgb, var(--theme-accent) 8%, transparent);
-
   text-align: center;
 }
 
@@ -214,17 +117,11 @@
 .login-input {
   width: 100%;
   height: 50px;
-  box-sizing: border-box;
-
   padding: 0 14px;
-
-  background:
-    linear-gradient(180deg, rgba(8, 8, 8, 0.94), rgba(16, 16, 16, 0.94));
+  background: linear-gradient(180deg, rgba(8, 8, 8, 0.94), rgba(16, 16, 16, 0.94));
   color: #fff2ca;
-
   border: 1px solid rgba(255, 215, 120, 0.16);
   border-radius: 12px;
-
   outline: none;
   transition:
     border-color 0.16s ease,
@@ -252,31 +149,23 @@
 .login-button {
   width: 100%;
   height: 50px;
-
   margin-top: 2px;
-
   border: 1px solid rgba(255, 215, 120, 0.22);
   border-radius: 12px;
-
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--theme-accent) 62%, #f6d57b) 0%,
-      color-mix(in srgb, var(--theme-accent) 42%, #b6872b) 100%
-    );
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--theme-accent) 62%, #f6d57b) 0%,
+    color-mix(in srgb, var(--theme-accent) 42%, #b6872b) 100%
+  );
   color: #120d04;
-
   font-size: 0.98rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-
   cursor: pointer;
-
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.26),
     0 0 20px color-mix(in srgb, var(--theme-accent) 10%, transparent);
-
   transition:
     transform 0.16s ease,
     filter 0.16s ease,
@@ -310,58 +199,42 @@
   font-weight: 600;
 }
 
-/* legacy launcher card kept in case other areas still reference it */
-
 .login-card {
+  width: 420px;
+  padding: 40px;
+  text-align: center;
   backdrop-filter: blur(12px);
   background: rgba(15, 15, 15, 0.55);
-
   border: 1px solid rgba(255, 215, 120, 0.15);
   border-radius: 14px;
-
-  padding: 40px;
-  width: 420px;
-
-  text-align: center;
 }
-
-/* subtitle */
 
 .site-subtitle {
-  font-size: 16px;
   margin-bottom: 24px;
+  font-size: 16px;
   opacity: 0.85;
 }
-
-/* legacy discord button kept temporarily so old class usage does not break */
 
 .discord-button {
   width: 260px;
   height: 52px;
-
-  background: #5865f2;
-  color: white;
-
-  border: none;
-  border-radius: 8px;
-
-  font-size: 16px;
-  font-weight: 600;
-
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-
+  background: #5865f2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
-
   transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
 }
 
 .discord-button:hover {
   transform: translateY(-1px);
   filter: brightness(1.1);
-
   box-shadow: 0 8px 20px rgba(88, 101, 242, 0.35);
 }
 
@@ -370,8 +243,6 @@
   height: 22px;
 }
 
-/* dev link */
-
 .dev-link {
   margin-top: 16px;
   font-size: 13px;
@@ -379,55 +250,7 @@
   cursor: pointer;
 }
 
-/* launcher footer */
-
-.launcher-footer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-
-  height: 46px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 0 24px;
-
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
-
-  background: rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(255, 215, 120, 0.08);
-}
-
-.launcher-footer-left,
-.launcher-footer-center {
-  opacity: 0.7;
-}
-
-.launcher-footer-right {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
-  font-size: 13px;
-  transition: opacity 0.15s ease, color 0.15s ease;
-}
-
-.launcher-footer-right:hover {
-  opacity: 1;
-  color: white;
-}
-
 @media (max-width: 760px) {
-  .launcher-center {
-    padding: 24px 16px 72px;
-  }
-
   .launcher-logo {
     height: min(240px, 36vw);
   }
@@ -449,10 +272,5 @@
   .login-input,
   .login-button {
     height: 48px;
-  }
-
-  .launcher-footer {
-    padding: 0 14px;
-    font-size: 12px;
   }
 }

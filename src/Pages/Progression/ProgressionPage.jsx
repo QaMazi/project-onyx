@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
@@ -7,11 +8,13 @@ import ProgressionSeriesMenuPanel from "./components/ProgressionSeriesMenuPanel"
 import ProgressionAdminMenuPanel from "./components/ProgressionAdminMenuPanel";
 import ProgressionOnlinePlayersPanel from "./components/ProgressionOnlinePlayersPanel";
 import ProgressionScoreboardPanel from "./components/ProgressionScoreboardPanel";
+import ProgressionNotesModal from "./components/ProgressionNotesModal";
 
 import "./ProgressionPage.css";
 
 function ProgressionPage() {
   const { user, authLoading } = useUser();
+  const [notesOpen, setNotesOpen] = useState(false);
 
   if (authLoading) return null;
 
@@ -36,14 +39,6 @@ function ProgressionPage() {
   return (
     <LauncherLayout>
       <div className="progression-root">
-        <div className="progression-hero">
-          <img
-            src="/ui/progression_logo.png"
-            alt="Progression Series"
-            className="progression-hero-logo"
-          />
-        </div>
-
         <div
           className={`progression-dashboard ${
             isSeriesAdmin
@@ -52,7 +47,7 @@ function ProgressionPage() {
           }`}
         >
           <div className="progression-area progression-area-player">
-            <ProgressionPlayerMenuPanel />
+            <ProgressionPlayerMenuPanel onOpenNotes={() => setNotesOpen(true)} />
           </div>
 
           {isSeriesAdmin ? (
@@ -74,6 +69,11 @@ function ProgressionPage() {
           </div>
         </div>
       </div>
+
+      <ProgressionNotesModal
+        isOpen={notesOpen}
+        onClose={() => setNotesOpen(false)}
+      />
     </LauncherLayout>
   );
 }

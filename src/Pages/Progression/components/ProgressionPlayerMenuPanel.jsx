@@ -2,14 +2,14 @@ import { useNavigate } from "react-router-dom";
 import ProgressionPanelShell from "./ProgressionPanelShell";
 
 const PLAYER_MENU_ITEMS = [
-  { label: "Binder" },
-  { label: "Deck Builder" },
-  { label: "Store" },
-  { label: "Inventory" },
-  { label: "Trade" },
-  { label: "Container Opener" },
-  { label: "Notes" },
   { label: "Ready Up", primary: true },
+  { label: "Store" },
+  { label: "Deck Builder" },
+  { label: "Trade" },
+  { label: "Binder" },
+  { label: "Notes" },
+  { label: "Inventory" },
+  { label: "Container Opener" },
 ];
 
 function ProgressionPlayerMenuPanel({ onOpenNotes }) {
@@ -65,7 +65,7 @@ function ProgressionPlayerMenuPanel({ onOpenNotes }) {
       meta={<span>{PLAYER_MENU_ITEMS.length} Actions</span>}
       className="progression-panel-fill"
     >
-      <div className="progression-action-grid progression-action-grid-player">
+      <div className="progression-action-grid progression-player-menu-grid">
         {PLAYER_MENU_ITEMS.map((item) => (
           <button
             key={item.label}

@@ -6,7 +6,7 @@ import ProfileModal from "./ProfileModal";
 import { useTheme } from "../context/ThemeContext";
 import "./LauncherLayout.css";
 
-function LauncherLayout({ children }) {
+function LauncherLayout({ children, showHeader = true }) {
   const [isPatchModalOpen, setIsPatchModalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -34,10 +34,14 @@ function LauncherLayout({ children }) {
       </div>
 
       <div className="launcher-shell__chrome">
-        <LauncherHeader
-          openSettings={() => setSettingsOpen(true)}
-          openProfile={() => setProfileOpen(true)}
-        />
+        {showHeader ? (
+          <LauncherHeader
+            openSettings={() => setSettingsOpen(true)}
+            openProfile={() => setProfileOpen(true)}
+          />
+        ) : (
+          <div className="launcher-shell__header-spacer" aria-hidden="true" />
+        )}
 
         <main className="launcher-shell__main">
           <div className="launcher-shell__content">{children}</div>
@@ -68,15 +72,19 @@ function LauncherLayout({ children }) {
         onClose={() => setIsPatchModalOpen(false)}
       />
 
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+      {showHeader ? (
+        <>
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
 
-      <ProfileModal
-        open={profileOpen}
-        onClose={() => setProfileOpen(false)}
-      />
+          <ProfileModal
+            open={profileOpen}
+            onClose={() => setProfileOpen(false)}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

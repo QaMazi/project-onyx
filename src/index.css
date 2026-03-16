@@ -13,6 +13,34 @@
   --onyx-shell-padding-x: 20px;
   --onyx-shell-padding-y: 20px;
   --onyx-shell-footer-height: 46px;
+
+  /* Shared launcher / panel tokens.
+     Additive only for now — do not apply broadly until page-by-page migration is approved. */
+  --onyx-panel-radius-sm: 12px;
+  --onyx-panel-radius-md: 14px;
+  --onyx-panel-radius-lg: 16px;
+
+  --onyx-panel-bg: rgba(15, 15, 15, 0.55);
+  --onyx-panel-bg-strong: rgba(15, 15, 15, 0.72);
+  --onyx-panel-bg-soft: rgba(255, 255, 255, 0.04);
+
+  --onyx-panel-border: var(--onyx-accent-border, rgba(255, 215, 120, 0.15));
+  --onyx-panel-border-strong: var(--onyx-accent-border-strong, rgba(255, 215, 120, 0.22));
+  --onyx-panel-border-hover: var(--onyx-accent-border-strong, rgba(255, 215, 120, 0.42));
+
+  --onyx-panel-blur: 12px;
+  --onyx-panel-blur-strong: 14px;
+
+  --onyx-panel-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --onyx-panel-shadow-hover:
+    0 14px 38px rgba(0, 0, 0, 0.68),
+    0 0 28px var(--onyx-accent-glow, rgba(255, 215, 120, 0.25));
+
+  --onyx-panel-accent-border: var(--onyx-accent-border-strong, rgba(255, 215, 120, 0.35));
+  --onyx-panel-accent-soft: var(--onyx-accent-soft, rgba(255, 215, 120, 0.12));
+  --onyx-panel-accent-glow: var(--onyx-accent-glow, rgba(255, 215, 120, 0.25));
 }
 
 html {

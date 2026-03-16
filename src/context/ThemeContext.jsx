@@ -32,6 +32,65 @@ function hexToRgb(hex) {
   };
 }
 
+function setThemeCssVariables(root, theme) {
+  const accentRgb = hexToRgb(theme.accent);
+  const accent2Rgb = hexToRgb(theme.accent2);
+  const accent3Rgb = hexToRgb(theme.accent3);
+
+  root.style.setProperty("--theme-accent", theme.accent);
+  root.style.setProperty("--theme-accent-2", theme.accent2);
+  root.style.setProperty("--theme-accent-3", theme.accent3);
+
+  root.style.setProperty(
+    "--theme-accent-rgb",
+    `${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}`
+  );
+  root.style.setProperty(
+    "--theme-accent-2-rgb",
+    `${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}`
+  );
+  root.style.setProperty(
+    "--theme-accent-3-rgb",
+    `${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}`
+  );
+
+  /* Shared launcher/panel theme variables.
+     These are additive only and let future pages inherit the same accent logic
+     without each page inventing its own theme math. */
+  root.style.setProperty(
+    "--onyx-accent-soft-rgb",
+    `${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}`
+  );
+  root.style.setProperty(
+    "--onyx-accent-soft",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.12)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-soft-2",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.18)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-border",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.28)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-border-strong",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.42)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-glow-soft",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.16)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-glow",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.26)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-glow-strong",
+    `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.4)`
+  );
+}
+
 export function ThemeProvider({ children }) {
   const [selectedThemeId, setSelectedThemeId] = useState(getInitialThemeId);
 
@@ -47,26 +106,7 @@ export function ThemeProvider({ children }) {
     if (!currentTheme) return;
 
     const root = document.documentElement;
-    const accentRgb = hexToRgb(currentTheme.accent);
-    const accent2Rgb = hexToRgb(currentTheme.accent2);
-    const accent3Rgb = hexToRgb(currentTheme.accent3);
-
-    root.style.setProperty("--theme-accent", currentTheme.accent);
-    root.style.setProperty("--theme-accent-2", currentTheme.accent2);
-    root.style.setProperty("--theme-accent-3", currentTheme.accent3);
-
-    root.style.setProperty(
-      "--theme-accent-rgb",
-      `${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}`
-    );
-    root.style.setProperty(
-      "--theme-accent-2-rgb",
-      `${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}`
-    );
-    root.style.setProperty(
-      "--theme-accent-3-rgb",
-      `${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}`
-    );
+    setThemeCssVariables(root, currentTheme);
   }, [currentTheme]);
 
   const value = useMemo(

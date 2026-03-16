@@ -25,8 +25,10 @@ import "./App.css";
 
 function LoadingScreen() {
   return (
-    <LauncherLayout>
-      <div style={{ color: "white" }}>Loading...</div>
+    <LauncherLayout showHeader={false}>
+      <div className="loading-screen-page">
+        <p className="loading-screen-text">Loading...</p>
+      </div>
     </LauncherLayout>
   );
 }
@@ -53,50 +55,54 @@ function LoginSplash() {
   }
 
   return (
-    <LauncherLayout>
-      <div className="launcher-logo-shell">
-        <div className="launcher-logo-aura"></div>
-        <img
-          src="/ui/project_onyx_logo.png"
-          className="launcher-logo"
-          alt="Project Onyx"
-        />
-      </div>
+    <LauncherLayout showHeader={false}>
+      <div className="login-splash-page">
+        <div className="login-stage">
+          <div className="launcher-logo-shell login-logo-shell">
+            <div className="launcher-logo-aura"></div>
+            <img
+              src="/ui/project_onyx_logo.png"
+              className="launcher-logo"
+              alt="Project Onyx"
+            />
+          </div>
 
-      <div className="login-panel">
-        <h2 className="login-panel-title">Project Onyx Login</h2>
+          <div className="login-panel">
+            <h2 className="login-panel-title">Project Onyx Login</h2>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            className="login-input"
-            placeholder="Username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            disabled={authLoading || submitting}
-          />
+            <form className="login-form" onSubmit={handleSubmit}>
+              <input
+                type="text"
+                className="login-input"
+                placeholder="Username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                autoComplete="username"
+                disabled={authLoading || submitting}
+              />
 
-          <input
-            type="password"
-            className="login-input"
-            placeholder="Password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            disabled={authLoading || submitting}
-          />
+              <input
+                type="password"
+                className="login-input"
+                placeholder="Password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                disabled={authLoading || submitting}
+              />
 
-          <button
-            className="login-button"
-            type="submit"
-            disabled={authLoading || submitting}
-          >
-            {submitting ? "Logging in..." : "Login"}
-          </button>
-        </form>
+              <button
+                className="login-button"
+                type="submit"
+                disabled={authLoading || submitting}
+              >
+                {submitting ? "Logging in..." : "Login"}
+              </button>
+            </form>
 
-        {errorText ? <p className="login-error">{errorText}</p> : null}
+            {errorText ? <p className="login-error">{errorText}</p> : null}
+          </div>
+        </div>
       </div>
     </LauncherLayout>
   );

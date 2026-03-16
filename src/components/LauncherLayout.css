@@ -2,7 +2,8 @@
   --launcher-shell-gap: var(--onyx-shell-padding-y);
   --launcher-shell-padding-x: var(--onyx-shell-padding-x);
   --launcher-content-max-width: var(--onyx-stage-max-width);
-  --launcher-footer-height: var(--onyx-shell-footer-height);
+  --launcher-footer-height: 56px;
+  --launcher-header-height: 60px;
 
   position: relative;
   min-height: 100vh;
@@ -73,6 +74,11 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
+.launcher-shell__header-spacer {
+  min-height: var(--launcher-header-height);
+  height: var(--launcher-header-height);
+}
+
 .launcher-shell__main {
   min-height: 0;
   overflow-x: hidden;
@@ -97,10 +103,16 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
-  padding: 10px 20px;
+  padding: 8px 20px;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+.launcher-shell__footer-left,
+.launcher-shell__footer-center,
+.launcher-shell__footer-button {
+  align-self: center;
 }
 
 .launcher-shell__footer-left {

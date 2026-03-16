@@ -1,21 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
 import "./ModeSelectPage.css";
 
-function resolveRole(user) {
-  return user?.effectiveRole || user?.globalRole || user?.role || "Applicant";
-}
-
-function canEnterProgression(user) {
-  const role = resolveRole(user);
-  return role === "Admin+" || role === "Admin" || role === "Duelist";
-}
-
 function isBlockedUser(user) {
-  return user?.isBlocked || resolveRole(user) === "Blocked";
+  return user?.isBlocked || user?.role === "Blocked" || user?.globalRole === "Blocked";
 }
 
 function ModeSelectPage() {
@@ -23,62 +14,29 @@ function ModeSelectPage() {
   const { user, authLoading } = useUser();
 
   const [activeSeries, setActiveSeries] = useState(null);
-  const [playerCount, setPlayerCount] = useState(0);
-  const [maxPlayers, setMaxPlayers] = useState(6);
-  const [hasPendingApplication, setHasPendingApplication] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
     let isMounted = true;
 
     async function loadSeriesState() {
       try {
-        const { data: series } = await supabase
+        const { data: series, error } = await supabase
           .from("game_series")
           .select("id, name, max_players")
           .eq("is_current", true)
           .maybeSingle();
 
+        if (error) throw error;
         if (!isMounted) return;
 
-        if (!series) {
-          setActiveSeries(null);
-          setPlayerCount(0);
-          setMaxPlayers(6);
-          setHasPendingApplication(false);
-          setLoading(false);
-          return;
-        }
-
-        setActiveSeries(series);
-        setMaxPlayers(series.max_players || 6);
-
-        const [{ count }, { data: pending }] = await Promise.all([
-          supabase
-            .from("series_players")
-            .select("*", { count: "exact", head: true })
-            .eq("series_id", series.id),
-          supabase
-            .from("series_applications")
-            .select("id")
-            .eq("series_id", series.id)
-            .eq("user_id", user.id)
-            .eq("status", "pending")
-            .maybeSingle(),
-        ]);
-
-        if (!isMounted) return;
-
-        setPlayerCount(count || 0);
-        setHasPendingApplication(!!pending);
+        setActiveSeries(series || null);
       } catch (error) {
         console.error("Series state load error:", error);
+        if (isMounted) {
+          setActiveSeries(null);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -91,11 +49,7 @@ function ModeSelectPage() {
     return () => {
       isMounted = false;
     };
-  }, [user]);
-
-  const role = useMemo(() => resolveRole(user), [user]);
-  const authorized = useMemo(() => canEnterProgression(user), [user]);
-  const seriesFull = playerCount >= maxPlayers;
+  }, []);
 
   if (authLoading || loading) return null;
 
@@ -103,52 +57,35 @@ function ModeSelectPage() {
     return <Navigate to="/" replace />;
   }
 
+  const canEnterProgression = Boolean(user?.canAccessProgression);
+  const currentSeriesName = activeSeries?.name || null;
+
   let ctaText = "";
-  let description =
-    "A progression series that rewards smart deck building and match wins.";
-  let disabled = false;
+  let description = "";
+  let modalTitle = "";
+  let modalMessage = "";
 
-  if (authorized) {
+  if (canEnterProgression) {
     ctaText = "Enter Progression";
-  } else if (seriesFull) {
-    ctaText = "Series Full";
-    description = "Applications are unavailable until a player slot opens.";
-    disabled = true;
-  } else if (hasPendingApplication) {
-    ctaText = "Application Pending";
-    description = "Your request is awaiting Admin+ review.";
-    disabled = true;
+    description = currentSeriesName
+      ? `Your current role grants Progression access. Active series: ${currentSeriesName}.`
+      : "Your current role grants Progression access. No globally active series is currently set.";
   } else {
-    ctaText = "Apply to Active Series";
-    description = "Submit an application to join the current progression series.";
-  }
-
-  async function submitApplication() {
-    if (!activeSeries || !user?.id) return;
-
-    try {
-      await supabase.from("series_applications").insert({
-        series_id: activeSeries.id,
-        user_id: user.id,
-        status: "pending",
-      });
-
-      setHasPendingApplication(true);
-      setModalOpen(false);
-    } catch (error) {
-      console.error("Application failed:", error);
-    }
+    ctaText = "Progression Locked";
+    description =
+      "This account is currently set to Player. Admin+ can promote it to Duelist or Admin from the Profiles panel.";
+    modalTitle = "Progression Locked";
+    modalMessage =
+      "This account is set to Player. Only Duelist, Admin, or Admin+ can access Progression Mode.";
   }
 
   function handleRankedClick() {
-    if (authorized) {
+    if (canEnterProgression) {
       navigate("/mode/progression");
       return;
     }
 
-    if (!seriesFull && !hasPendingApplication) {
-      setModalOpen(true);
-    }
+    setInfoModalOpen(true);
   }
 
   return (
@@ -167,29 +104,23 @@ function ModeSelectPage() {
         <div className="mode-select-card">
           <div className="mode-select-header">
             <h1 className="mode-select-title">Mode Select</h1>
-            <p className="mode-select-subtitle">
-              Choose your Project Onyx experience
-            </p>
+            <p className="mode-select-subtitle">Choose your Project Onyx experience</p>
           </div>
 
           <div className="mode-grid">
             <div
               className={`mode-panel mode-panel-image ${
-                disabled ? "mode-panel-disabled" : "mode-panel-clickable"
+                canEnterProgression ? "mode-panel-clickable" : "mode-panel-disabled"
               }`}
-              onClick={!disabled ? handleRankedClick : undefined}
-              role={!disabled ? "button" : undefined}
-              tabIndex={!disabled ? 0 : undefined}
-              onKeyDown={
-                !disabled
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        handleRankedClick();
-                      }
-                    }
-                  : undefined
-              }
+              onClick={handleRankedClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleRankedClick();
+                }
+              }}
             >
               <img
                 src="/ui/progression_mode.png"
@@ -229,22 +160,16 @@ function ModeSelectPage() {
           </div>
         </div>
 
-        {modalOpen && (
-          <div className="progression-modal" onClick={() => setModalOpen(false)}>
+        {infoModalOpen && (
+          <div className="progression-modal" onClick={() => setInfoModalOpen(false)}>
             <div
               className="progression-modal-content"
               onClick={(event) => event.stopPropagation()}
             >
-              <h2>Apply to Active Series</h2>
-
-              <p>
-                Submit your request to join the currently active progression
-                series. Approval is required before you can enter ranked mode.
-              </p>
-
+              <h2>{modalTitle}</h2>
+              <p>{modalMessage}</p>
               <div className="progression-modal-actions">
-                <button onClick={submitApplication}>Submit Application</button>
-                <button onClick={() => setModalOpen(false)}>Cancel</button>
+                <button onClick={() => setInfoModalOpen(false)}>Close</button>
               </div>
             </div>
           </div>

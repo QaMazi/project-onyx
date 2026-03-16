@@ -20,15 +20,15 @@ function LauncherLayout({ children, showHeader = true }) {
         alt="background"
       />
 
-      <div className="launcher-shell__overlay" aria-hidden="true"></div>
+      <div className="launcher-shell__overlay" aria-hidden="true" />
 
       <div className="launcher-shell__atmosphere" aria-hidden="true">
-        <div className="fog-layer fog-1"></div>
-        <div className="fog-layer fog-2"></div>
+        <div className="fog-layer fog-1" />
+        <div className="fog-layer fog-2" />
 
         <div className="particles">
           {Array.from({ length: 90 }).map((_, i) => (
-            <span key={i}></span>
+            <span key={i} />
           ))}
         </div>
       </div>
@@ -44,7 +44,11 @@ function LauncherLayout({ children, showHeader = true }) {
         )}
 
         <main className="launcher-shell__main">
-          <div className="launcher-shell__content">{children}</div>
+          <div className="launcher-shell__viewport">
+            <div className="launcher-shell__stage">
+              <div className="launcher-shell__content">{children}</div>
+            </div>
+          </div>
         </main>
 
         <div

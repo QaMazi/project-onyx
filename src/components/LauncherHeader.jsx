@@ -1,11 +1,22 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
-import { supabase } from "../lib/supabase";
 import "./LauncherHeader.css";
 
-function resolveDisplayedRole(user) {
-  return user?.effectiveRole || user?.role || user?.globalRole || "Duelist";
+function normalizeDisplayedRole(user) {
+  const rawRole = String(
+    user?.globalRole || user?.effectiveRole || user?.role || "Player"
+  )
+    .trim()
+    .toLowerCase();
+
+  if (rawRole === "admin+" || rawRole === "adminplus") return "Admin+";
+  if (rawRole === "admin") return "Admin";
+  if (rawRole === "duelist" || rawRole === "duelist+" || rawRole === "duelistplus") {
+    return "Duelist";
+  }
+  if (rawRole === "blocked") return "Blocked";
+  return "Player";
 }
 
 function resolveAvatar(user) {
@@ -18,21 +29,16 @@ function resolveUsername(user) {
 
 function LauncherHeader({ openSettings, openProfile = () => {} }) {
   const navigate = useNavigate();
-  const { user, reloadUser } = useUser();
+  const { user, reloadUser, signOut } = useUser();
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;
 
-  const displayedRole = resolveDisplayedRole(user);
+  const displayedRole = normalizeDisplayedRole(user);
   const displayedAvatar = resolveAvatar(user);
   const displayedUsername = resolveUsername(user);
-
-  const hasGlobalAdminAccess =
-    user?.canAccessHeaderAdmin ||
-    user?.globalRole === "Admin+" ||
-    displayedRole === "Admin+";
-
-  const avatarInitial = displayedUsername.charAt(0).toUpperCase() || "G";
+  const avatarInitial = displayedUsername.charAt(0).toUpperCase() || "P";
+  const hasHeaderAdminAccess = Boolean(user?.canAccessHeaderAdmin);
 
   const roleClass = useMemo(() => {
     switch (displayedRole) {
@@ -41,11 +47,10 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
       case "Admin":
         return "launcher-header-role role-admin";
       case "Duelist":
-      case "Duelist+":
         return "launcher-header-role role-duelist";
       case "Blocked":
         return "launcher-header-role role-blocked";
-      case "Applicant":
+      case "Player":
       default:
         return "launcher-header-role role-applicant";
     }
@@ -54,10 +59,15 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
   async function handleLogout() {
     try {
       setIsOpen(false);
-      await supabase.auth.signOut();
+
+      if (typeof signOut === "function") {
+        await signOut();
+      }
+
       if (typeof reloadUser === "function") {
         await reloadUser();
       }
+
       window.location.href = "/";
     } catch (error) {
       console.error("Logout crashed:", error);
@@ -145,7 +155,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
                 Settings
               </button>
 
-              {hasGlobalAdminAccess && (
+              {hasHeaderAdminAccess && (
                 <button
                   className="launcher-header-menu-item"
                   onClick={handleOpenAdminPanel}

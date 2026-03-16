@@ -1,13 +1,16 @@
 .launcher-shell {
-  --launcher-shell-gap: var(--onyx-shell-padding-y);
-  --launcher-shell-padding-x: var(--onyx-shell-padding-x);
-  --launcher-content-max-width: var(--onyx-stage-max-width);
+  --launcher-shell-gap: 16px;
+  --launcher-shell-padding-x: 20px;
+  --launcher-shell-padding-y: 18px;
   --launcher-footer-height: 56px;
   --launcher-header-height: 60px;
+  --launcher-content-max-width: 1560px;
+  --launcher-content-max-height: 780px;
 
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   isolation: isolate;
   background: #000;
@@ -46,8 +49,8 @@
   background:
     radial-gradient(
       circle at center,
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.74) 65%,
+      rgba(0, 0, 0, 0.28) 0%,
+      rgba(0, 0, 0, 0.72) 62%,
       rgba(0, 0, 0, 0.9) 100%
     ),
     linear-gradient(
@@ -68,10 +71,11 @@
 .launcher-shell__chrome {
   position: relative;
   z-index: 2;
-  min-height: 100vh;
-  min-height: 100dvh;
+  width: 100%;
+  height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: var(--launcher-header-height) minmax(0, 1fr) var(--launcher-footer-height);
+  overflow: hidden;
 }
 
 .launcher-shell__header-spacer {
@@ -81,20 +85,31 @@
 
 .launcher-shell__main {
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  padding: var(--launcher-shell-gap) var(--launcher-shell-padding-x);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--launcher-shell-padding-y) var(--launcher-shell-padding-x);
 }
 
 .launcher-shell__content {
   width: min(100%, var(--launcher-content-max-width));
-  min-height: 100%;
-  height: auto;
+  height: min(
+    calc(100vh - var(--launcher-header-height) - var(--launcher-footer-height) - (var(--launcher-shell-padding-y) * 2)),
+    calc(100dvh - var(--launcher-header-height) - var(--launcher-footer-height) - (var(--launcher-shell-padding-y) * 2)),
+    var(--launcher-content-max-height)
+  );
+  min-height: 0;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden;
+}
+
+.launcher-shell__content > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .launcher-shell__footer {
@@ -149,6 +164,33 @@
 
 .launcher-shell__footer-button:active {
   transform: translateY(0);
+}
+
+@media (max-width: 1600px) {
+  .launcher-shell {
+    --launcher-shell-padding-x: 16px;
+    --launcher-shell-padding-y: 14px;
+    --launcher-content-max-width: 1460px;
+    --launcher-content-max-height: 760px;
+  }
+}
+
+@media (max-width: 1366px), (max-height: 900px) {
+  .launcher-shell {
+    --launcher-shell-padding-x: 12px;
+    --launcher-shell-padding-y: 12px;
+    --launcher-content-max-width: 1320px;
+    --launcher-content-max-height: 700px;
+  }
+}
+
+@media (max-width: 1100px), (max-height: 760px) {
+  .launcher-shell {
+    --launcher-shell-padding-x: 10px;
+    --launcher-shell-padding-y: 10px;
+    --launcher-content-max-width: 1180px;
+    --launcher-content-max-height: 640px;
+  }
 }
 
 @media (max-width: 900px) {

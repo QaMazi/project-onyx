@@ -13,28 +13,20 @@ const UserContext = createContext(null);
 function normalizeGlobalRole(role) {
   const normalized = String(role || "").trim().toLowerCase();
 
-  if (normalized === "admin+") return "Admin+";
-  if (normalized === "adminplus") return "Admin+";
+  if (normalized === "admin+" || normalized === "adminplus") return "Admin+";
   if (normalized === "admin") return "Admin";
-  return "Duelist";
+  if (normalized === "duelist" || normalized === "duelist+" || normalized === "duelistplus") {
+    return "Duelist";
+  }
+  if (normalized === "blocked") return "Blocked";
+
+  return "Player";
 }
 
-function buildResolvedUser(profile, membership, activeSeriesId) {
-  const globalRole = normalizeGlobalRole(profile?.global_role);
-  const membershipRole = String(membership?.role || "").trim().toLowerCase();
-  const isSeriesAdmin = Boolean(membership?.is_owner) || membershipRole === "admin";
-  const isInActiveSeries = Boolean(membership?.series_id);
-  const isBlocked = !profile;
-
-  let effectiveRole = "Duelist";
-
-  if (globalRole === "Admin+") {
-    effectiveRole = "Admin+";
-  } else if (globalRole === "Admin") {
-    effectiveRole = "Admin";
-  } else if (isInActiveSeries) {
-    effectiveRole = "Duelist+";
-  }
+function buildResolvedUser(profile) {
+  const globalRole = normalizeGlobalRole(profile?.global_role || profile?.role);
+  const isBlocked = globalRole === "Blocked";
+  const effectiveRole = isBlocked ? "Blocked" : globalRole;
 
   return {
     id: profile?.id || null,
@@ -43,24 +35,19 @@ function buildResolvedUser(profile, membership, activeSeriesId) {
     authEmail: profile?.auth_email || "",
     globalRole,
     effectiveRole,
-    activeSeriesId: activeSeriesId || null,
+    role: effectiveRole,
+    activeSeriesId: null,
     isBlocked,
-    isInActiveSeries,
-    seriesMembershipRole: isInActiveSeries
-      ? isSeriesAdmin
-        ? "admin"
-        : membershipRole || "duelist"
-      : null,
-    canAccessHeaderAdmin: globalRole === "Admin+",
-    canAccessGameAdmin:
-      globalRole === "Admin+" ||
-      globalRole === "Admin" ||
-      isSeriesAdmin,
+    isInActiveSeries: false,
+    seriesMembershipRole: null,
+    canAccessHeaderAdmin: !isBlocked && globalRole === "Admin+",
+    canAccessGameAdmin: !isBlocked && (globalRole === "Admin+" || globalRole === "Admin"),
     canAccessProgression:
-      globalRole === "Admin+" ||
-      globalRole === "Admin" ||
-      isInActiveSeries,
-    canAccessDeckGame: true,
+      !isBlocked &&
+      (globalRole === "Admin+" || globalRole === "Admin" || globalRole === "Duelist"),
+    canAccessDeckGame:
+      !isBlocked &&
+      (globalRole === "Admin+" || globalRole === "Admin" || globalRole === "Player"),
   };
 }
 
@@ -73,43 +60,12 @@ export function UserProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, username, avatar_url, auth_email, global_role")
+      .select("id, username, avatar_url, auth_email, global_role, role")
       .eq("id", userId)
       .maybeSingle();
 
     if (error) throw error;
     return data;
-  }, []);
-
-  const fetchActiveSeriesMembership = useCallback(async (userId) => {
-    const { data: activeSeries, error: activeSeriesError } = await supabase
-      .from("game_series")
-      .select("id")
-      .eq("is_current", true)
-      .maybeSingle();
-
-    if (activeSeriesError) throw activeSeriesError;
-
-    if (!activeSeries?.id) {
-      return {
-        activeSeriesId: null,
-        membership: null,
-      };
-    }
-
-    const { data: membership, error: membershipError } = await supabase
-      .from("series_players")
-      .select("series_id, role, is_owner")
-      .eq("series_id", activeSeries.id)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (membershipError) throw membershipError;
-
-    return {
-      activeSeriesId: activeSeries.id,
-      membership: membership || null,
-    };
   }, []);
 
   const loadUser = useCallback(async () => {
@@ -139,12 +95,8 @@ export function UserProvider({ children }) {
         return;
       }
 
-      const { activeSeriesId, membership } = await fetchActiveSeriesMembership(
-        currentSession.user.id
-      );
-
       setProfile(loadedProfile);
-      setUser(buildResolvedUser(loadedProfile, membership, activeSeriesId));
+      setUser(buildResolvedUser(loadedProfile));
     } catch (error) {
       console.error("User load error:", error);
       setProfile(null);
@@ -152,7 +104,7 @@ export function UserProvider({ children }) {
     } finally {
       setAuthLoading(false);
     }
-  }, [fetchProfile, fetchActiveSeriesMembership]);
+  }, [fetchProfile]);
 
   useEffect(() => {
     let mounted = true;
@@ -278,6 +230,7 @@ export function UserProvider({ children }) {
       session,
       profile,
       user,
+      setUser,
       authLoading,
       signInWithUsername,
       signOut,

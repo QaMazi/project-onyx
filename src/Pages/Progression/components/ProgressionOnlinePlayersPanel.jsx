@@ -14,6 +14,10 @@ function getInitial(name) {
   return (name || "?").charAt(0).toUpperCase();
 }
 
+function getPlayerAvatar(player) {
+  return player?.avatar_url || player?.avatar || "";
+}
+
 export default function ProgressionOnlinePlayersPanel() {
   const [seriesData, setSeriesData] = useState(null);
   const [players, setPlayers] = useState([]);
@@ -65,27 +69,6 @@ export default function ProgressionOnlinePlayersPanel() {
 
   useEffect(() => {
     fetchSeriesInfo();
-
-    function handlePhaseChange(event) {
-      const nextPhase = event?.detail?.phase;
-
-      if (!nextPhase) return;
-
-      setSeriesData((prev) =>
-        prev
-          ? {
-              ...prev,
-              current_phase: nextPhase,
-            }
-          : prev
-      );
-    }
-
-    window.addEventListener("onyx-phase-changed", handlePhaseChange);
-
-    return () => {
-      window.removeEventListener("onyx-phase-changed", handlePhaseChange);
-    };
   }, []);
 
   const owner = useMemo(
@@ -109,10 +92,13 @@ export default function ProgressionOnlinePlayersPanel() {
       title="Series Info"
       meta={
         <span>
-          {seriesData ? `${players.length} / ${seriesData.max_players} Players` : "No Active Series"}
+          {seriesData
+            ? `${players.length} / ${seriesData.max_players} Players`
+            : "No Active Series"}
         </span>
       }
       className="progression-panel-fill"
+      bodyClassName="progression-series-panel-body"
     >
       {loading ? (
         <div className="progression-series-empty-state">
@@ -147,13 +133,6 @@ export default function ProgressionOnlinePlayersPanel() {
             </div>
 
             <div className="progression-series-meta-card">
-              <span className="progression-series-meta-label">Phase</span>
-              <span className="progression-series-meta-value">
-                {seriesData.current_phase || "Unknown"}
-              </span>
-            </div>
-
-            <div className="progression-series-meta-card">
               <span className="progression-series-meta-label">Players</span>
               <span className="progression-series-meta-value">
                 {players.length} / {seriesData.max_players}
@@ -168,8 +147,8 @@ export default function ProgressionOnlinePlayersPanel() {
               {owner ? (
                 <div className="progression-series-player-card">
                   <div className="progression-series-player-avatar">
-                    {owner.avatar ? (
-                      <img src={owner.avatar} alt={owner.username} />
+                    {getPlayerAvatar(owner) ? (
+                      <img src={getPlayerAvatar(owner)} alt={owner.username} />
                     ) : (
                       getInitial(owner.username)
                     )}
@@ -210,8 +189,8 @@ export default function ProgressionOnlinePlayersPanel() {
               {duelists.map((player) => (
                 <div className="progression-series-player-card" key={player.user_id}>
                   <div className="progression-series-player-avatar">
-                    {player.avatar ? (
-                      <img src={player.avatar} alt={player.username} />
+                    {getPlayerAvatar(player) ? (
+                      <img src={getPlayerAvatar(player)} alt={player.username} />
                     ) : (
                       getInitial(player.username)
                     )}

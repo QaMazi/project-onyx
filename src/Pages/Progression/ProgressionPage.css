@@ -3,7 +3,7 @@
 ================================ */
 
 .progression-root {
-  width: min(1320px, calc(100vw - 32px));
+  width: min(1380px, calc(100vw - 32px));
   min-height: 0;
   box-sizing: border-box;
 
@@ -37,19 +37,19 @@
 
 
 .progression-dashboard-with-admin {
-  grid-template-columns: minmax(0, 1.15fr) repeat(3, minmax(0, 280px));
-  grid-template-rows: minmax(320px, 360px) minmax(360px, 460px);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) minmax(0, 300px) minmax(0, 280px);
+  grid-template-rows: minmax(300px, 340px) minmax(420px, 540px);
   grid-template-areas:
-    "player player player admin"
-    "series-info future series-menu admin";
+    "player player series-menu admin"
+    "future future series-info admin";
 }
 
 .progression-dashboard-no-admin {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: minmax(320px, 360px) minmax(360px, 460px);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) minmax(0, 300px);
+  grid-template-rows: minmax(300px, 340px) minmax(420px, 540px);
   grid-template-areas:
-    "player player player"
-    "series-info future series-menu";
+    "player player series-menu"
+    "future future series-info";
 }
 
 .progression-area {
@@ -147,11 +147,16 @@
 
 .progression-panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
   flex-shrink: 0;
+}
+
+.progression-panel-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .progression-panel-kicker {
@@ -171,6 +176,9 @@
 }
 
 .progression-panel-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 9px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -180,12 +188,14 @@
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .progression-panel-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  align-items: stretch;
   min-height: 0;
   flex: 1 1 auto;
   overflow-y: auto;
@@ -221,6 +231,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
+  justify-items: stretch;
 }
 
 .progression-action-grid-series {
@@ -234,6 +245,9 @@
 }
 
 .progression-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 40px;
   padding: 9px 12px;
 
@@ -245,7 +259,7 @@
 
   font-size: 13px;
   font-weight: 700;
-  text-align: left;
+  text-align: center;
 
   cursor: default;
 
@@ -355,9 +369,11 @@
 .progression-series-summary-header {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   margin-bottom: 4px;
   min-width: 0;
+  text-align: center;
 }
 
 .progression-series-summary-title {
@@ -379,19 +395,25 @@
 
 .progression-series-meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 10px;
   min-width: 0;
 }
 
 .progression-series-meta-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 12px 13px;
+  min-height: 88px;
   border-radius: 12px;
   min-width: 0;
 
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
 }
 
 .progression-series-meta-label {
@@ -402,6 +424,7 @@
   letter-spacing: 0.08em;
   color: color-mix(in srgb, var(--theme-accent) 78%, white);
   text-transform: uppercase;
+  text-align: center;
 }
 
 .progression-series-meta-value {
@@ -409,6 +432,7 @@
   font-size: 14px;
   font-weight: 700;
   color: white;
+  text-align: center;
 }
 
 .progression-series-section {
@@ -421,6 +445,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   color: white;
+  text-align: center;
 }
 
 .progression-series-player-list {
@@ -565,6 +590,7 @@
 .progression-series-empty-state {
   padding: 12px 2px 0;
   min-width: 0;
+  text-align: center;
 }
 
 .progression-series-empty-state-title {
@@ -998,6 +1024,7 @@
   letter-spacing: 0.06em;
   line-height: 1.15;
   color: white;
+  text-align: center;
   text-transform: uppercase;
   word-break: break-word;
 }
@@ -1291,6 +1318,10 @@
 .progression-root .progression-panel-body {
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.progression-series-panel-body {
+  align-items: stretch;
 }
 
 .progression-scoreboard-block,

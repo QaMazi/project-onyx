@@ -56,12 +56,12 @@ function ProgressionPage() {
             </div>
           ) : null}
 
-          <div className="progression-area progression-area-series-info">
-            <ProgressionOnlinePlayersPanel />
-          </div>
-
           <div className="progression-area progression-area-future">
             <ProgressionScoreboardPanel />
+          </div>
+
+          <div className="progression-area progression-area-series-info">
+            <ProgressionOnlinePlayersPanel />
           </div>
 
           <div className="progression-area progression-area-series-menu">

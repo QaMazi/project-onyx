@@ -2,81 +2,177 @@
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #f5f5f5;
+  color: #f5f7ff;
   background: #000;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
 
-  /* Desktop-client viewport baseline */
+  --theme-accent: #d7a63e;
+  --theme-accent-2: #f4d37a;
+  --theme-accent-3: #6f4c16;
+  --theme-accent-rgb: 215, 166, 62;
+  --theme-accent-2-rgb: 244, 211, 122;
+  --theme-accent-3-rgb: 111, 76, 22;
+
   --onyx-baseline-width: 1920;
   --onyx-baseline-height: 1080;
 
-  /* Shared shell sizing */
   --onyx-shell-padding-x: 20px;
   --onyx-shell-padding-y: 18px;
   --onyx-shell-header-height: 60px;
   --onyx-shell-footer-height: 56px;
   --onyx-shell-gap: 16px;
+  --onyx-page-inline-gutter: clamp(14px, 1.15vw, 24px);
+  --onyx-layout-gap: 20px;
 
-  /* Shared bounded content stage */
   --onyx-stage-max-width: 1560px;
   --onyx-stage-max-height: 780px;
+  --onyx-page-max-primary: 1500px;
+  --onyx-page-max-wide: 1520px;
+  --onyx-page-max-browser: 1460px;
+  --onyx-page-max-reading: 1180px;
 
-  /* Shared launcher / panel tokens */
+  --onyx-store-side-width: 360px;
+  --onyx-trade-side-width: 420px;
+  --onyx-inventory-side-width: 300px;
+  --onyx-browser-filter-width: 305px;
+  --onyx-browser-preview-width: 320px;
+  --onyx-binder-filter-width: 280px;
+  --onyx-binder-preview-width: 320px;
+  --onyx-container-side-width: 320px;
+  --onyx-deck-side-width: 320px;
+
+  --onyx-store-grid-columns: 3;
+  --onyx-inventory-grid-columns: 2;
+  --onyx-summary-grid-columns: 3;
+  --onyx-mode-logo-width: clamp(440px, 42vw, 620px);
+
+  --onyx-login-logo-width: 1940px;
+  --onyx-login-logo-max-width: 1940px;
+  --onyx-login-logo-max-height: min(88vh, 1020px);
+  --onyx-login-logo-offset-x: -1.6vw;
+  --onyx-login-stage-width: 100%;
+  --onyx-login-stage-height: 100%;
+  --onyx-login-panel-width: min(100%, 440px);
+  --onyx-login-panel-right: clamp(280px, 22vw, 460px);
+  --onyx-login-panel-bottom: clamp(28px, 5vh, 82px);
+
   --onyx-panel-radius-sm: 12px;
   --onyx-panel-radius-md: 14px;
-  --onyx-panel-radius-lg: 16px;
+  --onyx-panel-radius-lg: 18px;
+  --onyx-panel-radius-xl: 22px;
 
-  --onyx-panel-bg: rgba(15, 15, 15, 0.55);
-  --onyx-panel-bg-strong: rgba(15, 15, 15, 0.72);
+  --onyx-panel-bg: rgba(11, 14, 19, 0.6);
+  --onyx-panel-bg-strong: rgba(7, 10, 14, 0.82);
   --onyx-panel-bg-soft: rgba(255, 255, 255, 0.04);
 
-  --onyx-panel-border: var(--onyx-accent-border, rgba(255, 215, 120, 0.15));
-  --onyx-panel-border-strong: var(--onyx-accent-border-strong, rgba(255, 215, 120, 0.22));
-  --onyx-panel-border-hover: var(--onyx-accent-border-strong, rgba(255, 215, 120, 0.42));
+  --onyx-accent-soft-rgb: 215, 166, 62;
+  --onyx-accent-soft: rgba(215, 166, 62, 0.12);
+  --onyx-accent-soft-2: rgba(215, 166, 62, 0.18);
+  --onyx-accent-border: rgba(215, 166, 62, 0.26);
+  --onyx-accent-border-strong: rgba(215, 166, 62, 0.42);
+  --onyx-accent-glow-soft: rgba(215, 166, 62, 0.16);
+  --onyx-accent-glow: rgba(215, 166, 62, 0.26);
+  --onyx-accent-glow-strong: rgba(215, 166, 62, 0.4);
 
-  --onyx-panel-blur: 12px;
-  --onyx-panel-blur-strong: 14px;
+  --onyx-panel-border: var(--onyx-accent-border);
+  --onyx-panel-border-strong: var(--onyx-accent-border-strong);
+  --onyx-panel-border-hover: rgba(var(--theme-accent-rgb), 0.56);
+
+  --onyx-panel-blur: 14px;
+  --onyx-panel-blur-strong: 18px;
 
   --onyx-panel-shadow:
-    0 22px 60px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    0 22px 60px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --onyx-panel-shadow-hover:
-    0 14px 38px rgba(0, 0, 0, 0.68),
-    0 0 28px var(--onyx-accent-glow, rgba(255, 215, 120, 0.25));
+    0 16px 42px rgba(0, 0, 0, 0.56),
+    0 0 28px var(--onyx-accent-glow-soft);
 
-  --onyx-panel-accent-border: var(--onyx-accent-border-strong, rgba(255, 215, 120, 0.35));
-  --onyx-panel-accent-soft: var(--onyx-accent-soft, rgba(255, 215, 120, 0.12));
-  --onyx-panel-accent-glow: var(--onyx-accent-glow, rgba(255, 215, 120, 0.25));
+  --onyx-panel-accent-border: var(--onyx-accent-border-strong);
+  --onyx-panel-accent-soft: var(--onyx-accent-soft);
+  --onyx-panel-accent-glow: var(--onyx-accent-glow);
 
-  color-scheme: dark;
+  --onyx-surface-base:
+    linear-gradient(180deg, rgba(7, 10, 14, 0.88), rgba(2, 4, 8, 0.94)),
+    radial-gradient(
+      circle at top left,
+      rgba(var(--theme-accent-rgb), 0.08) 0%,
+      transparent 46%
+    );
+  --onyx-surface-raised:
+    linear-gradient(180deg, rgba(8, 11, 16, 0.9), rgba(3, 5, 8, 0.96)),
+    radial-gradient(
+      circle at top left,
+      rgba(var(--theme-accent-rgb), 0.14) 0%,
+      transparent 52%
+    );
+  --onyx-surface-soft:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.022)),
+    radial-gradient(
+      circle at top left,
+      rgba(var(--theme-accent-rgb), 0.08) 0%,
+      transparent 60%
+    );
+  --onyx-surface-accent:
+    linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.24), rgba(0, 0, 0, 0.18)),
+    linear-gradient(180deg, rgba(9, 12, 18, 0.94), rgba(2, 4, 8, 0.98));
+  --onyx-input-bg:
+    linear-gradient(180deg, rgba(7, 10, 15, 0.94), rgba(12, 16, 22, 0.96));
+  --onyx-button-primary-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--theme-accent) 90%, white) 0%,
+    color-mix(in srgb, var(--theme-accent) 72%, var(--theme-accent-2)) 48%,
+    color-mix(in srgb, var(--theme-accent) 58%, black) 100%
+  );
+  --onyx-button-secondary-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+  --onyx-button-danger-bg:
+    linear-gradient(135deg, rgba(198, 72, 72, 0.95), rgba(107, 24, 24, 0.98));
+  --onyx-focus-ring: 0 0 0 3px rgba(var(--theme-accent-rgb), 0.12);
+
+  --onyx-text-primary: rgba(245, 247, 255, 0.96);
+  --onyx-text-secondary: rgba(219, 227, 245, 0.74);
+  --onyx-text-muted: rgba(219, 227, 245, 0.52);
+  --onyx-text-accent: color-mix(in srgb, var(--theme-accent) 76%, white);
+
+  --onyx-page-padding-top: clamp(6px, 1vh, 12px);
+  --onyx-page-padding-bottom: clamp(18px, 3vh, 32px);
 }
 
 html {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #000;
 }
 
 body {
   width: 100%;
-  height: 100%;
-  min-width: 1100px;
-  min-height: 680px;
+  min-height: 100vh;
+  min-width: 0;
   margin: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
-  background: #000;
-  color: #f5f5f5;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-x: none;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(var(--theme-accent-rgb), 0.07) 0%,
+      transparent 34%
+    ),
+    linear-gradient(180deg, rgba(1, 2, 4, 1), rgba(3, 4, 7, 1));
+  color: var(--onyx-text-primary);
 }
 
 #root {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow: visible;
   isolation: isolate;
 }
 
@@ -110,12 +206,623 @@ svg {
   max-width: 100%;
 }
 
+::selection {
+  background: rgba(var(--theme-accent-rgb), 0.32);
+  color: #fff;
+}
+
+body *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+body *::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+}
+
+body *::-webkit-scrollbar-thumb {
+  background: rgba(var(--theme-accent-rgb), 0.26);
+  border-radius: 999px;
+}
+
+body *::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--theme-accent-rgb), 0.38);
+}
+
+body .store-page,
+body .banlist-page,
+body .inventory-page,
+body .trade-page,
+body .container-database-page,
+body .starter-deck-page,
+body .reward-giver-page,
+body .container-maker-page {
+  width: min(100%, var(--onyx-page-max-primary));
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  padding: var(--onyx-page-padding-top) var(--onyx-page-inline-gutter)
+    var(--onyx-page-padding-bottom);
+  overflow: visible;
+}
+
+body .container-opener-page {
+  width: min(100%, var(--onyx-page-max-wide));
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  padding: var(--onyx-page-padding-top) var(--onyx-page-inline-gutter)
+    var(--onyx-page-padding-bottom);
+  overflow: visible;
+}
+
+body .progression-root {
+  width: min(100%, var(--onyx-page-max-reading));
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  padding: var(--onyx-page-padding-top) var(--onyx-page-inline-gutter)
+    var(--onyx-page-padding-bottom);
+  overflow: visible;
+}
+
+body .card-database-root,
+body .binder-page {
+  width: min(100%, var(--onyx-page-max-browser));
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  padding: var(--onyx-page-padding-top) var(--onyx-page-inline-gutter)
+    var(--onyx-page-padding-bottom);
+  overflow: visible;
+}
+
+body .deck-builder-page {
+  width: min(100%, var(--onyx-page-max-primary));
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  padding: var(--onyx-page-padding-top) var(--onyx-page-inline-gutter)
+    var(--onyx-page-padding-bottom);
+  overflow: visible;
+}
+
+body .admin-page-wrap {
+  min-height: 0;
+  padding: var(--onyx-page-padding-top) var(--onyx-page-inline-gutter)
+    var(--onyx-page-padding-bottom);
+  overflow: visible;
+}
+
+body .mode-select-page {
+  --mode-stage-width: var(--onyx-stage-max-width);
+  --mode-logo-width: var(--onyx-mode-logo-width);
+  padding-inline: var(--onyx-page-inline-gutter);
+}
+
+body .store-topbar,
+body .trade-topbar,
+body .inventory-topbar,
+body .container-opener-topbar,
+body .reward-giver-topbar,
+body .starter-deck-topbar,
+body .container-maker-topbar,
+body .container-database-topbar {
+  gap: var(--onyx-layout-gap);
+  padding: clamp(18px, 1.3vw, 24px);
+}
+
+body .store-topbar-right,
+body .trade-topbar-right,
+body .inventory-topbar-right,
+body .container-opener-topbar-actions {
+  flex-wrap: wrap;
+}
+
+body .store-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, var(--onyx-store-side-width));
+  gap: var(--onyx-layout-gap);
+}
+
+body .trade-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, var(--onyx-trade-side-width));
+  gap: var(--onyx-layout-gap);
+}
+
+body .inventory-layout {
+  grid-template-columns: minmax(260px, var(--onyx-inventory-side-width)) minmax(0, 1fr);
+  gap: var(--onyx-layout-gap);
+}
+
+body .container-opener-layout {
+  grid-template-columns: minmax(280px, var(--onyx-container-side-width)) minmax(0, 1fr);
+  gap: calc(var(--onyx-layout-gap) - 2px);
+}
+
+body .deck-builder-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, var(--onyx-deck-side-width));
+  gap: calc(var(--onyx-layout-gap) - 2px);
+}
+
+body .card-database-layout {
+  grid-template-columns:
+    minmax(250px, var(--onyx-browser-filter-width))
+    minmax(0, 1fr)
+    minmax(260px, var(--onyx-browser-preview-width));
+  gap: 16px;
+}
+
+body .binder-layout {
+  grid-template-columns:
+    minmax(240px, var(--onyx-binder-filter-width))
+    minmax(0, 1fr)
+    minmax(260px, var(--onyx-binder-preview-width));
+  gap: 16px;
+}
+
+body .store-right,
+body .inventory-sidebar {
+  top: var(--onyx-shell-padding-y);
+}
+
+body .store-category-grid {
+  grid-template-columns: repeat(var(--onyx-store-grid-columns), minmax(0, 1fr));
+}
+
+body .inventory-summary-row {
+  grid-template-columns: repeat(var(--onyx-summary-grid-columns), minmax(0, 1fr));
+}
+
+body .inventory-item-grid {
+  grid-template-columns: repeat(var(--onyx-inventory-grid-columns), minmax(0, 1fr));
+}
+
+body .progression-dashboard,
+body .card-database-layout,
+body .binder-layout,
+body .deck-builder-layout,
+body .store-layout,
+body .trade-layout,
+body .inventory-layout,
+body .container-database-layout,
+body .container-opener-layout,
+body .reward-giver-layout,
+body .starter-deck-layout,
+body .container-maker-layout {
+  min-height: 0;
+}
+
+body .card-database-filter-panel,
+body .card-database-center-panel,
+body .card-database-preview-panel,
+body .card-database-filter-scroll,
+body .card-database-grid-card,
+body .card-database-preview-card,
+body .binder-filter-panel,
+body .binder-center-panel,
+body .binder-preview-panel,
+body .binder-filter-scroll,
+body .binder-grid-card,
+body .binder-preview-card,
+body .deck-builder-left,
+body .deck-builder-right,
+body .deck-binder-panel,
+body .store-right,
+body .inventory-sidebar,
+body .progression-panel,
+body .admin-page-card {
+  min-height: 0;
+  max-height: none;
+}
+
+body .card-database-filter-scroll,
+body .card-database-grid-card,
+body .card-database-preview-card,
+body .binder-filter-scroll,
+body .binder-grid-card,
+body .binder-preview-card,
+body .deck-binder-list,
+body .progression-panel,
+body .progression-panel-body,
+body .store-cart-list,
+body .store-modal-items,
+body .trade-feed-list,
+body .container-opener-possible-grid,
+body .reward-giver-search-results,
+body .admin-profiles-list {
+  overflow: visible;
+}
+
+body .onyx-panel,
+body .inventory-panel,
+body .trade-panel,
+body .banlist-header-card,
+body .banlist-editor-card,
+body .banlist-loading-card,
+body .banlist-section-card,
+body .container-database-topbar,
+body .container-database-card,
+body .container-opener-topbar,
+body .container-opener-card,
+body .container-opener-modal,
+body .reward-giver-topbar,
+body .reward-giver-card,
+body .starter-deck-topbar,
+body .starter-deck-card,
+body .container-maker-topbar,
+body .container-maker-card,
+body .admin-page-card,
+body .admin-page-intro,
+body .admin-panel,
+body .admin-section-card,
+body .admin-side-panel,
+body .admin-profiles-create,
+body .admin-profiles-list-shell,
+body .admin-series-create-card,
+body .admin-series-card,
+body .admin-player-card,
+body .admin-application-card,
+body .admin-side-item,
+body .admin-series-active-banner,
+body .admin-placeholder-card {
+  background: var(--onyx-surface-raised);
+  border: 1px solid var(--onyx-panel-border);
+  box-shadow:
+    var(--onyx-panel-shadow),
+    0 0 28px var(--onyx-accent-glow-soft);
+  backdrop-filter: blur(var(--onyx-panel-blur-strong));
+  -webkit-backdrop-filter: blur(var(--onyx-panel-blur-strong));
+  color: var(--onyx-text-primary);
+}
+
+body .store-category-card,
+body .store-modal-item,
+body .store-cart-row,
+body .banlist-search-row,
+body .banlist-row,
+body .inventory-item-card,
+body .inventory-item-meta-row,
+body .trade-mode-toggle,
+body .trade-target-preview,
+body .trade-builder-column,
+body .trade-builder-column-full,
+body .trade-line-row,
+body .trade-feed-card,
+body .container-database-list-row,
+body .container-database-card-row,
+body .container-database-chip,
+body .container-opener-list-row,
+body .container-opener-box-shell,
+body .container-opener-feature-machine,
+body .container-opener-info-card,
+body .container-opener-possible-card,
+body .container-opener-pack-card,
+body .container-opener-modal-pack-card,
+body .container-opener-result-card,
+body .reward-giver-target-card,
+body .reward-giver-card-search-row,
+body .starter-deck-search-row,
+body .starter-deck-card-row,
+body .container-maker-container-row,
+body .container-maker-search-row,
+body .container-maker-card-row,
+body .container-maker-mass-import-block,
+body .admin-profile-card,
+body .admin-series-card,
+body .admin-player-card,
+body .admin-application-card,
+body .admin-empty-state {
+  background: var(--onyx-surface-soft);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+body .store-shards-card,
+body .inventory-shards-card,
+body .trade-shards-card,
+body .inventory-item-qty-wrap,
+body .container-database-tier-pill,
+body .admin-panel-count,
+body .admin-role-pill,
+body .admin-series-current-pill,
+body .admin-series-status-pill,
+body .admin-player-role-pill,
+body .admin-application-status,
+body .progression-panel-kicker,
+body .progression-series-meta-label,
+body .progression-admin-phase-label,
+body .progression-notes-modal-kicker,
+body .progression-results-modal-kicker {
+  color: var(--onyx-text-accent);
+}
+
+body .store-shards-card,
+body .inventory-shards-card,
+body .trade-shards-card,
+body .inventory-item-qty-wrap,
+body .container-database-tier-pill {
+  background: var(--onyx-surface-accent);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 18px rgba(var(--theme-accent-rgb), 0.16);
+}
+
+body .store-kicker,
+body .banlist-kicker,
+body .inventory-kicker,
+body .trade-kicker,
+body .trade-panel-kicker,
+body .container-database-kicker,
+body .container-opener-kicker,
+body .container-opener-modal-kicker,
+body .reward-giver-kicker,
+body .starter-deck-kicker,
+body .container-maker-kicker,
+body .admin-page-eyebrow,
+body .admin-panel-kicker,
+body .admin-section-eyebrow,
+body .admin-series-create-kicker {
+  color: var(--onyx-text-accent);
+}
+
+body .store-subtitle,
+body .banlist-subtitle,
+body .inventory-subtitle,
+body .trade-subtitle,
+body .container-database-subtitle,
+body .container-opener-subtitle,
+body .reward-giver-subtitle,
+body .starter-deck-subtitle,
+body .container-maker-subtitle,
+body .admin-page-intro,
+body .admin-intro-text,
+body .admin-section-description,
+body .admin-profile-email,
+body .admin-series-description,
+body .admin-series-active-meta,
+body .admin-loading-text,
+body .admin-status-message,
+body .admin-application-date,
+body .admin-placeholder-label {
+  color: var(--onyx-text-secondary);
+}
+
+body .login-button,
+body .store-add-btn,
+body .store-checkout-btn,
+body .banlist-primary-btn,
+body .trade-primary-btn,
+body .trade-inline-btn,
+body .reward-giver-primary-btn,
+body .starter-deck-primary-btn,
+body .container-maker-primary-btn,
+body .container-opener-primary-btn,
+body .progression-action-btn-primary,
+body .profile-form button,
+body .admin-back-button,
+body .admin-collapse-btn,
+body .admin-action-btn,
+body .admin-action-button {
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.34);
+  background: var(--onyx-button-primary-bg);
+  color: #0c0f12;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(var(--theme-accent-rgb), 0.18);
+}
+
+body .login-button:hover:not(:disabled),
+body .store-add-btn:hover:not(:disabled),
+body .store-checkout-btn:hover:not(:disabled),
+body .banlist-primary-btn:hover:not(:disabled),
+body .trade-primary-btn:hover:not(:disabled),
+body .trade-inline-btn:hover:not(:disabled),
+body .reward-giver-primary-btn:hover:not(:disabled),
+body .starter-deck-primary-btn:hover:not(:disabled),
+body .container-maker-primary-btn:hover:not(:disabled),
+body .container-opener-primary-btn:hover:not(:disabled),
+body .progression-action-btn-primary:hover:not(:disabled),
+body .profile-form button:hover:not(:disabled),
+body .admin-back-button:hover:not(:disabled),
+body .admin-collapse-btn:hover:not(:disabled),
+body .admin-action-btn:hover:not(:disabled),
+body .admin-action-button:hover:not(:disabled) {
+  border-color: rgba(var(--theme-accent-rgb), 0.54);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.34),
+    0 0 26px rgba(var(--theme-accent-rgb), 0.24);
+  filter: brightness(1.03);
+}
+
+body .launcher-shell__footer-button,
+body .settings-close-button,
+body .store-back-btn,
+body .inventory-back-btn,
+body .banlist-secondary-btn,
+body .trade-back-btn,
+body .trade-secondary-btn,
+body .reward-giver-secondary-btn,
+body .starter-deck-secondary-btn,
+body .container-maker-secondary-btn,
+body .container-database-secondary-btn,
+body .container-opener-secondary-btn,
+body .container-opener-tab-btn,
+body .card-database-back-btn,
+body .card-database-page-btn,
+body .card-database-clear-btn,
+body .binder-back-btn,
+body .binder-page-btn,
+body .binder-clear-btn,
+body .deck-builder-back-btn,
+body .deck-header-back-button,
+body .deck-builder-action-btn,
+body .deck-pagination-btn,
+body .deck-binder-action-btn,
+body .profile-upload-button,
+body .profile-remove-avatar-button,
+body .patch-modal-close,
+body .store-modal-close,
+body .progression-action-btn,
+body .progression-notes-modal-secondary-btn,
+body .progression-results-score-btn,
+body .trade-mode-btn {
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
+  background: var(--onyx-button-secondary-bg);
+  color: var(--onyx-text-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 0 1px rgba(255, 255, 255, 0.015);
+}
+
+body .launcher-shell__footer-button:hover:not(:disabled),
+body .settings-close-button:hover:not(:disabled),
+body .store-back-btn:hover:not(:disabled),
+body .inventory-back-btn:hover:not(:disabled),
+body .banlist-secondary-btn:hover:not(:disabled),
+body .trade-back-btn:hover:not(:disabled),
+body .trade-secondary-btn:hover:not(:disabled),
+body .reward-giver-secondary-btn:hover:not(:disabled),
+body .starter-deck-secondary-btn:hover:not(:disabled),
+body .container-maker-secondary-btn:hover:not(:disabled),
+body .container-database-secondary-btn:hover:not(:disabled),
+body .container-opener-secondary-btn:hover:not(:disabled),
+body .container-opener-tab-btn:hover:not(:disabled),
+body .card-database-back-btn:hover:not(:disabled),
+body .card-database-page-btn:hover:not(:disabled),
+body .card-database-clear-btn:hover:not(:disabled),
+body .binder-back-btn:hover:not(:disabled),
+body .binder-page-btn:hover:not(:disabled),
+body .binder-clear-btn:hover:not(:disabled),
+body .deck-builder-back-btn:hover:not(:disabled),
+body .deck-header-back-button:hover:not(:disabled),
+body .deck-builder-action-btn:hover:not(:disabled),
+body .deck-pagination-btn:hover:not(:disabled),
+body .deck-binder-action-btn:hover:not(:disabled),
+body .profile-upload-button:hover,
+body .profile-remove-avatar-button:hover:not(:disabled),
+body .patch-modal-close:hover,
+body .store-modal-close:hover,
+body .progression-action-btn:hover:not(:disabled),
+body .progression-notes-modal-secondary-btn:hover:not(:disabled),
+body .progression-results-score-btn:hover:not(:disabled),
+body .trade-mode-btn:hover:not(:disabled) {
+  border-color: rgba(var(--theme-accent-rgb), 0.32);
+  background:
+    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.16), rgba(255, 255, 255, 0.03));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 18px rgba(var(--theme-accent-rgb), 0.12);
+}
+
+body .trade-mode-btn.is-active,
+body .container-opener-tab-btn.is-active,
+body .card-database-page-btn.is-active,
+body .binder-page-btn.is-active,
+body .deck-pagination-page.is-active,
+body .card-database-checkbox-pill.is-active,
+body .trade-inline-btn,
+body .reward-giver-tab-btn.is-active,
+body .reward-giver-card-search-row.is-selected,
+body .container-maker-container-row.is-selected {
+  border-color: rgba(var(--theme-accent-rgb), 0.4);
+  background:
+    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.28), rgba(var(--theme-accent-rgb), 0.12));
+  box-shadow:
+    inset 0 0 18px rgba(var(--theme-accent-rgb), 0.1),
+    0 0 16px rgba(var(--theme-accent-rgb), 0.14);
+  color: var(--onyx-text-primary);
+}
+
+body .banlist-remove-btn,
+body .starter-deck-danger-btn,
+body .container-maker-danger-btn,
+body .trade-inline-btn-danger,
+body .admin-action-deny,
+body .admin-action-ban {
+  border: 1px solid rgba(255, 108, 108, 0.28);
+  background: var(--onyx-button-danger-bg);
+  color: #fff5f5;
+  box-shadow: 0 10px 24px rgba(88, 18, 18, 0.3);
+}
+
+body .login-input,
+body .profile-form input,
+body .settings-field select,
+body .settings-field option,
+body .settings-field optgroup {
+  color: var(--onyx-text-primary);
+}
+
+@media (min-width: 1850px) and (min-aspect-ratio: 20/9) {
+  :root {
+    --onyx-shell-padding-x: 28px;
+    --onyx-shell-padding-y: 22px;
+    --onyx-page-inline-gutter: clamp(22px, 1.8vw, 34px);
+    --onyx-layout-gap: 24px;
+    --onyx-stage-max-width: 1760px;
+    --onyx-stage-max-height: 860px;
+    --onyx-page-max-primary: 1660px;
+    --onyx-page-max-wide: 1720px;
+    --onyx-page-max-browser: 1580px;
+    --onyx-store-side-width: 390px;
+    --onyx-trade-side-width: 460px;
+    --onyx-inventory-side-width: 320px;
+    --onyx-browser-filter-width: 320px;
+    --onyx-browser-preview-width: 340px;
+    --onyx-binder-filter-width: 300px;
+    --onyx-binder-preview-width: 340px;
+    --onyx-container-side-width: 340px;
+    --onyx-deck-side-width: 360px;
+    --onyx-store-grid-columns: 4;
+    --onyx-inventory-grid-columns: 3;
+    --onyx-mode-logo-width: clamp(560px, 38vw, 760px);
+    --onyx-login-logo-width: 2520px;
+    --onyx-login-logo-max-width: 2520px;
+    --onyx-login-logo-max-height: min(90vh, 1180px);
+    --onyx-login-logo-offset-x: -3.2vw;
+    --onyx-login-stage-width: 100%;
+    --onyx-login-stage-height: 100%;
+    --onyx-login-panel-width: min(100%, 450px);
+    --onyx-login-panel-right: clamp(360px, 18vw, 620px);
+    --onyx-login-panel-bottom: clamp(36px, 5vh, 92px);
+  }
+}
+
+@media (min-width: 1450px) and (max-width: 2000px) and (min-aspect-ratio: 15/10) and (max-aspect-ratio: 17/10) {
+  :root {
+    --onyx-shell-padding-x: 18px;
+    --onyx-shell-padding-y: 16px;
+    --onyx-page-inline-gutter: clamp(16px, 1.25vw, 24px);
+    --onyx-stage-max-width: 1500px;
+    --onyx-stage-max-height: 860px;
+    --onyx-page-max-primary: 1480px;
+    --onyx-page-max-wide: 1520px;
+    --onyx-page-max-browser: 1440px;
+    --onyx-login-logo-width: 2060px;
+    --onyx-login-logo-max-width: 2060px;
+    --onyx-login-logo-max-height: min(88vh, 1100px);
+    --onyx-login-logo-offset-x: -1.2vw;
+    --onyx-login-stage-width: 100%;
+    --onyx-login-stage-height: 100%;
+    --onyx-login-panel-right: clamp(320px, 20vw, 480px);
+    --onyx-login-panel-bottom: clamp(34px, 5.8vh, 94px);
+  }
+}
+
 @media (max-width: 1600px) {
   :root {
     --onyx-shell-padding-x: 16px;
     --onyx-shell-padding-y: 14px;
     --onyx-stage-max-width: 1460px;
     --onyx-stage-max-height: 760px;
+    --onyx-page-inline-gutter: clamp(12px, 1vw, 20px);
   }
 }
 
@@ -123,16 +830,133 @@ svg {
   :root {
     --onyx-shell-padding-x: 12px;
     --onyx-shell-padding-y: 12px;
+    --onyx-page-inline-gutter: clamp(12px, 1.4vw, 18px);
+    --onyx-layout-gap: 18px;
     --onyx-stage-max-width: 1320px;
     --onyx-stage-max-height: 700px;
+    --onyx-page-max-primary: 1420px;
+    --onyx-page-max-wide: 1460px;
+    --onyx-page-max-browser: 1380px;
+    --onyx-login-logo-width: 1760px;
+    --onyx-login-logo-max-width: 1760px;
+    --onyx-login-logo-max-height: min(84vh, 900px);
+    --onyx-login-logo-offset-x: -1vw;
+    --onyx-login-stage-width: 100%;
+    --onyx-login-stage-height: 100%;
+    --onyx-login-panel-width: min(100%, 400px);
+    --onyx-login-panel-right: clamp(180px, 14vw, 280px);
+    --onyx-login-panel-bottom: clamp(24px, 4vh, 60px);
   }
 }
 
-@media (max-width: 1100px), (max-height: 760px) {
+@media (max-width: 1180px) {
+  :root {
+    --onyx-shell-padding-x: 12px;
+    --onyx-shell-padding-y: 12px;
+    --onyx-page-inline-gutter: clamp(12px, 2vw, 18px);
+    --onyx-layout-gap: 16px;
+    --onyx-stage-max-width: 1120px;
+    --onyx-stage-max-height: none;
+    --onyx-page-max-primary: 100%;
+    --onyx-page-max-wide: 100%;
+    --onyx-page-max-browser: 100%;
+    --onyx-page-max-reading: 100%;
+    --onyx-store-grid-columns: 2;
+    --onyx-summary-grid-columns: 2;
+  }
+
+  body .store-layout,
+  body .trade-layout,
+  body .inventory-layout,
+  body .container-opener-layout,
+  body .deck-builder-layout,
+  body .card-database-layout,
+  body .binder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  body .store-right,
+  body .inventory-sidebar {
+    position: static;
+    top: auto;
+  }
+
+  body .deck-binder-panel {
+    min-height: 0;
+  }
+
+  body .trade-form-row,
+  body .trade-builder-grid,
+  body .store-modal-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --onyx-page-inline-gutter: clamp(10px, 2.4vw, 16px);
+    --onyx-summary-grid-columns: 1;
+    --onyx-inventory-grid-columns: 1;
+    --onyx-mode-logo-width: min(100%, 440px);
+  }
+
+  body .store-topbar,
+  body .trade-topbar,
+  body .inventory-topbar,
+  body .container-opener-topbar,
+  body .reward-giver-topbar,
+  body .starter-deck-topbar,
+  body .container-maker-topbar,
+  body .container-database-topbar,
+  body .inventory-group-header,
+  body .container-opener-stage-header,
+  body .deck-header,
+  body .binder-topbar,
+  body .card-database-topbar {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body .store-topbar-right,
+  body .trade-topbar-right,
+  body .inventory-topbar-right,
+  body .container-opener-topbar-actions,
+  body .deck-header-right {
+    justify-content: space-between;
+  }
+
+  body .trade-feed-columns,
+  body .store-category-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px), (max-height: 760px) {
   :root {
     --onyx-shell-padding-x: 10px;
     --onyx-shell-padding-y: 10px;
-    --onyx-stage-max-width: 1180px;
-    --onyx-stage-max-height: 640px;
+    --onyx-page-inline-gutter: 10px;
+    --onyx-layout-gap: 12px;
+    --onyx-stage-max-width: 100%;
+    --onyx-stage-max-height: none;
+    --onyx-store-grid-columns: 1;
+    --onyx-summary-grid-columns: 1;
+    --onyx-inventory-grid-columns: 1;
+    --onyx-login-logo-width: min(100%, 1080px);
+    --onyx-login-logo-max-width: 1080px;
+    --onyx-login-logo-max-height: min(38vh, 420px);
+    --onyx-login-logo-offset-x: 0px;
+    --onyx-login-stage-width: 100%;
+    --onyx-login-stage-height: none;
+    --onyx-login-panel-width: min(100%, 390px);
+  }
+
+  body .deck-main-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  body .deck-row-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }

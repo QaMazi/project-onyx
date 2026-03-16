@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import "./LauncherHeader.css";
 
@@ -27,8 +26,11 @@ function resolveUsername(user) {
   return user?.username || "Unknown User";
 }
 
-function LauncherHeader({ openSettings, openProfile = () => {} }) {
-  const navigate = useNavigate();
+function LauncherHeader({
+  openSettings,
+  openProfile = () => {},
+  openAdminPanel = () => {},
+}) {
   const { user, reloadUser, signOut } = useUser();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -87,11 +89,7 @@ function LauncherHeader({ openSettings, openProfile = () => {} }) {
 
   function handleOpenAdminPanel() {
     setIsOpen(false);
-    navigate("/admin", {
-      state: {
-        from: window.location.pathname,
-      },
-    });
+    openAdminPanel();
   }
 
   return (

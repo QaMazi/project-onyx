@@ -10,20 +10,36 @@ const DEFAULT_CREATE_FORM = {
   maxPlayers: 6,
 };
 
+function normalizeSeriesMemberRole(globalRole) {
+  const normalized = String(globalRole || "").trim().toLowerCase();
+
+  if (normalized === "admin+" || normalized === "adminplus" || normalized === "admin") {
+    return "admin";
+  }
+
+  return "duelist";
+}
+
 function AdminSeriesPanel() {
   const { user, reloadUser } = useUser();
 
   const [seriesList, setSeriesList] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [seriesMembersById, setSeriesMembersById] = useState({});
   const [globalActiveSeries, setGlobalActiveSeries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [memberActionSeriesId, setMemberActionSeriesId] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
+  const [memberSearchBySeries, setMemberSearchBySeries] = useState({});
 
   async function fetchSeriesData() {
     if (!user?.id) {
       setSeriesList([]);
+      setProfiles([]);
+      setSeriesMembersById({});
       setGlobalActiveSeries(null);
       setLoading(false);
       return;
@@ -32,29 +48,68 @@ function AdminSeriesPanel() {
     setLoading(true);
 
     try {
-      const [{ data: ownedSeries, error: ownedError }, { data: activeSeries, error: activeError }] =
-        await Promise.all([
-          supabase
-            .from("series_summary_view")
-            .select("*")
-            .eq("created_by", user.id)
-            .order("created_at", { ascending: false }),
+      const [
+        { data: ownedSeries, error: ownedError },
+        { data: activeSeries, error: activeError },
+        { data: profileRows, error: profilesError },
+      ] = await Promise.all([
+        supabase
+          .from("series_summary_view")
+          .select("*")
+          .eq("created_by", user.id)
+          .order("created_at", { ascending: false }),
 
-          supabase
-            .from("series_summary_view")
-            .select("*")
-            .eq("is_current", true)
-            .maybeSingle(),
-        ]);
+        supabase
+          .from("series_summary_view")
+          .select("*")
+          .eq("is_current", true)
+          .maybeSingle(),
+
+        supabase
+          .from("profiles")
+          .select("id, username, avatar_url, auth_email, global_role")
+          .order("username", { ascending: true }),
+      ]);
 
       if (ownedError) throw ownedError;
       if (activeError) throw activeError;
+      if (profilesError) throw profilesError;
 
-      setSeriesList(ownedSeries || []);
+      const nextOwnedSeries = ownedSeries || [];
+      const ownedSeriesIds = nextOwnedSeries.map((series) => series.id).filter(Boolean);
+      let nextMembersById = {};
+
+      if (ownedSeriesIds.length > 0) {
+        const { data: memberRows, error: membersError } = await supabase
+          .from("series_players_view")
+          .select("*")
+          .in("series_id", ownedSeriesIds)
+          .order("is_owner", { ascending: false })
+          .order("username", { ascending: true });
+
+        if (membersError) throw membersError;
+
+        nextMembersById = (memberRows || []).reduce((acc, member) => {
+          const seriesId = member.series_id;
+
+          if (!acc[seriesId]) {
+            acc[seriesId] = [];
+          }
+
+          acc[seriesId].push(member);
+          return acc;
+        }, {});
+      }
+
+      setSeriesList(nextOwnedSeries);
+      setProfiles(profileRows || []);
+      setSeriesMembersById(nextMembersById);
       setGlobalActiveSeries(activeSeries || null);
     } catch (error) {
       console.error("Failed to fetch series:", error);
       setSeriesList([]);
+      setProfiles([]);
+      setSeriesMembersById({});
       setGlobalActiveSeries(null);
     } finally {
       setLoading(false);
@@ -76,6 +131,13 @@ function AdminSeriesPanel() {
     setCreateForm((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  }
+
+  function handleMemberSearchChange(seriesId, value) {
+    setMemberSearchBySeries((prev) => ({
+      ...prev,
+      [seriesId]: value,
     }));
   }
 
@@ -155,6 +217,49 @@ function AdminSeriesPanel() {
       window.alert("Series creation failed. Check console for details.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleAddPlayerToSeries(series, profile) {
+    if (!user?.id || !series?.id || !profile?.id) return;
+    if (user.globalRole !== "Admin+") return;
+    if (series.created_by !== user.id) return;
+
+    const currentMembers = seriesMembersById[series.id] || [];
+    const alreadyMember = currentMembers.some((member) => member.user_id === profile.id);
+
+    if (alreadyMember) {
+      window.alert(`${profile.username} is already in this series.`);
+      return;
+    }
+
+    const maxPlayers = Number(series.max_players || 0);
+
+    if (maxPlayers > 0 && currentMembers.length >= maxPlayers) {
+      window.alert(`"${series.name}" is already at its player limit.`);
+      return;
+    }
+
+    setMemberActionSeriesId(series.id);
+
+    try {
+      const { error } = await supabase.from("series_players").insert({
+        series_id: series.id,
+        user_id: profile.id,
+        is_owner: false,
+        role: normalizeSeriesMemberRole(profile.global_role),
+      });
+
+      if (error) throw error;
+
+      handleMemberSearchChange(series.id, "");
+      await fetchSeriesData();
+      await reloadUser();
+    } catch (error) {
+      console.error("Failed to add player to series:", error);
+      window.alert(error?.message || "Failed to add player to series.");
+    } finally {
+      setMemberActionSeriesId(null);
     }
   }
 
@@ -347,6 +452,12 @@ function AdminSeriesPanel() {
     return "Unknown";
   }
 
+  function getMemberRoleLabel(member) {
+    if (member?.is_owner) return "Owner";
+    if (String(member?.role || "").toLowerCase() === "admin") return "Admin";
+    return "Duelist";
+  }
+
   return (
     <section className="admin-panel">
       <div className="admin-panel-header">
@@ -478,7 +589,26 @@ function AdminSeriesPanel() {
             <div className="admin-series-list">
               {seriesList.map((series) => {
                 const isBusy = actionLoadingId === series.id;
+                const isAddingMember = memberActionSeriesId === series.id;
                 const statusLabel = getStatusLabel(series.status);
+                const currentMembers = seriesMembersById[series.id] || [];
+                const memberIds = new Set(currentMembers.map((member) => member.user_id));
+                const memberSearch = String(memberSearchBySeries[series.id] || "").trim().toLowerCase();
+                const openSlots = Math.max(
+                  0,
+                  Number(series.max_players || 0) - currentMembers.length
+                );
+                const candidateProfiles = profiles
+                  .filter((profile) => !memberIds.has(profile.id))
+                  .filter((profile) => {
+                    if (!memberSearch) return true;
+
+                    return (
+                      String(profile.username || "").toLowerCase().includes(memberSearch) ||
+                      String(profile.auth_email || "").toLowerCase().includes(memberSearch)
+                    );
+                  })
+                  .slice(0, 8);
 
                 return (
                   <div className="admin-series-card" key={series.id}>
@@ -562,6 +692,122 @@ function AdminSeriesPanel() {
                       >
                         {isBusy ? "Working..." : "Delete"}
                       </button>
+                    </div>
+
+                    <div className="admin-player-control-shell">
+                      <div className="admin-player-control-header">
+                        <h4 className="admin-subsection-title">Series Players</h4>
+                        <p className="admin-series-active-meta">
+                          {currentMembers.length} joined, {openSlots} open slot
+                          {openSlots === 1 ? "" : "s"}.
+                        </p>
+                      </div>
+
+                      {currentMembers.length > 0 ? (
+                        <div className="admin-player-list">
+                          {currentMembers.map((member) => (
+                            <div className="admin-player-card" key={`${series.id}-${member.user_id}`}>
+                              <div className="admin-player-left">
+                                <div className="admin-player-avatar">
+                                  {member.avatar ? (
+                                    <img src={member.avatar} alt={member.username} />
+                                  ) : (
+                                    <span>
+                                      {String(member.username || "?").charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="admin-player-info">
+                                  <div className="admin-player-topline">
+                                    <h4 className="admin-player-name">{member.username}</h4>
+                                    <span className="admin-player-role-pill">
+                                      {getMemberRoleLabel(member)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="admin-empty-state">
+                          No players added yet beyond owner membership.
+                        </div>
+                      )}
+
+                      <div className="admin-series-create-card">
+                        <div className="admin-series-create-header">
+                          <div>
+                            <p className="admin-series-create-kicker">ADD PLAYERS</p>
+                            <h4 className="admin-series-create-title">Search Profiles</h4>
+                          </div>
+                        </div>
+
+                        <div className="admin-form-row">
+                          <label className="admin-form-label">Search Username Or Email</label>
+                          <input
+                            className="admin-form-input"
+                            type="text"
+                            value={memberSearchBySeries[series.id] || ""}
+                            onChange={(event) =>
+                              handleMemberSearchChange(series.id, event.target.value)
+                            }
+                            placeholder="Search active accounts..."
+                            disabled={isAddingMember}
+                          />
+                        </div>
+
+                        {openSlots === 0 ? (
+                          <div className="admin-empty-state">
+                            This series is full. Increase capacity or remove a player before adding more.
+                          </div>
+                        ) : candidateProfiles.length === 0 ? (
+                          <div className="admin-empty-state">
+                            {memberSearch
+                              ? "No matching profiles are available to add."
+                              : "All available profiles are already in this series."}
+                          </div>
+                        ) : (
+                          <div className="admin-profiles-list admin-series-member-search-results">
+                            {candidateProfiles.map((profile) => (
+                              <div className="admin-profile-card" key={`${series.id}-${profile.id}`}>
+                                <div className="admin-profile-card-top">
+                                  <div className="admin-profile-avatar">
+                                    {profile.avatar_url ? (
+                                      <img src={profile.avatar_url} alt={profile.username} />
+                                    ) : (
+                                      <span>
+                                        {String(profile.username || "?").charAt(0).toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="admin-profile-meta">
+                                    <div className="admin-profile-name-row">
+                                      <h4 className="admin-profile-name">{profile.username}</h4>
+                                      <span className="admin-role-pill">{profile.global_role}</span>
+                                    </div>
+
+                                    <p className="admin-profile-email">{profile.auth_email}</p>
+                                  </div>
+                                </div>
+
+                                <div className="admin-profile-actions">
+                                  <button
+                                    className="admin-action-button"
+                                    type="button"
+                                    onClick={() => handleAddPlayerToSeries(series, profile)}
+                                    disabled={isAddingMember}
+                                  >
+                                    {isAddingMember ? "Adding..." : "Add To Series"}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

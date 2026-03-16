@@ -16,6 +16,18 @@ function ProfileStatCard({ label, value }) {
   );
 }
 
+function normalizeDisplayedRole(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "admin+" || normalized === "adminplus") return "Admin+";
+  if (normalized === "admin") return "Admin";
+  if (normalized === "duelist" || normalized === "duelist+" || normalized === "duelistplus") {
+    return "Duelist";
+  }
+  if (normalized === "blocked") return "Blocked";
+  return "Player";
+}
+
 function ProfileModal({ open, onClose }) {
   const { user, profile, updateOwnProfile, changeOwnPassword } = useUser();
 
@@ -38,6 +50,22 @@ function ProfileModal({ open, onClose }) {
 
   const avatar = profile.avatar_url || "";
   const displayUsername = profile.username || "Unknown";
+  const displayedRole = normalizeDisplayedRole(user?.globalRole || profile?.global_role);
+  const canAccessProgression = Boolean(user?.canAccessProgression);
+  const canAccessHeaderAdmin = Boolean(user?.canAccessHeaderAdmin);
+  const canAccessGameAdmin = Boolean(user?.canAccessGameAdmin);
+
+  let accessSummary = "";
+
+  if (canAccessHeaderAdmin) {
+    accessSummary = "Full access including the Admin+ header panel and Progression admin tools.";
+  } else if (canAccessGameAdmin) {
+    accessSummary = "Progression access with admin privileges inside progression systems.";
+  } else if (canAccessProgression) {
+    accessSummary = "Progression access is enabled for this account.";
+  } else {
+    accessSummary = "Progression access is locked for this account until an Admin+ changes your role.";
+  }
 
   function loadImageDimensions(file) {
     return new Promise((resolve, reject) => {
@@ -87,10 +115,10 @@ function ProfileModal({ open, onClose }) {
       const extension = file.name.includes(".")
         ? file.name.split(".").pop().toLowerCase()
         : file.type === "image/png"
-        ? "png"
-        : file.type === "image/webp"
-        ? "webp"
-        : "jpg";
+          ? "png"
+          : file.type === "image/webp"
+            ? "webp"
+            : "jpg";
 
       const filePath = `${profile.id}/avatar.${extension}`;
 
@@ -207,12 +235,12 @@ function ProfileModal({ open, onClose }) {
 
               <div>
                 <span className="profile-label">Role</span>
-                <span>{user.effectiveRole}</span>
+                <span>{displayedRole}</span>
               </div>
 
               <div>
-                <span className="profile-label">Global Role</span>
-                <span>{profile.global_role}</span>
+                <span className="profile-label">Mode Access</span>
+                <span>{accessSummary}</span>
               </div>
 
               <div>
@@ -307,23 +335,23 @@ function ProfileModal({ open, onClose }) {
           </div>
         </div>
 
-        {user.isInActiveSeries ? (
-          <div className="profile-section">
-            <div className="profile-stats-section-header">
-              <h3>Ranked Stats</h3>
-              <p className="profile-stats-subtext">
-                Progression-linked stats will update from the active series.
-              </p>
-            </div>
-
-            <div className="profile-stats-grid">
-              <ProfileStatCard label="Total 1st Place Wins" value="—" />
-              <ProfileStatCard label="Current Scoreboard Points" value="—" />
-              <ProfileStatCard label="Rounds Completed" value="—" />
-              <ProfileStatCard label="Series Joined" value="—" />
-            </div>
+        <div className="profile-section">
+          <div className="profile-stats-section-header">
+            <h3>Ranked Stats</h3>
+            <p className="profile-stats-subtext">
+              {canAccessProgression
+                ? "Progression placeholders for now. Ranked access comes from your global role."
+                : "This account does not currently have Progression access. Promote it to Duelist or Admin to unlock Ranked Mode."}
+            </p>
           </div>
-        ) : null}
+
+          <div className="profile-stats-grid">
+            <ProfileStatCard label="Total 1st Place Wins" value="—" />
+            <ProfileStatCard label="Current Scoreboard Points" value="—" />
+            <ProfileStatCard label="Rounds Completed" value="—" />
+            <ProfileStatCard label="Series Joined" value="—" />
+          </div>
+        </div>
 
         {statusText ? <p className="profile-note">{statusText}</p> : null}
       </div>

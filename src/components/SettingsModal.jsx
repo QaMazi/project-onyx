@@ -82,52 +82,6 @@ function SettingsModal({ open, onClose }) {
         <div className="settings-body">
           <section className="settings-section">
             <div className="settings-section-header">
-              <h3>Visual Theme</h3>
-              <span className="settings-section-value">{currentTheme?.name}</span>
-            </div>
-
-            <div className="settings-theme-grid">
-              {themes.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  className={`settings-theme-card ${
-                    selectedThemeId === theme.id ? "is-active" : ""
-                  }`}
-                  onClick={() => setSelectedThemeId(theme.id)}
-                >
-                  <span
-                    className="settings-theme-card-preview"
-                    style={{ backgroundImage: `url(${theme.background})` }}
-                  />
-
-                  <span className="settings-theme-card-overlay" />
-
-                  <span className="settings-theme-card-content">
-                    <span className="settings-theme-card-name">{theme.name}</span>
-
-                    <span className="settings-theme-swatches">
-                      <span
-                        className="settings-theme-swatch"
-                        style={{ background: theme.accent }}
-                      />
-                      <span
-                        className="settings-theme-swatch"
-                        style={{ background: theme.accent2 }}
-                      />
-                      <span
-                        className="settings-theme-swatch"
-                        style={{ background: theme.accent3 }}
-                      />
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="settings-section">
-            <div className="settings-section-header">
               <h3>Audio</h3>
               <span className="settings-section-value">{currentTrack?.name}</span>
             </div>
@@ -187,6 +141,52 @@ function SettingsModal({ open, onClose }) {
                   </span>
                 </button>
               </div>
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <h3>Visual Theme</h3>
+              <span className="settings-section-value">{currentTheme?.name}</span>
+            </div>
+
+            <div className="settings-theme-grid">
+              {themes.map((theme) => (
+                <button
+                  key={theme.id}
+                  type="button"
+                  className={`settings-theme-card ${
+                    selectedThemeId === theme.id ? "is-active" : ""
+                  }`}
+                  onClick={() => setSelectedThemeId(theme.id)}
+                >
+                  <span
+                    className="settings-theme-card-preview"
+                    style={{ backgroundImage: `url(${theme.background})` }}
+                  />
+
+                  <span className="settings-theme-card-overlay" />
+
+                  <span className="settings-theme-card-content">
+                    <span className="settings-theme-card-name">{theme.name}</span>
+
+                    <span className="settings-theme-swatches">
+                      <span
+                        className="settings-theme-swatch"
+                        style={{ background: theme.accent }}
+                      />
+                      <span
+                        className="settings-theme-swatch"
+                        style={{ background: theme.accent2 }}
+                      />
+                      <span
+                        className="settings-theme-swatch"
+                        style={{ background: theme.accent3 }}
+                      />
+                    </span>
+                  </span>
+                </button>
+              ))}
             </div>
           </section>
         </div>

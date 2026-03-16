@@ -10,6 +10,31 @@
   overflow: hidden;
 }
 
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.admin-modal-shell {
+  width: min(1640px, calc(100vw - 40px));
+  max-height: min(90vh, 1120px);
+  overflow: hidden;
+}
+
+.admin-modal-shell .admin-page-card {
+  width: 100%;
+  max-height: min(90vh, 1120px);
+  overflow-y: auto;
+}
+
 .admin-page-card {
   width: min(1600px, 100%);
   max-height: calc(100vh - 110px);
@@ -373,6 +398,10 @@
   gap: 14px;
 }
 
+.admin-series-member-search-results {
+  margin-top: 14px;
+}
+
 .admin-profiles-list {
   max-height: 900px;
   overflow-y: auto;
@@ -609,6 +638,10 @@
   margin-bottom: 14px;
 }
 
+.admin-player-control-header .admin-subsection-title {
+  margin-bottom: 6px;
+}
+
 @media (max-width: 1220px) {
   .admin-profiles-grid {
     grid-template-columns: 1fr;
@@ -620,6 +653,19 @@
 }
 
 @media (max-width: 760px) {
+  .admin-modal-backdrop {
+    padding: 12px;
+  }
+
+  .admin-modal-shell {
+    width: 100%;
+    max-height: 94vh;
+  }
+
+  .admin-modal-shell .admin-page-card {
+    max-height: 94vh;
+  }
+
   .admin-page-wrap {
     padding: 16px;
   }

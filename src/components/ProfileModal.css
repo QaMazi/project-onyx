@@ -17,18 +17,12 @@
   overflow-y: auto;
   padding: 28px 32px 30px;
   border-radius: 26px;
-  border: 1px solid rgba(255, 215, 120, 0.1);
-  background:
-    linear-gradient(180deg, rgba(7, 9, 15, 0.96), rgba(3, 5, 10, 0.98)),
-    radial-gradient(
-      circle at top,
-      color-mix(in srgb, var(--theme-accent) 8%, transparent) 0%,
-      transparent 42%
-    );
+  border: 1px solid var(--onyx-panel-border);
+  background: var(--onyx-surface-raised);
   color: #f3ede0;
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.46),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    var(--onyx-panel-shadow),
+    0 30px 80px rgba(0, 0, 0, 0.46);
 }
 
 .profile-modal-header {
@@ -62,7 +56,7 @@
 
 .profile-section {
   padding: 18px 0 22px;
-  border-top: 1px solid rgba(255, 215, 120, 0.07);
+  border-top: 1px solid rgba(var(--theme-accent-rgb), 0.1);
 }
 
 .profile-section:first-of-type {
@@ -94,8 +88,8 @@
   height: 80px;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(255, 215, 120, 0.12);
-  background: linear-gradient(180deg, rgba(20, 22, 28, 0.96), rgba(10, 12, 18, 0.96));
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  background: var(--onyx-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -175,18 +169,18 @@
   box-sizing: border-box;
   padding: 0 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 215, 120, 0.1);
-  background: linear-gradient(180deg, rgba(19, 22, 29, 0.95), rgba(12, 14, 20, 0.96));
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  background: var(--onyx-input-bg);
   color: #f7f1e5;
   outline: none;
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .profile-form input:focus {
-  border-color: rgba(255, 215, 120, 0.28);
+  border-color: rgba(var(--theme-accent-rgb), 0.36);
   box-shadow:
-    0 0 0 3px rgba(255, 215, 120, 0.06),
-    0 0 16px color-mix(in srgb, var(--theme-accent) 8%, transparent);
+    var(--onyx-focus-ring),
+    0 0 16px rgba(var(--theme-accent-rgb), 0.16);
 }
 
 .profile-form input::placeholder {
@@ -252,17 +246,12 @@
   font-weight: 800;
   font-size: 1rem;
   cursor: pointer;
-  border: 1px solid rgba(255, 215, 120, 0.12);
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--theme-accent) 22%, rgba(255,255,255,0.1)) 0%,
-      rgba(255, 255, 255, 0.05) 100%
-    );
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
+  background: var(--onyx-button-secondary-bg);
   color: #f3ede0 !important;
   box-shadow:
     0 8px 18px rgba(0, 0, 0, 0.16),
-    0 0 12px color-mix(in srgb, var(--theme-accent) 6%, transparent);
+    0 0 12px rgba(var(--theme-accent-rgb), 0.1);
   transition:
     transform 0.16s ease,
     filter 0.16s ease,
@@ -314,14 +303,8 @@
 .profile-stat-card {
   min-height: 98px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 215, 120, 0.08);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02)),
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--theme-accent) 6%, transparent),
-      transparent 50%
-    );
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.1);
+  background: var(--onyx-surface-soft);
   padding: 16px;
   box-sizing: border-box;
   display: flex;
@@ -365,8 +348,8 @@
 
 .profile-inline-status-info {
   color: rgba(243, 237, 224, 0.82);
-  background: rgba(255, 215, 120, 0.08);
-  border-color: rgba(255, 215, 120, 0.16);
+  background: rgba(var(--theme-accent-rgb), 0.08);
+  border-color: rgba(var(--theme-accent-rgb), 0.16);
 }
 
 @media (max-width: 900px) {

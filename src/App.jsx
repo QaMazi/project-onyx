@@ -55,54 +55,64 @@ function LoginSplash() {
   }
 
   return (
-    <LauncherLayout showHeader={false}>
+    <LauncherLayout showHeader={false} fullBleed>
       <div className="login-splash-page">
-        <div className="login-stage">
-          <div className="launcher-logo-shell login-logo-shell">
-            <div className="launcher-logo-aura"></div>
-            <img
-              src="/ui/project_onyx_logo.png"
-              className="launcher-logo"
-              alt="Project Onyx"
-            />
-          </div>
-
-          <div className="login-panel">
-            <h2 className="login-panel-title">Project Onyx Login</h2>
-
-            <form className="login-form" onSubmit={handleSubmit}>
-              <input
-                type="text"
-                className="login-input"
-                placeholder="Username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                autoComplete="username"
-                disabled={authLoading || submitting}
+        <section className="login-hero-section">
+          <div className="login-stage">
+            <div className="launcher-logo-shell login-logo-shell">
+              <div className="launcher-logo-aura"></div>
+              <img
+                src="/ui/project_onyx_logo.png"
+                className="launcher-logo login-logo-image"
+                alt="Project Onyx"
               />
+            </div>
 
-              <input
-                type="password"
-                className="login-input"
-                placeholder="Password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                disabled={authLoading || submitting}
-              />
-
-              <button
-                className="login-button"
-                type="submit"
-                disabled={authLoading || submitting}
-              >
-                {submitting ? "Logging in..." : "Login"}
-              </button>
-            </form>
-
-            {errorText ? <p className="login-error">{errorText}</p> : null}
+            <a className="login-scroll-cue" href="#login-access">
+              Scroll to Login
+            </a>
           </div>
-        </div>
+        </section>
+
+        <section className="login-access-section" id="login-access">
+          <div className="login-access-shell">
+            <div className="login-panel">
+              <h2 className="login-panel-title">Project Onyx Login</h2>
+
+              <form className="login-form" onSubmit={handleSubmit}>
+                <input
+                  type="text"
+                  className="login-input"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  autoComplete="username"
+                  disabled={authLoading || submitting}
+                />
+
+                <input
+                  type="password"
+                  className="login-input"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  disabled={authLoading || submitting}
+                />
+
+                <button
+                  className="login-button"
+                  type="submit"
+                  disabled={authLoading || submitting}
+                >
+                  {submitting ? "Logging in..." : "Login"}
+                </button>
+              </form>
+
+              {errorText ? <p className="login-error">{errorText}</p> : null}
+            </div>
+          </div>
+        </section>
       </div>
     </LauncherLayout>
   );

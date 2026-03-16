@@ -1,10 +1,10 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  useCallback,
 } from "react";
 import { supabase } from "../lib/supabase";
 
@@ -24,7 +24,7 @@ function normalizeGlobalRole(role) {
 }
 
 function buildResolvedUser(profile) {
-  const globalRole = normalizeGlobalRole(profile?.global_role || profile?.role);
+  const globalRole = normalizeGlobalRole(profile?.global_role);
   const isBlocked = globalRole === "Blocked";
   const effectiveRole = isBlocked ? "Blocked" : globalRole;
 
@@ -60,7 +60,7 @@ export function UserProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, username, avatar_url, auth_email, global_role, role")
+      .select("id, username, avatar_url, auth_email, global_role")
       .eq("id", userId)
       .maybeSingle();
 

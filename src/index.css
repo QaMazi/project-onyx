@@ -62,12 +62,6 @@ svg {
   max-width: 100%;
 }
 
-@media (min-aspect-ratio: 20/9) {
-  :root {
-    --onyx-stage-max-width: 1420px;
-  }
-}
-
 @media (max-aspect-ratio: 17/10) and (min-width: 1100px) {
   :root {
     --onyx-stage-max-width: 980px;

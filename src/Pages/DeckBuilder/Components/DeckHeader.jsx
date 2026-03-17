@@ -32,7 +32,7 @@ function DeckHeader({
             value={deckName}
             onChange={(event) => setDeckName(event.target.value)}
             className="deck-header-name-input"
-            placeholder="Deck name"
+            placeholder="Deck Name"
             maxLength={60}
           />
 

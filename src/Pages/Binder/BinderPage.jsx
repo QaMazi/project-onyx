@@ -6,7 +6,8 @@ import { supabase } from "../../lib/supabase";
 
 import BinderFilters from "./Components/BinderFilters";
 import BinderGrid from "./Components/BinderGrid";
-import BinderDetailPanel from "./Components/BinderDetailPanel";
+import BinderHoverTooltip from "./Components/BinderHoverTooltip";
+import BinderCardModal from "./Components/BinderCardModal";
 import BinderPagination from "./Components/BinderPagination";
 
 import "./BinderPage.css";
@@ -15,9 +16,34 @@ const PAGE_SIZE = 24;
 const CARD_IMAGE_FALLBACK =
   "https://dgbgfhzcinlomghohxdq.supabase.co/storage/v1/object/public/card-images-upload/fallback_image.jpg";
 
+const TYPE_FLAGS = {
+  MONSTER: 0x1,
+  SPELL: 0x2,
+  TRAP: 0x4,
+};
+
+const SORT_OPTIONS = [
+  { label: "Name", value: "name" },
+  { label: "Quantity", value: "quantity" },
+  { label: "Locked Copies", value: "locked" },
+  { label: "Rarity Count", value: "rarities" },
+];
+
+const CARD_KIND_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Monster", value: "monster" },
+  { label: "Spell", value: "spell" },
+  { label: "Trap", value: "trap" },
+];
+
+const TRADE_STATUS_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Tradeable", value: "tradeable" },
+  { label: "Has Locked Copies", value: "locked" },
+];
+
 function buildCardImageUrl(card) {
   if (card?.image_url) return card.image_url;
-
   return `https://dgbgfhzcinlomghohxdq.supabase.co/storage/v1/object/public/card-images-upload/${card?.id}.jpg`;
 }
 
@@ -44,6 +70,14 @@ function buildVisiblePages(currentPage, totalPages) {
   return Array.from(pages)
     .filter((pageNumber) => pageNumber >= 1 && pageNumber <= totalPages)
     .sort((a, b) => a - b);
+}
+
+function getCardKindKey(card) {
+  const normalized = Number(card?.type || 0);
+  if ((normalized & TYPE_FLAGS.MONSTER) === TYPE_FLAGS.MONSTER) return "monster";
+  if ((normalized & TYPE_FLAGS.SPELL) === TYPE_FLAGS.SPELL) return "spell";
+  if ((normalized & TYPE_FLAGS.TRAP) === TYPE_FLAGS.TRAP) return "trap";
+  return "unknown";
 }
 
 function normalizeBinderRows(rows) {
@@ -104,53 +138,43 @@ function groupBinderCards(rows) {
     }
   }
 
-  const groupedCards = Array.from(groupedMap.values()).map((group) => {
-    const rarityMap = new Map();
+  return Array.from(groupedMap.values())
+    .map((group) => {
+      const rarityMap = new Map();
 
-    for (const copy of group.copies) {
-      const rarityKey = copy.rarityId || "unknown";
+      for (const copy of group.copies) {
+        const rarityKey = copy.rarityId || "unknown";
 
-      if (!rarityMap.has(rarityKey)) {
-        rarityMap.set(rarityKey, {
-          rarityId: copy.rarityId,
-          rarity: copy.rarity,
-          quantity: 0,
-          lockedQuantity: 0,
-        });
+        if (!rarityMap.has(rarityKey)) {
+          rarityMap.set(rarityKey, {
+            rarityId: copy.rarityId,
+            rarity: copy.rarity,
+            quantity: 0,
+            lockedQuantity: 0,
+          });
+        }
+
+        const rarityEntry = rarityMap.get(rarityKey);
+        rarityEntry.quantity += copy.quantity;
+
+        if (copy.isTradeLocked) {
+          rarityEntry.lockedQuantity += copy.quantity;
+        }
       }
 
-      const rarityEntry = rarityMap.get(rarityKey);
-      rarityEntry.quantity += copy.quantity;
-
-      if (copy.isTradeLocked) {
-        rarityEntry.lockedQuantity += copy.quantity;
-      }
-    }
-
-    const rarities = Array.from(rarityMap.values()).sort((a, b) => {
-      const aOrder = Number(a.rarity?.sort_order ?? 9999);
-      const bOrder = Number(b.rarity?.sort_order ?? 9999);
-
-      if (aOrder !== bOrder) return aOrder - bOrder;
-
-      const aName = String(a.rarity?.name || "");
-      const bName = String(b.rarity?.name || "");
-      return aName.localeCompare(bName);
-    });
-
-    return {
-      ...group,
-      rarities,
-    };
-  });
-
-  groupedCards.sort((a, b) => {
-    const aName = String(a.card?.name || "");
-    const bName = String(b.card?.name || "");
-    return aName.localeCompare(bName);
-  });
-
-  return groupedCards;
+      return {
+        ...group,
+        rarities: Array.from(rarityMap.values()).sort((a, b) => {
+          const aOrder = Number(a.rarity?.sort_order ?? 9999);
+          const bOrder = Number(b.rarity?.sort_order ?? 9999);
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return String(a.rarity?.name || "").localeCompare(String(b.rarity?.name || ""));
+        }),
+      };
+    })
+    .sort((a, b) =>
+      String(a.card?.name || "").localeCompare(String(b.card?.name || ""))
+    );
 }
 
 function BinderPage() {
@@ -166,17 +190,52 @@ function BinderPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("name");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [cardKindFilter, setCardKindFilter] = useState("all");
+  const [rarityFilter, setRarityFilter] = useState("all");
+  const [tradeStatusFilter, setTradeStatusFilter] = useState("all");
 
-  const [selectedGroupKey, setSelectedGroupKey] = useState(null);
   const [hoveredGroupKey, setHoveredGroupKey] = useState(null);
+  const [hoverPreview, setHoverPreview] = useState(null);
+  const [modalGroupKey, setModalGroupKey] = useState(null);
 
   const [page, setPage] = useState(1);
   const [pageJumpInput, setPageJumpInput] = useState("1");
 
+  async function loadBinderData(seriesIdOverride = activeSeriesId) {
+    if (!user?.id || !seriesIdOverride) {
+      setBinderGroups([]);
+      setLoadingBinder(false);
+      return;
+    }
+
+    setLoadingBinder(true);
+    setLoadError("");
+
+    try {
+      const { data, error } = await supabase
+        .from("binder_cards_view")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("series_id", seriesIdOverride)
+        .order("card_name", { ascending: true })
+        .order("rarity_sort_order", { ascending: true });
+
+      if (error) throw error;
+      setBinderGroups(groupBinderCards(normalizeBinderRows(data || [])));
+    } catch (error) {
+      console.error("Failed to fetch binder:", error);
+      setBinderGroups([]);
+      setLoadError("Failed to load binder.");
+    } finally {
+      setLoadingBinder(false);
+    }
+  }
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       setSearchTerm(searchInput.trim().toLowerCase());
-      setPage(1);
     }, 200);
 
     return () => clearTimeout(timeout);
@@ -185,6 +244,10 @@ function BinderPage() {
   useEffect(() => {
     setPageJumpInput(String(page));
   }, [page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, sortField, sortDirection, cardKindFilter, rarityFilter, tradeStatusFilter]);
 
   useEffect(() => {
     async function resolveActiveSeries() {
@@ -204,7 +267,6 @@ function BinderPage() {
           .maybeSingle();
 
         if (error) throw error;
-
         setActiveSeriesId(currentSeries?.id || null);
       } catch (error) {
         console.error("Failed to resolve active binder series:", error);
@@ -220,58 +282,101 @@ function BinderPage() {
   }, [authLoading, user]);
 
   useEffect(() => {
-    async function fetchBinder() {
-      if (!user?.id) {
-        setBinderGroups([]);
-        setLoadingBinder(false);
-        return;
-      }
-
-      if (!activeSeriesId) {
-        setBinderGroups([]);
-        setLoadingBinder(false);
-        return;
-      }
-
-      setLoadingBinder(true);
-      setLoadError("");
-
-      try {
-        const { data, error } = await supabase
-          .from("binder_cards_view")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("series_id", activeSeriesId)
-          .order("card_name", { ascending: true })
-          .order("rarity_sort_order", { ascending: true });
-
-        if (error) throw error;
-
-        const normalizedRows = normalizeBinderRows(data || []);
-        const groupedCards = groupBinderCards(normalizedRows);
-
-        setBinderGroups(groupedCards);
-      } catch (error) {
-        console.error("Failed to fetch binder:", error);
-        setBinderGroups([]);
-        setLoadError("Failed to load binder.");
-      } finally {
-        setLoadingBinder(false);
-      }
-    }
-
     if (!authLoading && user && !loadingSeries) {
-      fetchBinder();
+      loadBinderData();
     }
   }, [authLoading, user, activeSeriesId, loadingSeries]);
 
-  const filteredGroups = useMemo(() => {
-    if (!searchTerm) return binderGroups;
+  const rarityOptions = useMemo(() => {
+    const options = new Map();
 
-    return binderGroups.filter((group) =>
-      String(group.card?.name || "").toLowerCase().includes(searchTerm)
-    );
-  }, [binderGroups, searchTerm]);
+    for (const group of binderGroups) {
+      for (const entry of group.rarities || []) {
+        const value = String(entry.rarityId || entry.rarity?.name || "unknown");
+        if (!options.has(value)) {
+          options.set(value, {
+            value,
+            label: entry.rarity?.name || "Unknown",
+            sortOrder: Number(entry.rarity?.sort_order ?? 9999),
+          });
+        }
+      }
+    }
+
+    return [
+      { label: "All", value: "all" },
+      ...Array.from(options.values()).sort((a, b) => {
+        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+        return a.label.localeCompare(b.label);
+      }),
+    ];
+  }, [binderGroups]);
+
+  const filteredGroups = useMemo(() => {
+    return binderGroups
+      .filter((group) => {
+        if (
+          searchTerm &&
+          !String(group.card?.name || "").toLowerCase().includes(searchTerm)
+        ) {
+          return false;
+        }
+
+        if (cardKindFilter !== "all" && getCardKindKey(group.card) !== cardKindFilter) {
+          return false;
+        }
+
+        if (
+          rarityFilter !== "all" &&
+          !(group.rarities || []).some(
+            (entry) => String(entry.rarityId || entry.rarity?.name || "unknown") === rarityFilter
+          )
+        ) {
+          return false;
+        }
+
+        if (tradeStatusFilter === "tradeable" && group.totalQuantity <= group.totalLockedQuantity) {
+          return false;
+        }
+
+        if (tradeStatusFilter === "locked" && group.totalLockedQuantity <= 0) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortField === "quantity") {
+          return sortDirection === "asc"
+            ? a.totalQuantity - b.totalQuantity
+            : b.totalQuantity - a.totalQuantity;
+        }
+
+        if (sortField === "locked") {
+          return sortDirection === "asc"
+            ? a.totalLockedQuantity - b.totalLockedQuantity
+            : b.totalLockedQuantity - a.totalLockedQuantity;
+        }
+
+        if (sortField === "rarities") {
+          return sortDirection === "asc"
+            ? (a.rarities?.length || 0) - (b.rarities?.length || 0)
+            : (b.rarities?.length || 0) - (a.rarities?.length || 0);
+        }
+
+        return sortDirection === "asc"
+          ? String(a.card?.name || "").localeCompare(String(b.card?.name || ""))
+          : String(b.card?.name || "").localeCompare(String(a.card?.name || ""));
+      });
+  }, [
+    binderGroups,
+    cardKindFilter,
+    rarityFilter,
+    searchTerm,
+    sortDirection,
+    sortField,
+    tradeStatusFilter,
+  ]);
 
   const totalCount = filteredGroups.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -290,63 +395,87 @@ function BinderPage() {
 
   const paginatedGroups = useMemo(() => {
     const start = (safePage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return filteredGroups.slice(start, end);
+    return filteredGroups.slice(start, start + PAGE_SIZE);
   }, [filteredGroups, safePage]);
 
   useEffect(() => {
-    if (!filteredGroups.length) {
-      setSelectedGroupKey(null);
-      setHoveredGroupKey(null);
-      return;
-    }
-
-    const selectedStillExists = filteredGroups.some(
-      (group) => group.groupKey === selectedGroupKey
-    );
-
-    if (!selectedStillExists) {
-      setSelectedGroupKey(filteredGroups[0].groupKey);
-    }
-
     const hoveredStillExists = filteredGroups.some(
       (group) => group.groupKey === hoveredGroupKey
     );
 
     if (!hoveredStillExists) {
       setHoveredGroupKey(null);
+      setHoverPreview(null);
     }
-  }, [filteredGroups, selectedGroupKey, hoveredGroupKey]);
 
-  const selectedGroup = useMemo(
+    const modalStillExists =
+      filteredGroups.some((group) => group.groupKey === modalGroupKey) ||
+      binderGroups.some((group) => group.groupKey === modalGroupKey);
+
+    if (!modalStillExists) {
+      setModalGroupKey(null);
+    }
+  }, [filteredGroups, binderGroups, hoveredGroupKey, modalGroupKey]);
+
+  const modalGroup = useMemo(
     () =>
-      filteredGroups.find((group) => group.groupKey === selectedGroupKey) || null,
-    [filteredGroups, selectedGroupKey]
+      filteredGroups.find((group) => group.groupKey === modalGroupKey) ||
+      binderGroups.find((group) => group.groupKey === modalGroupKey) ||
+      null,
+    [filteredGroups, binderGroups, modalGroupKey]
   );
 
-  const hoveredGroup = useMemo(
-    () =>
-      filteredGroups.find((group) => group.groupKey === hoveredGroupKey) || null,
-    [filteredGroups, hoveredGroupKey]
-  );
+  function handleHoverGroup(group, target) {
+    if (!group || !target) return;
 
-  const previewGroup = hoveredGroup || selectedGroup || null;
+    const rect = target.getBoundingClientRect();
+    const tooltipWidth = 340;
+    const tooltipHeight = 260;
+    const showRight = rect.right + tooltipWidth + 24 < window.innerWidth;
+    const x = showRight ? rect.right + 14 : Math.max(12, rect.left - tooltipWidth - 14);
+    const y = Math.min(window.innerHeight - tooltipHeight - 12, Math.max(12, rect.top - 8));
+
+    setHoveredGroupKey(group.groupKey);
+    setHoverPreview({ group, x, y });
+  }
+
+  function handleLeaveGroup() {
+    setHoveredGroupKey(null);
+    setHoverPreview(null);
+  }
+
+  function handleOpenModal(group) {
+    setModalGroupKey(group?.groupKey || null);
+    setHoveredGroupKey(null);
+    setHoverPreview(null);
+  }
+
+  function handleClearFilters() {
+    setSearchInput("");
+    setSearchTerm("");
+    setSortField("name");
+    setSortDirection("asc");
+    setCardKindFilter("all");
+    setRarityFilter("all");
+    setTradeStatusFilter("all");
+  }
+
+  async function handleSellCards({ binderCardId, quantity }) {
+    const { data, error } = await supabase.rpc("sell_binder_cards_for_shards", {
+      p_binder_card_id: binderCardId,
+      p_quantity: Number(quantity || 0),
+    });
+
+    if (error) throw error;
+
+    await loadBinderData();
+    return data;
+  }
 
   if (authLoading) return null;
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (user.role === "Blocked") {
-    return <Navigate to="/" replace />;
-  }
-
-  if (
-    user.role !== "Admin+" &&
-    user.role !== "Admin" &&
-    user.role !== "Duelist"
-  ) {
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role === "Blocked") return <Navigate to="/" replace />;
+  if (user.role !== "Admin+" && user.role !== "Admin" && user.role !== "Duelist") {
     return <Navigate to="/mode" replace />;
   }
 
@@ -368,6 +497,21 @@ function BinderPage() {
             totalCount={totalCount}
             searchInput={searchInput}
             setSearchInput={setSearchInput}
+            sortField={sortField}
+            setSortField={setSortField}
+            sortDirection={sortDirection}
+            setSortDirection={setSortDirection}
+            cardKindFilter={cardKindFilter}
+            setCardKindFilter={setCardKindFilter}
+            rarityFilter={rarityFilter}
+            setRarityFilter={setRarityFilter}
+            rarityOptions={rarityOptions}
+            tradeStatusFilter={tradeStatusFilter}
+            setTradeStatusFilter={setTradeStatusFilter}
+            handleClearFilters={handleClearFilters}
+            SORT_OPTIONS={SORT_OPTIONS}
+            CARD_KIND_OPTIONS={CARD_KIND_OPTIONS}
+            TRADE_STATUS_OPTIONS={TRADE_STATUS_OPTIONS}
           />
 
           <main className="binder-center-panel">
@@ -376,10 +520,11 @@ function BinderPage() {
               loadingBinder={loadingBinder || loadingSeries}
               hasActiveSeries={Boolean(activeSeriesId)}
               groups={paginatedGroups}
-              selectedGroupKey={selectedGroupKey}
+              activeGroupKey={modalGroupKey}
               hoveredGroupKey={hoveredGroupKey}
-              setSelectedGroupKey={setSelectedGroupKey}
-              setHoveredGroupKey={setHoveredGroupKey}
+              onHoverGroup={handleHoverGroup}
+              onLeaveGroup={handleLeaveGroup}
+              onOpenGroupModal={handleOpenModal}
               buildCardImageUrl={buildCardImageUrl}
               CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
             />
@@ -394,14 +539,21 @@ function BinderPage() {
               clampPage={clampPage}
             />
           </main>
-
-          <BinderDetailPanel
-            previewGroup={previewGroup}
-            buildCardImageUrl={buildCardImageUrl}
-            CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
-          />
         </div>
       </div>
+
+      <BinderHoverTooltip
+        preview={hoverPreview}
+        buildCardImageUrl={buildCardImageUrl}
+        CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
+      />
+      <BinderCardModal
+        group={modalGroup}
+        buildCardImageUrl={buildCardImageUrl}
+        CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
+        onSellCards={handleSellCards}
+        onClose={() => setModalGroupKey(null)}
+      />
     </LauncherLayout>
   );
 }

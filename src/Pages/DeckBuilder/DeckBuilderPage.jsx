@@ -47,8 +47,6 @@ const SEARCH_MODE_OPTIONS = [
 
 const SORT_OPTIONS = [
   { label: "Name", value: "name" },
-  { label: "Owned", value: "owned" },
-  { label: "Available", value: "available" },
   { label: "ATK", value: "atk" },
   { label: "DEF", value: "def" },
   { label: "Level", value: "level" },
@@ -926,6 +924,9 @@ function DeckBuilderPage() {
   }
 
   function removeCardFromSection(cardId, section) {
+    setHoverPreview(null);
+    setImageModalCard(null);
+
     setDeckState((prev) => {
       const next = { main: new Map(prev.main), extra: new Map(prev.extra), side: new Map(prev.side) };
       const currentQty = Number(next[section].get(String(cardId)) || 0);

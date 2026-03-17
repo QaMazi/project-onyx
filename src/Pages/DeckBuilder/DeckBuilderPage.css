@@ -977,7 +977,8 @@
 .deck-hover-tooltip {
   position: fixed;
   z-index: 2400;
-  width: 360px;
+  width: 420px;
+  max-width: min(420px, calc(100vw - 24px));
   padding: 12px;
   border-radius: 16px;
   border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, rgba(255, 255, 255, 0.08));
@@ -1022,8 +1023,10 @@
 
 .deck-hover-tooltip-desc {
   margin-top: 8px;
-  max-height: 108px;
-  overflow: hidden;
+  max-height: min(42vh, 420px);
+  overflow-y: auto;
+  padding-right: 4px;
+  white-space: pre-wrap;
   font-size: 12px;
   line-height: 1.45;
   color: #d4deef;

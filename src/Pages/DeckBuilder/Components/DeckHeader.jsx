@@ -3,7 +3,6 @@ import "../DeckBuilderPage.css";
 function DeckHeader({
   deckName,
   setDeckName,
-  mainCount,
   monsterCount,
   spellCount,
   trapCount,
@@ -83,7 +82,6 @@ function DeckHeader({
 
       <div className="deck-header-right">
         <div className="deck-header-slot">{deckSlotLabel}</div>
-        <div className="deck-header-main-count">{mainCount}/60</div>
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ function RewardGiverPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const canUsePage = user?.role === "Admin+";
+  const canUsePage = user?.role === "Admin+" || user?.role === "Admin";
 
   const selectedPlayer = useMemo(
     () => players.find((player) => player.user_id === selectedUserId) || null,

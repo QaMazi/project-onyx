@@ -233,6 +233,13 @@
   padding: 16px;
 }
 
+.container-opener-info-card {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
 .container-opener-reel-window {
   position: relative;
   overflow: hidden;
@@ -321,7 +328,11 @@
   display: grid;
   gap: 8px;
   max-height: 260px;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
 }
 
 .container-opener-possible-card {

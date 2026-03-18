@@ -165,7 +165,7 @@ function ContainerMakerPage({ mode = "box" }) {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const canUsePage = user?.role === "Admin+";
+  const canUsePage = user?.role === "Admin+" || user?.role === "Admin";
   const modeCopy = useMemo(() => buildModeCopy(mode), [mode]);
 
   const visibleContainerTypeOptions = useMemo(

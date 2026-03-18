@@ -1,0 +1,18 @@
+2026-03-18 progression admin access alignment
+
+- Problem:
+  - Progression admin menu buttons were visible to `Admin` users, but several progression admin pages still hard-blocked `Admin+` only.
+  - Several progression admin RPCs/functions also still required `Admin+`, so even if the UI was opened the actions would fail.
+- Frontend fix:
+  - Progression admin pages now allow both `Admin` and `Admin+`:
+    - Starter Deck Editor
+    - Reward Giver
+    - Box Maker
+    - Pack Maker
+    - Store Editor
+- Backend fix:
+  - Added `public._assert_progression_admin()` backed by `public.is_admin_auth()`
+  - Switched progression-admin-only functions from `_assert_admin_plus()` to `_assert_progression_admin()`
+  - This keeps the real header Admin+ systems separate while letting plain `Admin` use progression admin tools
+- User data follow-up:
+  - After this alignment, SKX can be safely demoted from `Admin+` back to `Admin`

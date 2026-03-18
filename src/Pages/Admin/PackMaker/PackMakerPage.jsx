@@ -176,7 +176,7 @@ function PackMakerPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const canUsePage = user?.role === "Admin+";
+  const canUsePage = user?.role === "Admin+" || user?.role === "Admin";
 
   const packTierMap = useMemo(() => {
     const map = new Map();
@@ -1535,8 +1535,8 @@ function PackMakerPage() {
                                   </div>
                                   <div className="container-maker-container-row-meta">
                                     {product.code}
-                                    {product.is_locked ? " • Locked" : ""}
-                                    {!product.is_enabled ? " • Disabled" : ""}
+                                    {product.is_locked ? " â€¢ Locked" : ""}
+                                    {!product.is_enabled ? " â€¢ Disabled" : ""}
                                   </div>
                                 </div>
                               </button>

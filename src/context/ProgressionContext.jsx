@@ -45,6 +45,8 @@ function getPageAllowance(pageKey, state, user) {
   const duelStatus = String(state.duelingStatus || "idle").toLowerCase();
   const starterClaimed = Boolean(state.starterDeckClaimed);
   const everyoneStarterClaimed = Boolean(state.everyoneStarterClaimed);
+  const isSeriesMember = Boolean(state.isSeriesMember);
+  const isRoundZeroStandby = roundNumber === 0 && phase === "standby";
 
   if (phase === "lobby") {
     if (isAdmin) {
@@ -71,6 +73,32 @@ function getPageAllowance(pageKey, state, user) {
     };
   }
 
+  if (isRoundZeroStandby) {
+    const showRoundZeroFlow = !isAdmin || isSeriesMember;
+
+    if (!starterClaimed) {
+      return {
+        allowed: isAdmin || pageKey === "progression",
+        reason: "Begin the series to unlock progression systems.",
+        showBeginModal: showRoundZeroFlow && pageKey === "progression",
+        showLobbyModal: false,
+        showRoundZeroWaitingModal: false,
+        showWaitingOverlay: !isAdmin && pageKey !== "progression",
+      };
+    }
+
+    return {
+      allowed: isAdmin || pageKey === "progression",
+      reason: everyoneStarterClaimed
+        ? "Final Round 0 setup is finishing."
+        : "Waiting for every player in the series to claim a starter deck.",
+      showBeginModal: false,
+      showLobbyModal: false,
+      showRoundZeroWaitingModal: showRoundZeroFlow && pageKey === "progression",
+      showWaitingOverlay: !isAdmin && pageKey !== "progression",
+    };
+  }
+
   if (isAdmin) {
     return {
       allowed: true,
@@ -79,30 +107,6 @@ function getPageAllowance(pageKey, state, user) {
       showLobbyModal: false,
       showRoundZeroWaitingModal: false,
       showWaitingOverlay: false,
-    };
-  }
-
-  if (roundNumber === 0 && phase === "standby") {
-    if (!starterClaimed) {
-      return {
-        allowed: pageKey === "progression",
-        reason: "Begin the series to unlock progression systems.",
-        showBeginModal: true,
-        showLobbyModal: false,
-        showRoundZeroWaitingModal: false,
-        showWaitingOverlay: pageKey !== "progression",
-      };
-    }
-
-    return {
-      allowed: pageKey === "progression",
-      reason: everyoneStarterClaimed
-        ? "Final Round 0 setup is finishing."
-        : "Waiting for every player in the series to claim a starter deck.",
-      showBeginModal: false,
-      showLobbyModal: false,
-      showRoundZeroWaitingModal: pageKey === "progression",
-      showWaitingOverlay: pageKey !== "progression",
     };
   }
 
@@ -386,10 +390,11 @@ export function ProgressionSystemProvider({ pageKey, children }) {
           currentPhase: "standby",
           roundNumber: 0,
           roundStep: null,
-          starterDeckClaimed: false,
-          isReady: false,
-          canBypassLocks: user.role === "Admin+",
-          duelingStatus: "idle",
+        starterDeckClaimed: false,
+        isSeriesMember: false,
+        isReady: false,
+        canBypassLocks: user.role === "Admin+" || user.role === "Admin",
+        duelingStatus: "idle",
         });
         setStatusStrip([]);
         setRewardNotification(null);
@@ -455,6 +460,9 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       const nextState = {
         ...(stateResponse.data || {}),
         activeSeriesId: activeSeries.id,
+        isSeriesMember: (stripResponse.data || []).some(
+          (row) => row.user_id === user.id
+        ),
         everyoneStarterClaimed:
           (stripResponse.data || []).length > 0 &&
           (stripResponse.data || []).every((row) => Boolean(row.starter_claimed)),
@@ -480,8 +488,9 @@ export function ProgressionSystemProvider({ pageKey, children }) {
         roundStep: null,
         starterDeckClaimed: false,
         everyoneStarterClaimed: false,
+        isSeriesMember: false,
         isReady: false,
-        canBypassLocks: user.role === "Admin+",
+        canBypassLocks: user.role === "Admin+" || user.role === "Admin",
         duelingStatus: "idle",
         loadError: error.message || "Failed to load progression state.",
       });

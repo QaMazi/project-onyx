@@ -84,7 +84,7 @@ function StarterDeckEditorPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const canUsePage = user?.role === "Admin+";
+  const canUsePage = user?.role === "Admin+" || user?.role === "Admin";
 
   async function hydrateCardsWithNames(rows) {
     const uniqueIds = [...new Set(rows.map((row) => Number(row.card_id)).filter(Boolean))];

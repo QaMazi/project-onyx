@@ -228,7 +228,7 @@ function BanlistPage() {
     user?.role === "Admin" ||
     user?.role === "Duelist";
 
-  const isBanlistEditor = user?.role === "Admin+";
+  const isBanlistEditor = user?.role === "Admin+" || user?.role === "Admin";
 
   async function loadBanlistPage() {
     setLoading(true);

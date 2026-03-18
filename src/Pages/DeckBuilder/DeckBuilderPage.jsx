@@ -842,9 +842,11 @@ function DeckBuilderPage() {
   const isSelectedActiveDeck = Boolean(selectedDeckMeta?.isActive);
   const canSwitchActiveDeck =
     user?.role === "Admin+" ||
+    user?.role === "Admin" ||
     (currentPhase === "deckbuilding" && currentRoundNumber > 0);
   const canEditSelectedDeck =
     user?.role === "Admin+" ||
+    user?.role === "Admin" ||
     !isSelectedActiveDeck ||
     (currentPhase === "deckbuilding" && currentRoundNumber > 0);
   const canExportSelectedDeck = Boolean(selectedDeckMeta?.isActive);

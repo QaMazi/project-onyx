@@ -8,18 +8,25 @@ import CardDatabasePage from "./Pages/CardDatabase/CardDatabasePage";
 import DeckGamePage from "./Pages/DeckGame/DeckGamePage";
 import AdminPanelPage from "./Pages/Admin/AdminPanelPage";
 import BinderPage from "./Pages/Binder/BinderPage";
+import VaultPage from "./Pages/Vault/VaultPage";
 import DeckBuilderPage from "./Pages/DeckBuilder/DeckBuilderPage";
 import StorePage from "./Pages/Store/StorePage";
+import PremiumStorePage from "./Pages/PremiumStore/PremiumStorePage";
 import InventoryPage from "./Pages/Inventory/InventoryPage";
 import TradePage from "./Pages/Trade/TradePage";
 import BanlistPage from "./Pages/Banlist/BanlistPage";
 import StarterDeckEditorPage from "./Pages/Admin/StarterDeck/StarterDeckEditorPage";
 import RewardGiverPage from "./Pages/Admin/RewardGiver/RewardGiverPage";
 import ContainerMakerPage from "./Pages/Admin/ContainerMaker/ContainerMakerPage";
+import StoreEditorPage from "./Pages/Admin/StoreEditor/StoreEditorPage";
+import PlayerItemsPage from "./Pages/Admin/PlayerItems/PlayerItemsPage";
+import RoundRewardsPage from "./Pages/Admin/RoundRewards/RoundRewardsPage";
 import ContainerDatabasePage from "./Pages/Containers/ContainerDatabasePage";
 import ContainerOpenerPage from "./Pages/Containers/ContainerOpenerPage";
+import FeatureSlotsPage from "./Pages/FeatureSlots/FeatureSlotsPage";
 
 import { useUser } from "./context/UserContext";
+import { ProgressionSystemProvider } from "./context/ProgressionContext";
 
 import "./App.css";
 
@@ -174,6 +181,14 @@ function ProgressionAdminRoute({ children }) {
   return children;
 }
 
+function ProgressionSystemRoute({ pageKey, children }) {
+  return (
+    <ProgressionSystemProvider pageKey={pageKey}>
+      {children}
+    </ProgressionSystemProvider>
+  );
+}
+
 function AdminRoute({ children }) {
   const { user, authLoading } = useUser();
 
@@ -220,7 +235,9 @@ function App() {
         path="/mode/progression"
         element={
           <ProgressionRoute>
-            <ProgressionPage />
+            <ProgressionSystemRoute pageKey="progression">
+              <ProgressionPage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -229,7 +246,9 @@ function App() {
         path="/mode/progression/cards"
         element={
           <ProgressionRoute>
-            <CardDatabasePage />
+            <ProgressionSystemRoute pageKey="cards">
+              <CardDatabasePage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -238,7 +257,20 @@ function App() {
         path="/mode/progression/binder"
         element={
           <ProgressionRoute>
-            <BinderPage />
+            <ProgressionSystemRoute pageKey="binder">
+              <BinderPage />
+            </ProgressionSystemRoute>
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/vault"
+        element={
+          <ProgressionRoute>
+            <ProgressionSystemRoute pageKey="binder">
+              <VaultPage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -247,7 +279,9 @@ function App() {
         path="/mode/progression/deck"
         element={
           <ProgressionRoute>
-            <DeckBuilderPage />
+            <ProgressionSystemRoute pageKey="deck">
+              <DeckBuilderPage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -256,8 +290,19 @@ function App() {
         path="/mode/progression/store"
         element={
           <ProgressionRoute>
-            <StorePage />
+            <ProgressionSystemRoute pageKey="store">
+              <StorePage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/premium-store"
+        element={
+          <ProtectedRoute>
+            <PremiumStorePage />
+          </ProtectedRoute>
         }
       />
 
@@ -265,7 +310,9 @@ function App() {
         path="/mode/progression/inventory"
         element={
           <ProgressionRoute>
-            <InventoryPage />
+            <ProgressionSystemRoute pageKey="inventory">
+              <InventoryPage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -274,7 +321,9 @@ function App() {
         path="/mode/progression/trade"
         element={
           <ProgressionRoute>
-            <TradePage />
+            <ProgressionSystemRoute pageKey="trade">
+              <TradePage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -283,7 +332,9 @@ function App() {
         path="/mode/progression/banlist"
         element={
           <ProgressionRoute>
-            <BanlistPage />
+            <ProgressionSystemRoute pageKey="banlist">
+              <BanlistPage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -292,7 +343,9 @@ function App() {
         path="/mode/progression/containers/:typeSlug"
         element={
           <ProgressionRoute>
-            <ContainerDatabasePage />
+            <ProgressionSystemRoute pageKey="containers-db">
+              <ContainerDatabasePage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -301,7 +354,20 @@ function App() {
         path="/mode/progression/opener"
         element={
           <ProgressionRoute>
-            <ContainerOpenerPage />
+            <ProgressionSystemRoute pageKey="opener">
+              <ContainerOpenerPage />
+            </ProgressionSystemRoute>
+          </ProgressionRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/feature-slots"
+        element={
+          <ProgressionRoute>
+            <ProgressionSystemRoute pageKey="feature-slots">
+              <FeatureSlotsPage />
+            </ProgressionSystemRoute>
           </ProgressionRoute>
         }
       />
@@ -329,6 +395,33 @@ function App() {
         element={
           <ProgressionAdminRoute>
             <ContainerMakerPage />
+          </ProgressionAdminRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/store-editor"
+        element={
+          <ProgressionAdminRoute>
+            <StoreEditorPage />
+          </ProgressionAdminRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/player-items"
+        element={
+          <ProgressionAdminRoute>
+            <PlayerItemsPage />
+          </ProgressionAdminRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/round-rewards"
+        element={
+          <ProgressionAdminRoute>
+            <RoundRewardsPage />
           </ProgressionAdminRoute>
         }
       />

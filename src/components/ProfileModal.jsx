@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { usePremium } from "../context/PremiumContext";
 import { useUser } from "../context/UserContext";
 import { supabase } from "../lib/supabase";
 import "./ProfileModal.css";
@@ -29,7 +31,9 @@ function normalizeDisplayedRole(value) {
 }
 
 function ProfileModal({ open, onClose }) {
+  const navigate = useNavigate();
   const { user, profile, updateOwnProfile, changeOwnPassword } = useUser();
+  const { tokens, equippedBySlot } = usePremium();
 
   const [username, setUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -46,14 +50,34 @@ function ProfileModal({ open, onClose }) {
     setStatusText("");
   }, [open, profile]);
 
-  if (!open || !user || !profile) return null;
-
-  const avatar = profile.avatar_url || "";
-  const displayUsername = profile.username || "Unknown";
-  const displayedRole = normalizeDisplayedRole(user?.globalRole || profile?.global_role);
+  const avatar = profile?.avatar_url || "";
+  const displayUsername = profile?.username || "Unknown";
+  const displayedRole = normalizeDisplayedRole(
+    user?.globalRole || profile?.global_role
+  );
   const canAccessProgression = Boolean(user?.canAccessProgression);
   const canAccessHeaderAdmin = Boolean(user?.canAccessHeaderAdmin);
   const canAccessGameAdmin = Boolean(user?.canAccessGameAdmin);
+  const badgeFrameStyle =
+    equippedBySlot?.profile_badge_frame?.metadata?.styleId || "";
+  const avatarFrameStyle = equippedBySlot?.avatar_frame?.metadata?.styleId || "";
+  const rolePillStyle =
+    equippedBySlot?.role_pill_style?.metadata?.styleId || "";
+  const tokenPillStyle =
+    equippedBySlot?.token_pill_style?.metadata?.styleId || "";
+  const nameplateStyle =
+    equippedBySlot?.nameplate_style?.metadata?.styleId || "";
+  const profileSkinStyle =
+    equippedBySlot?.profile_card_skin?.metadata?.styleId || "";
+  const prestigeBorderStyle =
+    equippedBySlot?.prestige_border?.metadata?.styleId || "";
+  const bannerEffectStyle =
+    equippedBySlot?.profile_banner_effect?.metadata?.styleId || "";
+  const titleFlairStyle =
+    equippedBySlot?.title_flair?.metadata?.styleId || "";
+  const emblemStyle = equippedBySlot?.account_emblem?.metadata?.styleId || "";
+
+  if (!open || !user || !profile) return null;
 
   let accessSummary = "";
 
@@ -209,44 +233,98 @@ function ProfileModal({ open, onClose }) {
           <h2>Account Profile</h2>
 
           <button className="profile-close" onClick={onClose} type="button">
-            ✕
+            X
           </button>
         </div>
 
         <div className="profile-section">
           <h3>Account Identity</h3>
 
-          <div className="profile-account profile-account-expanded">
-            <div className="profile-avatar profile-avatar-large">
-              {avatar ? (
-                <img src={avatar} alt="avatar" />
-              ) : (
-                <div className="profile-avatar-placeholder">
-                  {displayUsername.charAt(0).toUpperCase()}
-                </div>
-              )}
+          <div
+            className="profile-identity-card"
+            data-badge-frame-style={badgeFrameStyle}
+            data-avatar-frame-style={avatarFrameStyle}
+            data-role-pill-style={rolePillStyle}
+            data-token-pill-style={tokenPillStyle}
+            data-nameplate-style={nameplateStyle}
+            data-profile-skin-style={profileSkinStyle}
+            data-prestige-border-style={prestigeBorderStyle}
+            data-banner-effect-style={bannerEffectStyle}
+            data-title-flair={titleFlairStyle}
+            data-emblem-style={emblemStyle}
+          >
+            <div className="profile-identity-topline">
+              <span className="profile-identity-kicker">Premium Account Card</span>
+              <span className="profile-identity-emblem" aria-hidden="true" />
             </div>
 
-            <div className="profile-account-info profile-account-info-expanded">
-              <div>
-                <span className="profile-label">Username</span>
-                <span>{displayUsername}</span>
+            <div className="profile-account profile-account-expanded">
+              <div className="profile-avatar profile-avatar-large">
+                {avatar ? (
+                  <img src={avatar} alt="avatar" />
+                ) : (
+                  <div className="profile-avatar-placeholder">
+                    {displayUsername.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <span className="profile-label">Role</span>
-                <span>{displayedRole}</span>
+              <div className="profile-account-info profile-account-info-expanded">
+                <div>
+                  <span className="profile-label">Username</span>
+                  <span className="profile-nameplate">{displayUsername}</span>
+                </div>
+
+                <div>
+                  <span className="profile-label">Role</span>
+                  <span className="profile-role-pill">{displayedRole}</span>
+                </div>
+
+                <div>
+                  <span className="profile-label">Mode Access</span>
+                  <span>{accessSummary}</span>
+                </div>
+
+                <div>
+                  <span className="profile-label">Login Email</span>
+                  <span>{profile.auth_email}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="profile-section">
+          <div className="profile-premium-topbar">
+            <div>
+              <h3>Premium Snapshot</h3>
+              <p className="profile-stats-subtext">
+                Onyx Tokens live on the account layer, not progression.
+              </p>
+            </div>
+
+            <div className="profile-premium-actions">
+              <div
+                className="profile-token-card"
+                data-token-pill-style={tokenPillStyle}
+              >
+                <img src="/ui/gentlemens_token.png" alt="" aria-hidden="true" />
+                <div>
+                  <span>Onyx Tokens</span>
+                  <strong>{tokens}</strong>
+                </div>
               </div>
 
-              <div>
-                <span className="profile-label">Mode Access</span>
-                <span>{accessSummary}</span>
-              </div>
-
-              <div>
-                <span className="profile-label">Login Email</span>
-                <span>{profile.auth_email}</span>
-              </div>
+              <button
+                type="button"
+                className="profile-premium-link"
+                onClick={() => {
+                  onClose?.();
+                  navigate("/mode/premium-store");
+                }}
+              >
+                Open Premium Store
+              </button>
             </div>
           </div>
         </div>
@@ -288,7 +366,7 @@ function ProfileModal({ open, onClose }) {
             </div>
 
             <p className="profile-note">
-              PNG, JPG, or WEBP only. Maximum 500×500 pixels and 1 MB.
+              PNG, JPG, or WEBP only. Maximum 500x500 pixels and 1 MB.
             </p>
 
             <button type="submit" disabled={savingProfile || uploadingAvatar}>
@@ -328,10 +406,10 @@ function ProfileModal({ open, onClose }) {
           </div>
 
           <div className="profile-stats-grid">
-            <ProfileStatCard label="Decks Beaten" value="—" />
-            <ProfileStatCard label="Win Rate" value="—" />
-            <ProfileStatCard label="Decks Played" value="—" />
-            <ProfileStatCard label="Last Played Date" value="—" />
+            <ProfileStatCard label="Decks Beaten" value="--" />
+            <ProfileStatCard label="Win Rate" value="--" />
+            <ProfileStatCard label="Decks Played" value="--" />
+            <ProfileStatCard label="Last Played Date" value="--" />
           </div>
         </div>
 
@@ -346,10 +424,10 @@ function ProfileModal({ open, onClose }) {
           </div>
 
           <div className="profile-stats-grid">
-            <ProfileStatCard label="Total 1st Place Wins" value="—" />
-            <ProfileStatCard label="Current Scoreboard Points" value="—" />
-            <ProfileStatCard label="Rounds Completed" value="—" />
-            <ProfileStatCard label="Series Joined" value="—" />
+            <ProfileStatCard label="Total 1st Place Wins" value="--" />
+            <ProfileStatCard label="Current Scoreboard Points" value="--" />
+            <ProfileStatCard label="Rounds Completed" value="--" />
+            <ProfileStatCard label="Series Joined" value="--" />
           </div>
         </div>
 

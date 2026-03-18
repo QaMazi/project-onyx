@@ -3,39 +3,13 @@ import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
+import {
+  formatStoreCategoryName,
+  normalizeStoreCategoryCode,
+  sortStoreGroups,
+} from "../../lib/storeCatalog";
 
 import "./StorePage.css";
-
-function formatCategoryName(code) {
-  switch (code) {
-    case "pack_openers":
-      return "Pack Openers";
-    case "pack_keys":
-      return "Pack Keys";
-    case "box_keys":
-      return "Box Keys";
-    case "feature_tokens":
-      return "Feature Tokens";
-    case "collection_notices":
-      return "Collection Notices";
-    case "rarity_reforgers":
-      return "Rarity Reforgers";
-    case "progression":
-      return "Progression";
-    case "protection":
-      return "Protection";
-    case "banlist":
-      return "Banlist";
-    case "chaos":
-      return "Chaos";
-    case "special":
-      return "Special";
-    default:
-      return String(code || "Other")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (m) => m.toUpperCase());
-  }
-}
 
 function StorePage() {
   const navigate = useNavigate();
@@ -43,17 +17,24 @@ function StorePage() {
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [exchangeBusy, setExchangeBusy] = useState(false);
   const [error, setError] = useState("");
 
   const [activeSeriesId, setActiveSeriesId] = useState(null);
   const [shards, setShards] = useState(0);
+  const [featureCoins, setFeatureCoins] = useState(0);
 
   const [catalog, setCatalog] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [exchangeConfig, setExchangeConfig] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [quantityByItem, setQuantityByItem] = useState({});
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [exchangeForm, setExchangeForm] = useState({
+    fromCurrency: "shards",
+    amount: "10",
+  });
 
   async function loadStoreData(currentUser) {
     if (!currentUser?.id) return;
@@ -73,24 +54,29 @@ function StorePage() {
 
       setActiveSeriesId(currentSeries.id);
 
-      const [catalogResponse, walletResponse, cartResponse] = await Promise.all([
-        supabase.from("store_catalog").select("*"),
-        supabase
-          .from("player_wallets")
-          .select("shards")
-          .eq("user_id", currentUser.id)
-          .eq("series_id", currentSeries.id)
-          .maybeSingle(),
-        supabase
-          .from("store_cart_view")
-          .select("*")
-          .eq("user_id", currentUser.id)
-          .eq("series_id", currentSeries.id),
-      ]);
+      const [catalogResponse, walletResponse, cartResponse, exchangeResponse] =
+        await Promise.all([
+          supabase.from("store_catalog").select("*"),
+          supabase
+            .from("player_wallets")
+            .select("shards, feature_coins")
+            .eq("user_id", currentUser.id)
+            .eq("series_id", currentSeries.id)
+            .maybeSingle(),
+          supabase
+            .from("store_cart_view")
+            .select("*")
+            .eq("user_id", currentUser.id)
+            .eq("series_id", currentSeries.id),
+          supabase.rpc("get_series_currency_exchange_config", {
+            p_series_id: currentSeries.id,
+          }),
+        ]);
 
       if (catalogResponse.error) throw catalogResponse.error;
       if (walletResponse.error) throw walletResponse.error;
       if (cartResponse.error) throw cartResponse.error;
+      if (exchangeResponse.error) throw exchangeResponse.error;
 
       const nextCatalog = catalogResponse.data || [];
       const nextCart = cartResponse.data || [];
@@ -98,12 +84,15 @@ function StorePage() {
       setCatalog(nextCatalog);
       setCartItems(nextCart);
       setShards(Number(walletResponse.data?.shards || 0));
+      setFeatureCoins(Number(walletResponse.data?.feature_coins || 0));
+      setExchangeConfig(exchangeResponse.data || null);
 
-      const nextQuantities = {};
-      for (const item of nextCatalog) {
-        nextQuantities[item.id] = 1;
-      }
-      setQuantityByItem(nextQuantities);
+      setQuantityByItem(
+        nextCatalog.reduce((accumulator, item) => {
+          accumulator[item.id] = 1;
+          return accumulator;
+        }, {})
+      );
     } catch (err) {
       console.error("Store load failed:", err);
       setError(err.message || "Failed to load store.");
@@ -122,12 +111,12 @@ function StorePage() {
     const map = new Map();
 
     for (const item of catalog) {
-      const code = item.category_code || "other";
+      const code = normalizeStoreCategoryCode(item.category_code);
 
       if (!map.has(code)) {
         map.set(code, {
           code,
-          label: formatCategoryName(code),
+          label: formatStoreCategoryName(code, item.category_name),
           items: [],
         });
       }
@@ -135,9 +124,15 @@ function StorePage() {
       map.get(code).items.push(item);
     }
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
+    if (!map.has("currency_exchange")) {
+      map.set("currency_exchange", {
+        code: "currency_exchange",
+        label: "Currency Exchange",
+        items: [],
+      });
+    }
+
+    return sortStoreGroups(Array.from(map.values()));
   }, [catalog]);
 
   const selectedCategoryGroup = useMemo(() => {
@@ -148,24 +143,23 @@ function StorePage() {
   const filteredModalItems = useMemo(() => {
     if (!selectedCategoryGroup) return [];
 
-    const q = searchTerm.trim().toLowerCase();
+    const query = searchTerm.trim().toLowerCase();
 
     return selectedCategoryGroup.items.filter((item) => {
-      if (!q) return true;
+      if (!query) return true;
 
       return (
-        String(item.name || "").toLowerCase().includes(q) ||
-        String(item.description || "").toLowerCase().includes(q)
+        String(item.name || "").toLowerCase().includes(query) ||
+        String(item.description || "").toLowerCase().includes(query)
       );
     });
   }, [selectedCategoryGroup, searchTerm]);
 
-  const cartTotal = useMemo(() => {
-    return cartItems.reduce(
-      (sum, item) => sum + Number(item.total_price || 0),
-      0
-    );
-  }, [cartItems]);
+  const cartTotal = useMemo(
+    () =>
+      cartItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0),
+    [cartItems]
+  );
 
   async function addToCart(itemId) {
     if (!user?.id || !activeSeriesId) return;
@@ -187,7 +181,7 @@ function StorePage() {
       await loadStoreData(user);
     } catch (err) {
       console.error("Add to cart failed:", err);
-      alert(err.message || "Failed to add item to cart.");
+      window.alert(err.message || "Failed to add item to cart.");
     } finally {
       setBusy(false);
     }
@@ -211,7 +205,7 @@ function StorePage() {
       await loadStoreData(user);
     } catch (err) {
       console.error("Set cart quantity failed:", err);
-      alert(err.message || "Failed to update cart.");
+      window.alert(err.message || "Failed to update cart.");
     } finally {
       setBusy(false);
     }
@@ -231,12 +225,39 @@ function StorePage() {
       if (rpcError) throw rpcError;
 
       await loadStoreData(user);
-      alert("Purchase complete.");
+      window.alert("Purchase complete.");
     } catch (err) {
       console.error("Checkout failed:", err);
-      alert(err.message || "Checkout failed.");
+      window.alert(err.message || "Checkout failed.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleExchangeSubmit() {
+    if (!activeSeriesId) return;
+
+    try {
+      setExchangeBusy(true);
+
+      const { error: rpcError } = await supabase.rpc(
+        "exchange_series_wallet_currency",
+        {
+          p_series_id: activeSeriesId,
+          p_from_currency: exchangeForm.fromCurrency,
+          p_amount: Number(exchangeForm.amount || 0),
+        }
+      );
+
+      if (rpcError) throw rpcError;
+
+      await loadStoreData(user);
+      window.alert("Exchange complete.");
+    } catch (err) {
+      console.error("Exchange failed:", err);
+      window.alert(err.message || "Exchange failed.");
+    } finally {
+      setExchangeBusy(false);
     }
   }
 
@@ -246,20 +267,9 @@ function StorePage() {
   }
 
   if (authLoading) return null;
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (user.role === "Blocked") {
-    return <Navigate to="/" replace />;
-  }
-
-  if (
-    user.role !== "Admin+" &&
-    user.role !== "Admin" &&
-    user.role !== "Duelist"
-  ) {
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role === "Blocked") return <Navigate to="/" replace />;
+  if (user.role !== "Admin+" && user.role !== "Admin" && user.role !== "Duelist") {
     return <Navigate to="/mode" replace />;
   }
 
@@ -271,7 +281,8 @@ function StorePage() {
             <div className="store-kicker">PROGRESSION</div>
             <h1 className="store-title">Store</h1>
             <p className="store-subtitle">
-              Buy items with shards. Purchased items go to your inventory.
+              Buy items with shards, exchange into Feature Coins, and send purchases
+              straight into your active-series inventory.
             </p>
           </div>
 
@@ -279,6 +290,11 @@ function StorePage() {
             <div className="store-shards-card">
               <span className="store-shards-label">Available Shards</span>
               <span className="store-shards-value">{shards}</span>
+            </div>
+
+            <div className="store-shards-card store-feature-coin-card">
+              <span className="store-shards-label">Feature Coins</span>
+              <span className="store-shards-value">{featureCoins}</span>
             </div>
 
             <button
@@ -308,7 +324,9 @@ function StorePage() {
                   >
                     <div className="store-category-card-label">{group.label}</div>
                     <div className="store-category-card-count">
-                      {group.items.length} Items
+                      {group.code === "currency_exchange"
+                        ? "Wallet Exchange"
+                        : `${group.items.length} Items`}
                     </div>
                   </button>
                 ))}
@@ -331,7 +349,7 @@ function StorePage() {
                         <div className="store-cart-info">
                           <div className="store-cart-name">{item.name}</div>
                           <div className="store-cart-line-price">
-                            {item.store_price} × {item.quantity} = {item.total_price}
+                            {item.store_price} x {item.quantity} = {item.total_price}
                           </div>
                         </div>
 
@@ -384,12 +402,9 @@ function StorePage() {
           </div>
         )}
 
-        {selectedCategoryGroup && (
+        {selectedCategoryGroup ? (
           <div className="store-modal-overlay" onClick={closeModal}>
-            <div
-              className="onyx-panel store-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="onyx-panel store-modal" onClick={(event) => event.stopPropagation()}>
               <div className="store-modal-header">
                 <div>
                   <div className="store-kicker">CATEGORY</div>
@@ -401,74 +416,162 @@ function StorePage() {
                   className="store-modal-close"
                   onClick={closeModal}
                 >
-                  ×
+                  x
                 </button>
               </div>
 
-              <div className="store-modal-toolbar">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={`Search ${selectedCategoryGroup.label}...`}
-                  className="store-search"
-                />
-              </div>
+              {selectedCategoryGroup.code === "currency_exchange" ? (
+                <div className="store-exchange-shell">
+                  <div className="store-exchange-card">
+                    <div className="store-item-name">Currency Exchange</div>
+                    <div className="store-item-desc">
+                      Convert between Shards and Feature Coins with the live series
+                      exchange settings.
+                    </div>
 
-              <div className="store-modal-items">
-                {filteredModalItems.length === 0 ? (
-                  <div className="store-empty">No items found.</div>
-                ) : (
-                  filteredModalItems.map((item) => (
-                    <div key={item.id} className="store-modal-item">
-                      <div className="store-modal-item-main">
-                        <div className="store-item-name">{item.name}</div>
-                        <div className="store-item-desc">
-                          {item.description || "No description yet."}
-                        </div>
+                    <div className="store-exchange-rates">
+                      <div className="store-exchange-rate-row">
+                        <span>Shards per Feature Coin</span>
+                        <strong>{exchangeConfig?.shards_per_feature_coin ?? "-"}</strong>
                       </div>
-
-                      <div className="store-modal-item-side">
-                        <div className="store-item-price">{item.store_price} Shards</div>
-
-                        <div className="store-item-actions">
-                          <input
-                            type="number"
-                            min="1"
-                            max={item.max_purchase || 99}
-                            value={quantityByItem[item.id] || 1}
-                            onChange={(e) =>
-                              setQuantityByItem((prev) => ({
-                                ...prev,
-                                [item.id]: Math.max(
-                                  1,
-                                  Math.min(
-                                    Number(item.max_purchase || 99),
-                                    Number(e.target.value || 1)
-                                  )
-                                ),
-                              }))
-                            }
-                            className="store-qty-input"
-                          />
-
-                          <button
-                            type="button"
-                            className="store-add-btn"
-                            onClick={() => addToCart(item.id)}
-                            disabled={busy}
-                          >
-                            Add to Cart
-                          </button>
-                        </div>
+                      <div className="store-exchange-rate-row">
+                        <span>Feature Coin to Shards Rate</span>
+                        <strong>{exchangeConfig?.feature_coin_to_shards_rate ?? "-"}</strong>
+                      </div>
+                      <div className="store-exchange-rate-row">
+                        <span>Fee</span>
+                        <strong>{exchangeConfig?.fee_percent ?? 0}%</strong>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+
+                    <div className="store-exchange-form">
+                      <select
+                        className="store-search"
+                        value={exchangeForm.fromCurrency}
+                        onChange={(event) =>
+                          setExchangeForm((current) => ({
+                            ...current,
+                            fromCurrency: event.target.value,
+                          }))
+                        }
+                      >
+                        <option value="shards">Spend Shards</option>
+                        <option value="feature_coins">Spend Feature Coins</option>
+                      </select>
+
+                      <input
+                        type="number"
+                        min="1"
+                        className="store-search"
+                        value={exchangeForm.amount}
+                        onChange={(event) =>
+                          setExchangeForm((current) => ({
+                            ...current,
+                            amount: event.target.value,
+                          }))
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        className="store-add-btn"
+                        onClick={handleExchangeSubmit}
+                        disabled={exchangeBusy}
+                      >
+                        {exchangeBusy ? "Exchanging..." : "Confirm Exchange"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="store-modal-toolbar">
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder={`Search ${selectedCategoryGroup.label}...`}
+                      className="store-search"
+                    />
+                  </div>
+
+                  <div className="store-modal-items">
+                    {filteredModalItems.length === 0 ? (
+                      <div className="store-empty">No items found.</div>
+                    ) : (
+                      filteredModalItems.map((item) => {
+                        const isPurchaseLocked = Boolean(item.is_store_purchase_locked);
+
+                        return (
+                          <div key={item.id} className="store-modal-item">
+                            <div className="store-modal-item-main">
+                              <div className="store-item-name">{item.name}</div>
+                              <div className="store-item-desc">
+                                {item.description || "No description yet."}
+                              </div>
+
+                              <div className="store-item-flags">
+                                {isPurchaseLocked ? (
+                                  <span className="store-item-flag is-locked">
+                                    Purchase Locked
+                                  </span>
+                                ) : null}
+
+                                {item.max_purchase ? (
+                                  <span className="store-item-flag">
+                                    Max {item.max_purchase}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="store-modal-item-side">
+                              <div className="store-item-price">
+                                {item.store_price} Shards
+                              </div>
+
+                              <div className="store-item-actions">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={item.max_purchase || 99}
+                                  value={quantityByItem[item.id] || 1}
+                                  onChange={(event) =>
+                                    setQuantityByItem((current) => ({
+                                      ...current,
+                                      [item.id]: Math.max(
+                                        1,
+                                        Math.min(
+                                          Number(item.max_purchase || 99),
+                                          Number(event.target.value || 1)
+                                        )
+                                      ),
+                                    }))
+                                  }
+                                  className="store-qty-input"
+                                  disabled={isPurchaseLocked}
+                                />
+
+                                <button
+                                  type="button"
+                                  className="store-add-btn"
+                                  onClick={() => addToCart(item.id)}
+                                  disabled={busy || isPurchaseLocked}
+                                >
+                                  {isPurchaseLocked ? "Locked" : "Add to Cart"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </LauncherLayout>
   );

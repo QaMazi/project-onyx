@@ -40,6 +40,16 @@ function normalizePositiveQuantity(value, maxValue = Number.MAX_SAFE_INTEGER) {
   return Math.max(1, Math.min(maxValue, Math.floor(numeric)));
 }
 
+async function fetchVisibleBinderRows(seriesId, targetUserId) {
+  const { data, error } = await supabase.rpc("get_series_player_visible_binder_cards", {
+    p_series_id: seriesId,
+    p_target_user_id: targetUserId,
+  });
+
+  if (error) throw error;
+  return data || [];
+}
+
 function upsertLineItem(list, nextLine, identityKeys, maxQuantity = null) {
   const existingIndex = list.findIndex((line) =>
     identityKeys.every((key) => line[key] === nextLine[key])
@@ -231,6 +241,22 @@ function TradePage() {
   const [outgoingTrades, setOutgoingTrades] = useState([]);
   const [receivedGifts, setReceivedGifts] = useState([]);
 
+  const tradeableMyBinderRows = useMemo(
+    () =>
+      myBinderRows.filter(
+        (row) => !row.is_trade_locked && Number(row.quantity || 0) > 0
+      ),
+    [myBinderRows]
+  );
+
+  const tradeableRecipientBinderRows = useMemo(
+    () =>
+      recipientBinderRows.filter(
+        (row) => !row.is_trade_locked && Number(row.quantity || 0) > 0
+      ),
+    [recipientBinderRows]
+  );
+
   async function loadRecipientAssets(seriesId, nextRecipientId) {
     if (!seriesId || !nextRecipientId) {
       setRecipientBinderRows([]);
@@ -239,13 +265,10 @@ function TradePage() {
     }
 
     const [binderResponse, inventoryResponse] = await Promise.all([
-      supabase
-        .from("binder_cards_view")
-        .select("*")
-        .eq("series_id", seriesId)
-        .eq("user_id", nextRecipientId)
-        .order("card_name", { ascending: true })
-        .order("rarity_sort_order", { ascending: true }),
+      fetchVisibleBinderRows(seriesId, nextRecipientId).then((data) => ({
+        data,
+        error: null,
+      })),
 
       supabase
         .from("player_inventory_view")
@@ -304,13 +327,10 @@ function TradePage() {
           .neq("user_id", currentUser.id)
           .order("username", { ascending: true }),
 
-        supabase
-          .from("binder_cards_view")
-          .select("*")
-          .eq("series_id", currentSeries.id)
-          .eq("user_id", currentUser.id)
-          .order("card_name", { ascending: true })
-          .order("rarity_sort_order", { ascending: true }),
+        fetchVisibleBinderRows(currentSeries.id, currentUser.id).then((data) => ({
+          data,
+          error: null,
+        })),
 
         supabase
           .from("player_inventory_view")
@@ -539,7 +559,7 @@ function TradePage() {
   const canUseRecipientAssets = Boolean(recipientId) && !isComposerDisabled;
 
   function addTradeOfferedCard() {
-    const row = myBinderRows.find((entry) => entry.id === offerCardId);
+    const row = tradeableMyBinderRows.find((entry) => entry.id === offerCardId);
     if (!row) return;
 
     setTradeOfferedCards((prev) =>
@@ -559,7 +579,9 @@ function TradePage() {
   }
 
   function addTradeRequestedCard() {
-    const row = recipientBinderRows.find((entry) => entry.id === requestCardId);
+    const row = tradeableRecipientBinderRows.find(
+      (entry) => entry.id === requestCardId
+    );
     if (!row) return;
 
     setTradeRequestedCards((prev) =>
@@ -623,7 +645,7 @@ function TradePage() {
   }
 
   function addGiftCard() {
-    const row = myBinderRows.find((entry) => entry.id === giftCardId);
+    const row = tradeableMyBinderRows.find((entry) => entry.id === giftCardId);
     if (!row) return;
 
     setGiftCards((prev) =>
@@ -1067,13 +1089,11 @@ function TradePage() {
                               >
                                 <option value="">Choose binder card...</option>
 
-                                {myBinderRows
-                                  .filter((row) => !row.is_trade_locked)
-                                  .map((row) => (
-                                    <option key={row.id} value={row.id}>
-                                      {buildCardOptionLabel(row)}
-                                    </option>
-                                  ))}
+                                {tradeableMyBinderRows.map((row) => (
+                                  <option key={row.id} value={row.id}>
+                                    {buildCardOptionLabel(row)}
+                                  </option>
+                                ))}
                               </select>
 
                               <input
@@ -1229,7 +1249,7 @@ function TradePage() {
                               >
                                 <option value="">Choose player card...</option>
 
-                                {recipientBinderRows.map((row) => (
+                                {tradeableRecipientBinderRows.map((row) => (
                                   <option key={row.id} value={row.id}>
                                     {buildCardOptionLabel(row)}
                                   </option>
@@ -1434,13 +1454,11 @@ function TradePage() {
                             >
                               <option value="">Choose binder card...</option>
 
-                              {myBinderRows
-                                .filter((row) => !row.is_trade_locked)
-                                .map((row) => (
-                                  <option key={row.id} value={row.id}>
-                                    {buildCardOptionLabel(row)}
-                                  </option>
-                                ))}
+                              {tradeableMyBinderRows.map((row) => (
+                                <option key={row.id} value={row.id}>
+                                  {buildCardOptionLabel(row)}
+                                </option>
+                              ))}
                             </select>
 
                             <input

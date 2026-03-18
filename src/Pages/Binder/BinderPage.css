@@ -1,5 +1,5 @@
 .binder-page {
-  width: min(1480px, calc(100vw - 56px));
+  width: min(1780px, calc(100vw - 56px));
   height: calc(100vh - 106px);
   box-sizing: border-box;
   margin: 0 auto;
@@ -96,7 +96,7 @@
   min-height: 0;
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 292px minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
 }
@@ -205,7 +205,7 @@
 
 .binder-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
   gap: 16px 14px;
   align-items: start;
 }
@@ -559,7 +559,7 @@
 
 @media (max-width: 1380px) {
   .binder-page {
-    width: min(1320px, calc(100vw - 40px));
+    width: min(1460px, calc(100vw - 40px));
   }
 
   .binder-layout {
@@ -567,7 +567,7 @@
   }
 
   .binder-grid {
-    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(154px, 1fr));
   }
 }
 

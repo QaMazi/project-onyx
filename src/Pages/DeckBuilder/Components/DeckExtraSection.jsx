@@ -17,6 +17,7 @@ function DeckExtraSection({
   onShowHoverCard,
   onHideHoverCard,
   buildCardImageUrl,
+  interactionDisabled = false,
 }) {
   const isDropActive = activeDropSection === "extra";
 
@@ -61,7 +62,7 @@ function DeckExtraSection({
                 <div
                   key={`extra-card-${slot.instanceKey || `${slot.cardId}-${index}`}`}
                   className="deck-slot deck-slot-filled"
-                  draggable
+                  draggable={!interactionDisabled}
                   onClick={() => onOpenCardModal(slot.cardId)}
                   onMouseEnter={(event) => onShowHoverCard(slot.cardId, event.currentTarget)}
                   onMouseLeave={onHideHoverCard}
@@ -81,6 +82,7 @@ function DeckExtraSection({
                       event.stopPropagation();
                       onRemoveCard(slot.cardId, "extra");
                     }}
+                    disabled={interactionDisabled}
                     aria-label={`Remove ${slot.card?.name || "card"} from extra deck`}
                   >
                     -

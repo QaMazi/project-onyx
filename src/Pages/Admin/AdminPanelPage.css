@@ -408,6 +408,33 @@
   padding-right: 4px;
 }
 
+.admin-premium-price-shell {
+  min-height: 0;
+  max-height: 820px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-premium-price-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-premium-price-category {
+  flex-shrink: 0;
+}
+
+.admin-premium-price-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .admin-profile-card,
 .admin-series-card,
 .admin-player-card,

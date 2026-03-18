@@ -172,7 +172,12 @@ function BinderCardModal({
   buildCardImageUrl,
   CARD_IMAGE_FALLBACK,
   onSellCards,
+  onVaultCards,
+  onUnvaultCards,
   onClose,
+  collectionMode = "binder",
+  vaultSlotsUsed = 0,
+  vaultSlotsTotal = 0,
 }) {
   const card = group?.card ?? null;
   const copies = group?.copies ?? [];
@@ -181,6 +186,8 @@ function BinderCardModal({
   const [sellQuantity, setSellQuantity] = useState(1);
   const [sellBusy, setSellBusy] = useState(false);
   const [sellError, setSellError] = useState("");
+  const [vaultBusy, setVaultBusy] = useState(false);
+  const [vaultError, setVaultError] = useState("");
 
   const detailRows = buildDetailRows(card);
   const sellOptions = useMemo(() => {
@@ -202,11 +209,16 @@ function BinderCardModal({
   }, [copies]);
 
   const selectedSellOption =
-    sellOptions.find((option) => option.binderCardId === selectedSellRowId) || sellOptions[0] || null;
+    sellOptions.find((option) => option.binderCardId === selectedSellRowId) ||
+    sellOptions[0] ||
+    null;
+
+  const hasLockedCopies = Number(group?.totalLockedQuantity || 0) > 0;
 
   useEffect(() => {
     setSellOpen(false);
     setSellError("");
+    setVaultError("");
     setSelectedSellRowId(sellOptions[0]?.binderCardId || "");
     setSellQuantity(1);
   }, [group, sellOptions]);
@@ -239,6 +251,44 @@ function BinderCardModal({
       setSellError(error.message || "Failed to sell cards.");
     } finally {
       setSellBusy(false);
+    }
+  }
+
+  async function handleMoveToVault() {
+    if (!group?.copies?.[0]?.id || !onVaultCards) return;
+
+    setVaultBusy(true);
+    setVaultError("");
+
+    try {
+      await onVaultCards({
+        binderCardId: group.copies[0].id,
+      });
+      onClose();
+    } catch (error) {
+      console.error("Failed to move card family to vault:", error);
+      setVaultError(error.message || "Failed to move card family to vault.");
+    } finally {
+      setVaultBusy(false);
+    }
+  }
+
+  async function handleMoveBackToBinder() {
+    if (!group?.copies?.[0]?.id || !onUnvaultCards) return;
+
+    setVaultBusy(true);
+    setVaultError("");
+
+    try {
+      await onUnvaultCards({
+        binderCardId: group.copies[0].id,
+      });
+      onClose();
+    } catch (error) {
+      console.error("Failed to move card family back to binder:", error);
+      setVaultError(error.message || "Failed to move card family back to binder.");
+    } finally {
+      setVaultBusy(false);
     }
   }
 
@@ -288,6 +338,14 @@ function BinderCardModal({
                 <span>Trade Locked</span>
                 <strong>x{group.totalLockedQuantity || 0}</strong>
               </div>
+              {collectionMode === "binder" ? (
+                <div className="binder-card-modal-row">
+                  <span>Vault Slots</span>
+                  <strong>
+                    {vaultSlotsUsed}/{vaultSlotsTotal}
+                  </strong>
+                </div>
+              ) : null}
             </div>
 
             <h3 className="binder-card-modal-subtitle">Rarities</h3>
@@ -326,17 +384,54 @@ function BinderCardModal({
             </div>
 
             <div className="binder-card-modal-actions">
-              <button
-                type="button"
-                className="binder-card-modal-sell-btn"
-                onClick={() => setSellOpen((current) => !current)}
-                disabled={!sellOptions.length || sellBusy}
-              >
-                {sellOpen ? "Cancel Sell" : "Sell"}
-              </button>
+              {collectionMode === "binder" ? (
+                <>
+                  <button
+                    type="button"
+                    className="binder-card-modal-sell-btn"
+                    onClick={() => setSellOpen((current) => !current)}
+                    disabled={!sellOptions.length || sellBusy || vaultBusy}
+                  >
+                    {sellOpen ? "Cancel Sell" : "Sell"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="binder-card-modal-sell-btn"
+                    onClick={handleMoveToVault}
+                    disabled={
+                      !onVaultCards ||
+                      vaultBusy ||
+                      sellBusy ||
+                      hasLockedCopies ||
+                      vaultSlotsTotal <= 0 ||
+                      vaultSlotsUsed >= vaultSlotsTotal
+                    }
+                  >
+                    {vaultBusy ? "Moving..." : "Move to Vault"}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="binder-card-modal-sell-btn"
+                  onClick={handleMoveBackToBinder}
+                  disabled={!onUnvaultCards || vaultBusy}
+                >
+                  {vaultBusy ? "Moving..." : "Move Back to Binder"}
+                </button>
+              )}
             </div>
 
-            {sellOpen ? (
+            {collectionMode === "binder" && vaultError ? (
+              <div className="binder-card-modal-error">{vaultError}</div>
+            ) : null}
+
+            {collectionMode === "vault" && vaultError ? (
+              <div className="binder-card-modal-error">{vaultError}</div>
+            ) : null}
+
+            {collectionMode === "binder" && sellOpen ? (
               <div className="binder-card-modal-sell-panel">
                 <h3 className="binder-card-modal-subtitle">Sell For Shards</h3>
 
@@ -402,6 +497,21 @@ function BinderCardModal({
                     </button>
                   </>
                 )}
+              </div>
+            ) : null}
+
+            {collectionMode === "binder" && !sellOpen ? (
+              <div className="binder-card-modal-description">
+                Moving to Vault hides all copies and rarities of this card family from your
+                Binder until you move them back.
+                {hasLockedCopies ? " Trade-locked copies must be cleared first." : ""}
+              </div>
+            ) : null}
+
+            {collectionMode === "vault" ? (
+              <div className="binder-card-modal-description">
+                Vaulted cards stay hidden from the normal Binder view until you move the
+                whole card family back.
               </div>
             ) : null}
           </div>

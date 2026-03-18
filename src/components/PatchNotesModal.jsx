@@ -48,8 +48,13 @@ function PatchNotesModal({ isOpen, onClose }) {
             </p>
           </div>
 
-          <button className="patch-modal-close" onClick={onClose} type="button" aria-label="Close patch notes">
-            ✕
+          <button
+            className="patch-modal-close"
+            onClick={onClose}
+            type="button"
+            aria-label="Close patch notes"
+          >
+            {"\u2715"}
           </button>
         </div>
 

@@ -1,0 +1,160 @@
+.progression-global-modal-backdrop,
+.progression-route-lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(2, 4, 10, 0.84), rgba(2, 4, 10, 0.92)),
+    radial-gradient(circle at top, rgba(189, 156, 95, 0.2), transparent 42%);
+  backdrop-filter: blur(12px);
+}
+
+.progression-global-modal,
+.progression-route-lock-card {
+  width: min(720px, 100%);
+  border: 1px solid rgba(184, 156, 95, 0.34);
+  border-radius: 28px;
+  background: rgba(10, 12, 18, 0.96);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
+  color: #f3efe3;
+}
+
+.progression-global-modal {
+  padding: 28px;
+}
+
+.progression-route-lock-card {
+  padding: 32px;
+  text-align: center;
+}
+
+.progression-global-modal-kicker,
+.progression-route-lock-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  color: rgba(184, 156, 95, 0.8);
+  text-transform: uppercase;
+}
+
+.progression-global-modal-title,
+.progression-route-lock-title {
+  margin: 10px 0 0;
+  font-size: clamp(1.8rem, 2vw, 2.4rem);
+  line-height: 1.1;
+}
+
+.progression-global-modal-copy,
+.progression-route-lock-copy {
+  margin: 14px 0 0;
+  color: rgba(243, 239, 227, 0.78);
+  line-height: 1.6;
+}
+
+.progression-global-modal-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.progression-global-primary-btn {
+  min-width: 220px;
+  padding: 14px 22px;
+  border: 1px solid rgba(184, 156, 95, 0.42);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(184, 156, 95, 0.94), rgba(232, 195, 95, 0.92));
+  color: #120f08;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.progression-global-primary-btn:disabled {
+  opacity: 0.66;
+  cursor: default;
+}
+
+.progression-global-error {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 107, 107, 0.28);
+  background: rgba(91, 16, 16, 0.32);
+  color: #ffd2d2;
+}
+
+.progression-reward-notice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.progression-reward-notice-card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(184, 156, 95, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.progression-reward-notice-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 227, 0.6);
+}
+
+.progression-reward-notice-value {
+  margin-top: 6px;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.progression-reward-notice-section {
+  margin-top: 20px;
+}
+
+.progression-reward-notice-section h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progression-reward-notice-list {
+  display: grid;
+  gap: 8px;
+}
+
+.progression-reward-notice-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(184, 156, 95, 0.16);
+}
+
+.progression-reward-notice-empty {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(243, 239, 227, 0.7);
+}
+
+@media (max-width: 720px) {
+  .progression-global-modal,
+  .progression-route-lock-card {
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .progression-reward-notice-grid {
+    grid-template-columns: 1fr;
+  }
+}

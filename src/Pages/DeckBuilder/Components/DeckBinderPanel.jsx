@@ -24,6 +24,7 @@ function DeckBinderPanel({
   onDragStartBinderCard,
   onDragEndCard,
   buildCardImageUrl,
+  interactionDisabled = false,
 }) {
   return (
     <aside className="deck-browser-panel">
@@ -112,7 +113,7 @@ function DeckBinderPanel({
                   <div
                     key={String(cardId)}
                     className={`deck-binder-card ${isCursed ? "is-cursed" : ""}`}
-                    draggable
+                    draggable={!interactionDisabled}
                     onClick={() => onOpenCardModal(cardId)}
                     onMouseEnter={(event) => onHoverCard(cardId, event.currentTarget)}
                     onMouseLeave={onLeaveCard}
@@ -148,7 +149,7 @@ function DeckBinderPanel({
                               event.stopPropagation();
                               onAddToMain(cardId);
                             }}
-                            disabled={availableQuantity <= 0 || isCursed}
+                            disabled={interactionDisabled || availableQuantity <= 0 || isCursed}
                           >
                             + Main
                           </button>
@@ -162,7 +163,7 @@ function DeckBinderPanel({
                               event.stopPropagation();
                               onAddToExtra(cardId);
                             }}
-                            disabled={availableQuantity <= 0 || isCursed}
+                            disabled={interactionDisabled || availableQuantity <= 0 || isCursed}
                           >
                             + Extra
                           </button>
@@ -176,7 +177,7 @@ function DeckBinderPanel({
                               event.stopPropagation();
                               onAddToSide(cardId);
                             }}
-                            disabled={availableQuantity <= 0 || isCursed}
+                            disabled={interactionDisabled || availableQuantity <= 0 || isCursed}
                           >
                             + Side
                           </button>

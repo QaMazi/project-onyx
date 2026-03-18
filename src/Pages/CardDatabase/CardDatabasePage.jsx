@@ -3,13 +3,13 @@ import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
+import useResponsiveGridPageSize from "../../hooks/useResponsiveGridPageSize";
 import CardFilters from "./Components/CardFilters";
 import CardGrid from "./Components/CardGrid";
 import CardDetailPanel from "./Components/CardDetailPanel";
 import Pagination from "./Components/Pagination";
 import "./CardDatabasePage.css";
 
-const PAGE_SIZE = 50;
 const CARD_IMAGE_FALLBACK =
   "https://dgbgfhzcinlomghohxdq.supabase.co/storage/v1/object/public/card-images-upload/fallback_image.jpg";
 
@@ -863,8 +863,26 @@ function CardDatabasePage() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
 
   const typeIndexRef = useRef(null);
+  const gridCardRef = useRef(null);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const cardDatabasePageSizeOptions = useMemo(
+    () => ({
+      fallback: 50,
+      minPageSize: 6,
+      minColumnWidth: 138,
+      columnGap: 14,
+      rowGap: 16,
+      paddingX: 32,
+      paddingY: 32,
+      textHeight: 34,
+      extraHeight: 12,
+    }),
+    []
+  );
+
+  const pageSize = useResponsiveGridPageSize(gridCardRef, cardDatabasePageSizeOptions);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const visiblePages = useMemo(
     () => buildVisiblePages(page, totalPages),
     [page, totalPages]
@@ -1010,7 +1028,7 @@ function CardDatabasePage() {
           if (countError) throw countError;
 
           resolvedTotalCount = count || 0;
-          const resolvedTotalPages = Math.max(1, Math.ceil(resolvedTotalCount / PAGE_SIZE));
+          const resolvedTotalPages = Math.max(1, Math.ceil(resolvedTotalCount / pageSize));
           const resolvedPage = clampPage(page, resolvedTotalPages);
 
           if (resolvedPage !== page) {
@@ -1020,8 +1038,8 @@ function CardDatabasePage() {
             return;
           }
 
-          const start = (resolvedPage - 1) * PAGE_SIZE;
-          const end = start + PAGE_SIZE - 1;
+          const start = (resolvedPage - 1) * pageSize;
+          const end = start + pageSize - 1;
 
           let query = supabase
             .from("cards")
@@ -1074,7 +1092,7 @@ function CardDatabasePage() {
           if (countError) throw countError;
 
           const roughCount = count || 0;
-          const resolvedTotalPages = Math.max(1, Math.ceil(roughCount / PAGE_SIZE));
+          const resolvedTotalPages = Math.max(1, Math.ceil(roughCount / pageSize));
           const resolvedPage = clampPage(page, resolvedTotalPages);
 
           if (resolvedPage !== page) {
@@ -1084,8 +1102,8 @@ function CardDatabasePage() {
             return;
           }
 
-          const start = (resolvedPage - 1) * PAGE_SIZE;
-          const end = start + PAGE_SIZE - 1;
+          const start = (resolvedPage - 1) * pageSize;
+          const end = start + pageSize - 1;
 
           if (Array.isArray(matchingIds) && matchingIds.length > 0) {
             const chunks = chunkArray(matchingIds, 500);
@@ -1230,6 +1248,7 @@ function CardDatabasePage() {
     defMin,
     defMax,
     page,
+    pageSize,
     hasComputedFilters,
     showMonsterSubtypeFilter,
     showSpellTrapSubtypeFilter,
@@ -1368,10 +1387,12 @@ function CardDatabasePage() {
               loadingCards={loadingCards}
               typeIndexLoading={typeIndexLoading}
               cards={cards}
+              gridCardRef={gridCardRef}
               lockedCard={lockedCard}
               hoveredCard={hoveredCard}
               setHoveredCard={setHoveredCard}
               setLockedCard={setLockedCard}
+              setImageModalOpen={setImageModalOpen}
               buildCardImageUrl={buildCardImageUrl}
               CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
             />

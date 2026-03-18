@@ -3,15 +3,17 @@ function CardGrid({
   loadingCards,
   typeIndexLoading,
   cards,
+  gridCardRef,
   lockedCard,
   hoveredCard,
   setHoveredCard,
   setLockedCard,
+  setImageModalOpen,
   buildCardImageUrl,
   CARD_IMAGE_FALLBACK,
 }) {
   return (
-    <div className="card-database-grid-card">
+    <div className="card-database-grid-card" ref={gridCardRef}>
       {loadError ? (
         <div className="card-database-empty-state">{loadError}</div>
       ) : loadingCards || typeIndexLoading ? (
@@ -33,7 +35,10 @@ function CardGrid({
                 } ${isHovered ? "is-hovered" : ""}`}
                 onMouseEnter={() => setHoveredCard(card)}
                 onMouseLeave={() => setHoveredCard(null)}
-                onClick={() => setLockedCard(card)}
+                onClick={() => {
+                  setLockedCard(card);
+                  setImageModalOpen(true);
+                }}
               >
                 <div className="card-database-tile-image-shell">
                   <img

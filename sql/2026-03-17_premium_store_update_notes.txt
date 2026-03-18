@@ -1,0 +1,35 @@
+Premium Store implementation notes
+Date: 2026-03-17
+
+- Applied live DB migration:
+  - sql/2026-03-17_premium_account_store.sql
+
+- Live backend verification completed:
+  - premium_store_items table exists
+  - profile_premium_wallets table exists
+  - profile_showcase_settings table exists
+  - premium_system_settings seeded
+  - 77 premium catalog rows seeded
+  - all premium item prices currently default to 0
+  - premium RPC set verified:
+    - get_my_premium_state
+    - purchase_premium_item
+    - equip_premium_item
+    - unequip_premium_slot
+    - save_my_profile_showcase
+    - search_showcase_cards
+    - get_random_public_showcase
+    - admin_grant_gentlemens_tokens
+    - admin_set_premium_item_price
+    - admin_set_premium_auto_round_tokens_enabled
+
+- Frontend follow-up adjustments after audit:
+  - profile premium cosmetics now visibly apply on the profile identity surface
+  - showcase object premium branches completed for background, pedestal, banner trim, aura, emblem, and related styles
+  - panel border premium style now renders as a live orbit border effect
+
+- Verification:
+  - npm run build passes after premium updates
+
+- Remaining recommendation:
+  - rotate the database password after this implementation pass, since it was shared during setup

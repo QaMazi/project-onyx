@@ -1,0 +1,164 @@
+.round-rewards-page {
+  display: grid;
+  gap: 22px;
+}
+
+.round-rewards-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.round-rewards-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  color: rgba(184, 156, 95, 0.82);
+  text-transform: uppercase;
+}
+
+.round-rewards-title {
+  margin: 8px 0 0;
+  font-size: clamp(2rem, 2.8vw, 2.8rem);
+}
+
+.round-rewards-subtitle {
+  margin: 10px 0 0;
+  color: rgba(243, 239, 227, 0.72);
+}
+
+.round-rewards-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.round-rewards-card {
+  border: 1px solid rgba(184, 156, 95, 0.22);
+  border-radius: 24px;
+  background: rgba(10, 12, 18, 0.88);
+  padding: 20px;
+}
+
+.round-rewards-section-header h2 {
+  margin: 0 0 12px;
+}
+
+.round-rewards-primary-btn,
+.round-rewards-secondary-btn,
+.round-rewards-config-row,
+.round-rewards-field input,
+.round-rewards-field select {
+  border-radius: 14px;
+}
+
+.round-rewards-primary-btn,
+.round-rewards-secondary-btn {
+  padding: 12px 16px;
+  border: 1px solid rgba(184, 156, 95, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f3efe3;
+  cursor: pointer;
+}
+
+.round-rewards-config-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.round-rewards-config-row {
+  padding: 12px 14px;
+  border: 1px solid rgba(184, 156, 95, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: #f3efe3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.round-rewards-config-row.is-selected {
+  border-color: rgba(184, 156, 95, 0.5);
+  background: rgba(184, 156, 95, 0.14);
+}
+
+.round-rewards-main {
+  display: grid;
+  gap: 18px;
+}
+
+.round-rewards-form-grid,
+.round-rewards-placement-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.round-rewards-form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.round-rewards-placement-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.round-rewards-placement-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(184, 156, 95, 0.14);
+  display: grid;
+  gap: 10px;
+}
+
+.round-rewards-placement-card h3 {
+  margin: 0;
+}
+
+.round-rewards-field {
+  display: grid;
+  gap: 6px;
+}
+
+.round-rewards-field span {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 227, 0.64);
+}
+
+.round-rewards-field input,
+.round-rewards-field select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(184, 156, 95, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3efe3;
+}
+
+.round-rewards-success,
+.round-rewards-error {
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.round-rewards-success {
+  background: rgba(39, 111, 73, 0.26);
+  border: 1px solid rgba(65, 177, 112, 0.26);
+}
+
+.round-rewards-error {
+  background: rgba(101, 24, 24, 0.26);
+  border: 1px solid rgba(201, 91, 91, 0.24);
+}
+
+.round-rewards-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1100px) {
+  .round-rewards-layout,
+  .round-rewards-form-grid,
+  .round-rewards-placement-grid {
+    grid-template-columns: 1fr;
+  }
+}

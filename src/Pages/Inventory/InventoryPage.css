@@ -63,6 +63,11 @@
   gap: 4px;
 }
 
+.inventory-feature-coin-card {
+  border-color: rgba(112, 189, 255, 0.28);
+  background: linear-gradient(180deg, rgba(112, 189, 255, 0.16), rgba(112, 189, 255, 0.06));
+}
+
 .inventory-shards-label {
   font-size: 11px;
   font-weight: 700;
@@ -216,6 +221,40 @@
   gap: 12px;
 }
 
+.inventory-item-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inventory-item-action-btn,
+.inventory-modal-close-btn {
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.inventory-item-action-btn:hover,
+.inventory-modal-close-btn:hover {
+  transform: translateY(-1px);
+}
+
+.inventory-item-action-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.inventory-item-action-btn {
+  min-width: 110px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #111;
+  background: linear-gradient(180deg, #efd28c, #c8a85d);
+}
+
 .inventory-item-top {
   display: flex;
   align-items: flex-start;
@@ -309,6 +348,283 @@
   color: rgba(231, 237, 255, 0.68);
 }
 
+.inventory-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(3, 6, 12, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.inventory-modal {
+  width: min(720px, calc(100vw - 40px));
+  max-height: min(90vh, 980px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inventory-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.inventory-modal-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.inventory-modal-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 22px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.inventory-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.inventory-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.inventory-modal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.inventory-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(200, 168, 93, 0.34);
+  border-radius: 999px;
+}
+
+.inventory-modal-copy {
+  margin: 0;
+  color: rgba(231, 237, 255, 0.82);
+  line-height: 1.6;
+}
+
+.inventory-modal-warning {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(190, 74, 74, 0.16);
+  color: #ffc0c0;
+  border: 1px solid rgba(190, 74, 74, 0.28);
+}
+
+.inventory-modal-meta {
+  margin-top: 4px;
+}
+
+.inventory-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.inventory-flow-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inventory-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inventory-choice-card {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #f5f7ff;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.inventory-choice-card:hover,
+.inventory-choice-inline-btn:hover,
+.inventory-rarity-pill:hover,
+.inventory-counter-btn:hover,
+.inventory-target-chip:hover {
+  transform: translateY(-1px);
+}
+
+.inventory-choice-card.is-selected,
+.inventory-choice-inline-btn.is-selected,
+.inventory-rarity-pill.is-selected {
+  border-color: rgba(200, 168, 93, 0.52);
+  background: rgba(200, 168, 93, 0.14);
+}
+
+.inventory-choice-card-static {
+  cursor: default;
+  align-items: flex-start;
+}
+
+.inventory-choice-card-image {
+  width: 58px;
+  height: 84px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.inventory-choice-card-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inventory-choice-card-copy strong {
+  font-size: 15px;
+}
+
+.inventory-choice-card-copy span {
+  font-size: 13px;
+  color: rgba(231, 237, 255, 0.72);
+}
+
+.inventory-choice-inline-btn,
+.inventory-rarity-pill,
+.inventory-counter-btn {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f7ff;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.inventory-choice-inline-btn {
+  margin-left: auto;
+  min-width: 118px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.inventory-rarity-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.inventory-rarity-pill {
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.inventory-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.inventory-target-chip {
+  border: 1px solid rgba(200, 168, 93, 0.3);
+  background: rgba(200, 168, 93, 0.12);
+  color: #fff1c8;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inventory-target-section {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.inventory-target-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.inventory-target-section-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.inventory-target-section-header span {
+  color: rgba(231, 237, 255, 0.7);
+  font-size: 13px;
+}
+
+.inventory-rarity-counter-list {
+  width: min(240px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.inventory-rarity-counter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.inventory-rarity-counter span {
+  font-size: 13px;
+  color: rgba(231, 237, 255, 0.82);
+}
+
+.inventory-counter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-counter-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.inventory-modal-warning-success {
+  background: rgba(87, 178, 120, 0.16);
+  color: #bdf0ca;
+  border-color: rgba(87, 178, 120, 0.28);
+}
+
 @media (max-width: 1180px) {
   .inventory-item-grid {
     grid-template-columns: 1fr;
@@ -348,5 +664,18 @@
   .inventory-group-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .inventory-choice-card,
+  .inventory-choice-card-static {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inventory-choice-inline-btn,
+  .inventory-rarity-pill-row,
+  .inventory-rarity-counter-list {
+    margin-left: 0;
+    width: 100%;
   }
 }

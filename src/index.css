@@ -77,6 +77,28 @@
   --onyx-accent-glow-soft: rgba(215, 166, 62, 0.16);
   --onyx-accent-glow: rgba(215, 166, 62, 0.26);
   --onyx-accent-glow-strong: rgba(215, 166, 62, 0.4);
+  --onyx-accent-secondary-soft: rgba(244, 211, 122, 0.14);
+  --onyx-accent-secondary-border: rgba(244, 211, 122, 0.32);
+  --onyx-accent-secondary-glow: rgba(244, 211, 122, 0.22);
+  --onyx-accent-tertiary-soft: rgba(111, 76, 22, 0.16);
+  --onyx-accent-tertiary-border: rgba(111, 76, 22, 0.28);
+  --onyx-accent-tertiary-glow: rgba(111, 76, 22, 0.22);
+  --onyx-accent-spectrum: linear-gradient(
+    135deg,
+    rgba(244, 211, 122, 0.92) 0%,
+    rgba(215, 166, 62, 0.88) 48%,
+    rgba(111, 76, 22, 0.9) 100%
+  );
+  --onyx-title-gradient: linear-gradient(
+    90deg,
+    var(--theme-accent-2) 0%,
+    #ffffff 42%,
+    var(--theme-accent) 76%,
+    var(--theme-accent-2) 100%
+  );
+  --onyx-title-shadow:
+    0 3px 18px rgba(111, 76, 22, 0.28),
+    0 0 22px rgba(215, 166, 62, 0.16);
 
   --onyx-panel-border: var(--onyx-accent-border);
   --onyx-panel-border-strong: var(--onyx-accent-border-strong);
@@ -87,10 +109,12 @@
 
   --onyx-panel-shadow:
     0 22px 60px rgba(0, 0, 0, 0.42),
+    0 0 30px rgba(244, 211, 122, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --onyx-panel-shadow-hover:
-    0 16px 42px rgba(0, 0, 0, 0.56),
-    0 0 28px var(--onyx-accent-glow-soft);
+    0 18px 46px rgba(0, 0, 0, 0.56),
+    0 0 28px rgba(215, 166, 62, 0.16),
+    0 0 34px rgba(244, 211, 122, 0.12);
 
   --onyx-panel-accent-border: var(--onyx-accent-border-strong);
   --onyx-panel-accent-soft: var(--onyx-accent-soft);
@@ -102,42 +126,87 @@
       circle at top left,
       rgba(var(--theme-accent-rgb), 0.08) 0%,
       transparent 46%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(var(--theme-accent-2-rgb), 0.06) 0%,
+      transparent 32%
     );
   --onyx-surface-raised:
-    linear-gradient(180deg, rgba(8, 11, 16, 0.9), rgba(3, 5, 8, 0.96)),
+    linear-gradient(180deg, rgba(8, 11, 16, 0.9), rgba(3, 5, 8, 0.97)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-3-rgb), 0.18),
+      transparent 42%
+    ),
     radial-gradient(
       circle at top left,
-      rgba(var(--theme-accent-rgb), 0.14) 0%,
+      rgba(var(--theme-accent-rgb), 0.16) 0%,
       transparent 52%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(var(--theme-accent-2-rgb), 0.12) 0%,
+      transparent 38%
     );
   --onyx-surface-soft:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.022)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-3-rgb), 0.12),
+      transparent 52%
+    ),
     radial-gradient(
       circle at top left,
-      rgba(var(--theme-accent-rgb), 0.08) 0%,
+      rgba(var(--theme-accent-rgb), 0.12) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(var(--theme-accent-2-rgb), 0.1) 0%,
       transparent 60%
     );
   --onyx-surface-accent:
-    linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.24), rgba(0, 0, 0, 0.18)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-2-rgb), 0.24) 0%,
+      rgba(var(--theme-accent-rgb), 0.18) 44%,
+      rgba(var(--theme-accent-3-rgb), 0.28) 100%
+    ),
     linear-gradient(180deg, rgba(9, 12, 18, 0.94), rgba(2, 4, 8, 0.98));
   --onyx-input-bg:
-    linear-gradient(180deg, rgba(7, 10, 15, 0.94), rgba(12, 16, 22, 0.96));
+    linear-gradient(180deg, rgba(7, 10, 15, 0.94), rgba(12, 16, 22, 0.96)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-3-rgb), 0.1),
+      transparent 58%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(var(--theme-accent-2-rgb), 0.08),
+      transparent 36%
+    );
   --onyx-button-primary-bg: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--theme-accent) 90%, white) 0%,
-    color-mix(in srgb, var(--theme-accent) 72%, var(--theme-accent-2)) 48%,
-    color-mix(in srgb, var(--theme-accent) 58%, black) 100%
+    rgba(var(--theme-accent-2-rgb), 0.96) 0%,
+    rgba(var(--theme-accent-rgb), 0.92) 48%,
+    rgba(var(--theme-accent-3-rgb), 0.9) 100%
   );
   --onyx-button-secondary-bg:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-2-rgb), 0.12),
+      rgba(var(--theme-accent-3-rgb), 0.14)
+    );
   --onyx-button-danger-bg:
     linear-gradient(135deg, rgba(198, 72, 72, 0.95), rgba(107, 24, 24, 0.98));
-  --onyx-focus-ring: 0 0 0 3px rgba(var(--theme-accent-rgb), 0.12);
+  --onyx-focus-ring: 0 0 0 3px rgba(var(--theme-accent-2-rgb), 0.16);
 
   --onyx-text-primary: rgba(245, 247, 255, 0.96);
   --onyx-text-secondary: rgba(219, 227, 245, 0.74);
   --onyx-text-muted: rgba(219, 227, 245, 0.52);
-  --onyx-text-accent: color-mix(in srgb, var(--theme-accent) 76%, white);
+  --onyx-text-accent: color-mix(in srgb, var(--theme-accent-2) 78%, white);
 
   --onyx-page-padding-top: clamp(6px, 1vh, 12px);
   --onyx-page-padding-bottom: clamp(18px, 3vh, 32px);
@@ -164,6 +233,16 @@ body {
       circle at top,
       rgba(var(--theme-accent-rgb), 0.07) 0%,
       transparent 34%
+    ),
+    radial-gradient(
+      circle at 84% 16%,
+      rgba(var(--theme-accent-2-rgb), 0.08) 0%,
+      transparent 18%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-3-rgb), 0.16) 0%,
+      transparent 24%
     ),
     linear-gradient(180deg, rgba(1, 2, 4, 1), rgba(3, 4, 7, 1));
   color: var(--onyx-text-primary);
@@ -222,12 +301,22 @@ body *::-webkit-scrollbar-track {
 }
 
 body *::-webkit-scrollbar-thumb {
-  background: rgba(var(--theme-accent-rgb), 0.26);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--theme-accent-2-rgb), 0.42),
+    rgba(var(--theme-accent-rgb), 0.34) 52%,
+    rgba(var(--theme-accent-3-rgb), 0.52)
+  );
   border-radius: 999px;
 }
 
 body *::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--theme-accent-rgb), 0.38);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--theme-accent-2-rgb), 0.56),
+    rgba(var(--theme-accent-rgb), 0.46) 52%,
+    rgba(var(--theme-accent-3-rgb), 0.62)
+  );
 }
 
 body .store-page,
@@ -473,7 +562,8 @@ body .admin-placeholder-card {
   border: 1px solid var(--onyx-panel-border);
   box-shadow:
     var(--onyx-panel-shadow),
-    0 0 28px var(--onyx-accent-glow-soft);
+    0 0 28px var(--onyx-accent-glow-soft),
+    0 0 38px var(--onyx-accent-secondary-glow);
   backdrop-filter: blur(var(--onyx-panel-blur-strong));
   -webkit-backdrop-filter: blur(var(--onyx-panel-blur-strong));
   color: var(--onyx-text-primary);
@@ -520,7 +610,8 @@ body .admin-empty-state {
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 10px 28px rgba(0, 0, 0, 0.18);
+    0 10px 28px rgba(0, 0, 0, 0.18),
+    0 0 18px rgba(var(--theme-accent-2-rgb), 0.06);
 }
 
 body .store-shards-card,
@@ -551,7 +642,8 @@ body .container-database-tier-pill {
   border: 1px solid rgba(var(--theme-accent-rgb), 0.28);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 18px rgba(var(--theme-accent-rgb), 0.16);
+    0 0 18px rgba(var(--theme-accent-rgb), 0.16),
+    0 0 24px rgba(var(--theme-accent-2-rgb), 0.1);
 }
 
 body .store-kicker,
@@ -570,6 +662,7 @@ body .admin-panel-kicker,
 body .admin-section-eyebrow,
 body .admin-series-create-kicker {
   color: var(--onyx-text-accent);
+  text-shadow: 0 0 16px rgba(var(--theme-accent-2-rgb), 0.16);
 }
 
 body .store-subtitle,
@@ -612,10 +705,11 @@ body .admin-action-btn,
 body .admin-action-button {
   border: 1px solid rgba(var(--theme-accent-rgb), 0.34);
   background: var(--onyx-button-primary-bg);
-  color: #0c0f12;
+  color: #fafcff;
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.28),
-    0 0 22px rgba(var(--theme-accent-rgb), 0.18);
+    0 0 22px rgba(var(--theme-accent-rgb), 0.18),
+    0 0 26px rgba(var(--theme-accent-2-rgb), 0.16);
 }
 
 body .login-button:hover:not(:disabled),
@@ -634,10 +728,11 @@ body .admin-back-button:hover:not(:disabled),
 body .admin-collapse-btn:hover:not(:disabled),
 body .admin-action-btn:hover:not(:disabled),
 body .admin-action-button:hover:not(:disabled) {
-  border-color: rgba(var(--theme-accent-rgb), 0.54);
+  border-color: rgba(var(--theme-accent-2-rgb), 0.54);
   box-shadow:
     0 14px 32px rgba(0, 0, 0, 0.34),
-    0 0 26px rgba(var(--theme-accent-rgb), 0.24);
+    0 0 26px rgba(var(--theme-accent-rgb), 0.24),
+    0 0 30px rgba(var(--theme-accent-2-rgb), 0.2);
   filter: brightness(1.03);
 }
 
@@ -713,12 +808,18 @@ body .progression-action-btn:hover:not(:disabled),
 body .progression-notes-modal-secondary-btn:hover:not(:disabled),
 body .progression-results-score-btn:hover:not(:disabled),
 body .trade-mode-btn:hover:not(:disabled) {
-  border-color: rgba(var(--theme-accent-rgb), 0.32);
+  border-color: rgba(var(--theme-accent-2-rgb), 0.32);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.16), rgba(255, 255, 255, 0.03));
+    linear-gradient(
+      180deg,
+      rgba(var(--theme-accent-2-rgb), 0.16),
+      rgba(var(--theme-accent-rgb), 0.08) 52%,
+      rgba(255, 255, 255, 0.03)
+    );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 18px rgba(var(--theme-accent-rgb), 0.12);
+    0 0 18px rgba(var(--theme-accent-rgb), 0.12),
+    0 0 22px rgba(var(--theme-accent-2-rgb), 0.1);
 }
 
 body .trade-mode-btn.is-active,
@@ -731,12 +832,18 @@ body .trade-inline-btn,
 body .reward-giver-tab-btn.is-active,
 body .reward-giver-card-search-row.is-selected,
 body .container-maker-container-row.is-selected {
-  border-color: rgba(var(--theme-accent-rgb), 0.4);
+  border-color: rgba(var(--theme-accent-2-rgb), 0.42);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.28), rgba(var(--theme-accent-rgb), 0.12));
+    linear-gradient(
+      180deg,
+      rgba(var(--theme-accent-2-rgb), 0.24),
+      rgba(var(--theme-accent-rgb), 0.18) 48%,
+      rgba(var(--theme-accent-3-rgb), 0.18)
+    );
   box-shadow:
     inset 0 0 18px rgba(var(--theme-accent-rgb), 0.1),
-    0 0 16px rgba(var(--theme-accent-rgb), 0.14);
+    0 0 16px rgba(var(--theme-accent-rgb), 0.14),
+    0 0 20px rgba(var(--theme-accent-2-rgb), 0.12);
   color: var(--onyx-text-primary);
 }
 
@@ -758,6 +865,31 @@ body .settings-field select,
 body .settings-field option,
 body .settings-field optgroup {
   color: var(--onyx-text-primary);
+}
+
+body :is(
+    .store-title,
+    .inventory-title,
+    .trade-title,
+    .banlist-title,
+    .container-database-title,
+    .container-opener-title,
+    .reward-giver-title,
+    .starter-deck-title,
+    .container-maker-title,
+    .admin-page-title,
+    .premium-store-title,
+    .mode-select-title,
+    .progression-series-summary-title,
+    .settings-header h2,
+    .profile-modal-header h2,
+    .showcase-settings-header h2
+  ) {
+  background: var(--onyx-title-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
 }
 
 @media (min-width: 1850px) and (min-aspect-ratio: 20/9) {

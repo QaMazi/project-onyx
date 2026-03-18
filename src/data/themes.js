@@ -95,6 +95,38 @@ const themes = [
     accent2: "#ffb3d8",
     accent3: "#5d4695",
   },
+  {
+    id: "cyber-dragon",
+    name: "Cyber Dragon",
+    background: "/ui/backgrounds/cyber_dragon_theme.png",
+    accent: "#63d5ff",
+    accent2: "#ff9f4f",
+    accent3: "#253766",
+  },
+  {
+    id: "egyptian-god",
+    name: "Egyptian God",
+    background: "/ui/backgrounds/egyptian_god_theme.png",
+    accent: "#f4cf6d",
+    accent2: "#fff1d2",
+    accent3: "#5f6fb5",
+  },
+  {
+    id: "kuriboh",
+    name: "Kuriboh",
+    background: "/ui/backgrounds/kuriboh_theme.png",
+    accent: "#bb7c45",
+    accent2: "#b7d8ff",
+    accent3: "#7c5aa8",
+  },
+  {
+    id: "traptrix",
+    name: "Traptrix",
+    background: "/ui/backgrounds/traptrix_theme.png",
+    accent: "#f18aa0",
+    accent2: "#9fca59",
+    accent3: "#734229",
+  },
 ];
 
 export const DEFAULT_THEME_ID = "project-onyx";

@@ -1,0 +1,18 @@
+Premium UI cleanup notes
+Date: 2026-03-17
+
+- Applied live DB patch:
+  - sql/2026-03-17_premium_defaults_and_settings.sql
+
+- Fixed:
+  - default Project Onyx theme now behaves as owned by default
+  - default Egyptian 1 track now behaves as owned by default
+  - default theme/song no longer present as buyable items in normal premium state
+  - Profile modal trimmed back down after moving showcase editing out
+  - new Showcase Settings modal added to header dropdown
+  - Settings now only shows owned theme/music options
+  - Settings now includes owned premium UI/profile/atmosphere slot toggles
+  - showcase preview kept wide with horizontal scrolling instead of collapsing
+
+- Verification:
+  - npm run build passes

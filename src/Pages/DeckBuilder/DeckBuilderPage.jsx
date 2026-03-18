@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
+import { useProgression } from "../../context/ProgressionContext";
 import { supabase } from "../../lib/supabase";
 
 import DeckHeader from "./Components/DeckHeader";
@@ -530,6 +531,7 @@ function compareValues(a, b, direction) {
 function DeckBuilderPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
+  const { state: progressionState, recordDeckExport } = useProgression();
 
   const [loadingPage, setLoadingPage] = useState(true);
   const [loadingSeries, setLoadingSeries] = useState(true);
@@ -611,6 +613,12 @@ function DeckBuilderPage() {
     }
   }, [authLoading, user]);
 
+  useEffect(() => {
+    setDeckSlots(
+      BASE_DECK_SLOTS + Number(progressionState?.extraSavedDeckSlots || 0)
+    );
+  }, [progressionState?.extraSavedDeckSlots]);
+
   async function loadDeckCardsForDeck(deckId) {
     if (!deckId) {
       setDeckState({ main: new Map(), extra: new Map(), side: new Map() });
@@ -634,6 +642,7 @@ function DeckBuilderPage() {
       setDecks([]);
       setSelectedDeckId(null);
       setDeckName("");
+      setDeckSlots(BASE_DECK_SLOTS);
       setDeckState({ main: new Map(), extra: new Map(), side: new Map() });
       setLoadingPage(false);
       return;
@@ -643,14 +652,12 @@ function DeckBuilderPage() {
     setLoadError("");
 
     try {
-      const [binderResponse, decksResponse, banlistResponse, cursesResponse, inventoryResponse] =
+      const [binderResponse, decksResponse, banlistResponse, cursesResponse] =
         await Promise.all([
-          supabase
-            .from("binder_cards_view")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("series_id", activeSeriesId)
-            .order("card_name", { ascending: true }),
+          supabase.rpc("get_series_player_visible_binder_cards", {
+            p_series_id: activeSeriesId,
+            p_target_user_id: user.id,
+          }),
           supabase
             .from("player_decks")
             .select("id, deck_name, is_active, is_valid, validation_summary")
@@ -667,30 +674,19 @@ function DeckBuilderPage() {
             .eq("series_id", activeSeriesId)
             .eq("target_user_id", user.id)
             .eq("is_active", true),
-          supabase
-            .from("player_inventory_view")
-            .select("quantity, item_code")
-            .eq("user_id", user.id)
-            .eq("series_id", activeSeriesId),
         ]);
 
       if (binderResponse.error) throw binderResponse.error;
       if (decksResponse.error) throw decksResponse.error;
       if (banlistResponse.error) throw banlistResponse.error;
       if (cursesResponse.error) throw cursesResponse.error;
-      if (inventoryResponse.error) throw inventoryResponse.error;
 
       const ownedMap = buildOwnedCardMap(normalizeBinderRows(binderResponse.data || []));
       const normalizedDecks = normalizeDeckRows(decksResponse.data || []);
-      const deckCaseQuantity = (inventoryResponse.data || []).reduce((total, row) => {
-        if (row.item_code !== "deck_case") return total;
-        return total + Number(row.quantity || 0);
-      }, 0);
 
       setOwnedCardMap(ownedMap);
       setBanlistMap(buildBanlistMap(banlistResponse.data || []));
       setCurseMap(buildCurseMap(cursesResponse.data || []));
-      setDeckSlots(BASE_DECK_SLOTS + deckCaseQuantity);
       setDecks(normalizedDecks);
 
       const nextSelectedDeck =
@@ -836,6 +832,29 @@ function DeckBuilderPage() {
   const mainCards = useMemo(() => buildSectionSlots(deckState.main, ownedCardMap), [deckState.main, ownedCardMap]);
   const extraCards = useMemo(() => buildSectionSlots(deckState.extra, ownedCardMap), [deckState.extra, ownedCardMap]);
   const sideCards = useMemo(() => buildSectionSlots(deckState.side, ownedCardMap), [deckState.side, ownedCardMap]);
+  const selectedDeckMeta = useMemo(
+    () => decks.find((deck) => deck.id === selectedDeckId) || null,
+    [decks, selectedDeckId]
+  );
+
+  const currentPhase = String(progressionState?.currentPhase || "standby").toLowerCase();
+  const currentRoundNumber = Number(progressionState?.roundNumber || 0);
+  const isSelectedActiveDeck = Boolean(selectedDeckMeta?.isActive);
+  const canSwitchActiveDeck =
+    user?.role === "Admin+" ||
+    (currentPhase === "deckbuilding" && currentRoundNumber > 0);
+  const canEditSelectedDeck =
+    user?.role === "Admin+" ||
+    !isSelectedActiveDeck ||
+    (currentPhase === "deckbuilding" && currentRoundNumber > 0);
+  const canExportSelectedDeck = Boolean(selectedDeckMeta?.isActive);
+  const deckHeaderHelperText = isSelectedActiveDeck && !canEditSelectedDeck
+    ? currentRoundNumber === 0 && currentPhase === "deckbuilding"
+      ? "Round 0 uses the assigned starter deck. Export it and Ready Up when you are done."
+      : "The active deck is locked in this phase. You can still work on non-active decks."
+    : !isSelectedActiveDeck && currentPhase !== "deckbuilding"
+      ? "Non-active decks can still be edited outside Deckbuilding."
+      : "";
 
   const monsterCount = useMemo(() => {
     let total = 0;
@@ -915,6 +934,7 @@ function DeckBuilderPage() {
   }
 
   function addCardToSection(cardId, section) {
+    if (!canEditSelectedDeck) return;
     if (!canAddCardToSection(cardId, section)) return;
     setDeckState((prev) => {
       const next = { main: new Map(prev.main), extra: new Map(prev.extra), side: new Map(prev.side) };
@@ -924,6 +944,7 @@ function DeckBuilderPage() {
   }
 
   function removeCardFromSection(cardId, section) {
+    if (!canEditSelectedDeck) return;
     setHoverPreview(null);
     setImageModalCard(null);
 
@@ -937,6 +958,7 @@ function DeckBuilderPage() {
   }
 
   function moveCardBetweenSections(cardId, fromSection, toSection) {
+    if (!canEditSelectedDeck) return;
     if (!fromSection || !toSection || fromSection === toSection || !canAddCardToSection(cardId, toSection)) return;
 
     setDeckState((prev) => {
@@ -951,11 +973,13 @@ function DeckBuilderPage() {
   }
 
   function onDragStartBinderCard(cardId) {
+    if (!canEditSelectedDeck) return;
     setHoverPreview(null);
     setDragPayload({ source: "binder", cardId: String(cardId), fromSection: null });
   }
 
   function onDragStartDeckCard(cardId, fromSection) {
+    if (!canEditSelectedDeck) return;
     setHoverPreview(null);
     setDragPayload({ source: "deck", cardId: String(cardId), fromSection });
   }
@@ -1051,6 +1075,10 @@ function DeckBuilderPage() {
 
   async function saveDeck() {
     if (!user?.id || !activeSeriesId) return;
+    if (selectedDeckId && isSelectedActiveDeck && !canEditSelectedDeck) {
+      window.alert("The active deck cannot be edited in this phase.");
+      return;
+    }
 
     const trimmedName = deckName.trim() || "Unnamed Deck";
     const validationSummary = validation.isValid ? "Valid" : validation.summary;
@@ -1125,6 +1153,10 @@ function DeckBuilderPage() {
 
   async function deleteDeck() {
     if (!selectedDeckId) return;
+    if (isSelectedActiveDeck && !canEditSelectedDeck) {
+      window.alert("The active deck cannot be deleted in this phase.");
+      return;
+    }
 
     try {
       const { error } = await supabase.from("player_decks").delete().eq("id", selectedDeckId);
@@ -1151,6 +1183,10 @@ function DeckBuilderPage() {
 
   async function setActiveDeck() {
     if (!selectedDeckId || !user?.id || !activeSeriesId) return;
+    if (!canSwitchActiveDeck) {
+      window.alert("Active deck switching is locked in this phase.");
+      return;
+    }
 
     try {
       const { error: clearError } = await supabase
@@ -1175,7 +1211,12 @@ function DeckBuilderPage() {
     }
   }
 
-  function exportDeck() {
+  async function exportDeck() {
+    if (!canExportSelectedDeck) {
+      window.alert("Only the active deck can be exported.");
+      return;
+    }
+
     if (!validation.isValid) {
       window.alert("Only valid decks can be exported.");
       return;
@@ -1203,6 +1244,14 @@ function DeckBuilderPage() {
     anchor.download = `${(deckName || "onyx-deck").replace(/[^\w\-]+/g, "_")}.ydk`;
     anchor.click();
     URL.revokeObjectURL(url);
+
+    if (selectedDeckId) {
+      try {
+        await recordDeckExport(selectedDeckId);
+      } catch (error) {
+        console.error("Failed to record deck export:", error);
+      }
+    }
   }
 
   if (authLoading) return null;
@@ -1245,8 +1294,12 @@ function DeckBuilderPage() {
                 onDuplicate={duplicateDeck}
                 onDelete={deleteDeck}
                 onSetActive={setActiveDeck}
-                saveDisabled={!activeSeriesId}
-                setActiveDisabled={!selectedDeckId}
+                saveDisabled={!activeSeriesId || (selectedDeckId && isSelectedActiveDeck && !canEditSelectedDeck)}
+                setActiveDisabled={!selectedDeckId || !canSwitchActiveDeck}
+                duplicateDisabled={false}
+                deleteDisabled={!selectedDeckId || (isSelectedActiveDeck && !canEditSelectedDeck)}
+                nameDisabled={Boolean(selectedDeckId && isSelectedActiveDeck && !canEditSelectedDeck)}
+                helperText={deckHeaderHelperText}
               />
 
               <DeckMainSection
@@ -1264,6 +1317,7 @@ function DeckBuilderPage() {
                 onShowHoverCard={showHoverCard}
                 onHideHoverCard={hideHoverCard}
                 buildCardImageUrl={buildCardImageUrl}
+                interactionDisabled={!canEditSelectedDeck}
               />
 
               <DeckExtraSection
@@ -1281,6 +1335,7 @@ function DeckBuilderPage() {
                 onShowHoverCard={showHoverCard}
                 onHideHoverCard={hideHoverCard}
                 buildCardImageUrl={buildCardImageUrl}
+                interactionDisabled={!canEditSelectedDeck}
               />
 
               <DeckSideSection
@@ -1298,6 +1353,7 @@ function DeckBuilderPage() {
                 onShowHoverCard={showHoverCard}
                 onHideHoverCard={hideHoverCard}
                 buildCardImageUrl={buildCardImageUrl}
+                interactionDisabled={!canEditSelectedDeck}
               />
 
               <div className="deck-panel deck-builder-validation-panel">
@@ -1313,7 +1369,7 @@ function DeckBuilderPage() {
                     type="button"
                     className="deck-builder-action-btn"
                     onClick={exportDeck}
-                    disabled={!validation.isValid}
+                    disabled={!validation.isValid || !canExportSelectedDeck}
                   >
                     Export .ydk
                   </button>
@@ -1350,6 +1406,7 @@ function DeckBuilderPage() {
                 onDragStartBinderCard={onDragStartBinderCard}
                 onDragEndCard={onDragEndCard}
                 buildCardImageUrl={buildCardImageUrl}
+                interactionDisabled={!canEditSelectedDeck}
               />
             </div>
           </div>

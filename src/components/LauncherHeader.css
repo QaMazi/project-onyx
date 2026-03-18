@@ -10,7 +10,15 @@
   justify-content: space-between;
   gap: 16px;
 
-  background: rgba(0, 0, 0, 0.28);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.2)),
+    linear-gradient(
+      90deg,
+      rgba(var(--theme-accent-3-rgb), 0.14) 0%,
+      transparent 32%,
+      transparent 68%,
+      rgba(var(--theme-accent-2-rgb), 0.1) 100%
+    );
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 
@@ -38,6 +46,26 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.launcher-header-brand-group:hover {
+  transform: translateY(-1px);
+  filter: drop-shadow(0 0 18px rgba(var(--theme-accent-2-rgb), 0.16));
+}
+
+.launcher-header-brand-group:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 72%, white);
+  outline-offset: 6px;
+  border-radius: 12px;
 }
 
 .launcher-header-logo {
@@ -47,7 +75,7 @@
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 
-.launcher-header-logo:hover {
+.launcher-header-brand-group:hover .launcher-header-logo {
   transform: translateY(-1px);
   filter:
     drop-shadow(0 0 6px var(--theme-accent))
@@ -58,8 +86,12 @@
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--onyx-title-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   white-space: nowrap;
+  text-shadow: none;
 }
 
 .launcher-header-profile-wrap {
@@ -67,6 +99,7 @@
 }
 
 .launcher-header-profile {
+  position: relative;
   min-height: 42px;
   padding: 0 12px 0 6px;
 
@@ -74,7 +107,13 @@
   align-items: center;
   gap: 10px;
 
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-2-rgb), 0.1),
+      rgba(var(--theme-accent-3-rgb), 0.14)
+    );
   border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent);
   border-radius: 999px;
 
@@ -89,11 +128,18 @@
 }
 
 .launcher-header-profile:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--theme-accent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-2-rgb), 0.14),
+      rgba(var(--theme-accent-3-rgb), 0.18)
+    );
+  border-color: rgba(var(--theme-accent-2-rgb), 0.54);
   box-shadow:
     0 0 10px color-mix(in srgb, var(--theme-accent) 40%, transparent),
-    0 0 20px color-mix(in srgb, var(--theme-accent) 25%, transparent);
+    0 0 20px color-mix(in srgb, var(--theme-accent) 25%, transparent),
+    0 0 24px rgba(var(--theme-accent-2-rgb), 0.16);
   transform: translateY(-1px);
 }
 
@@ -131,6 +177,15 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  padding: 0 4px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-3-rgb), 0.08),
+      transparent 65%
+    );
 }
 
 .launcher-header-username {
@@ -162,6 +217,42 @@
   letter-spacing: 0.06em;
   line-height: 1;
   flex-shrink: 0;
+}
+
+.launcher-header-token-pill {
+  min-width: 78px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-2-rgb), 0.18) 0%,
+      rgba(var(--theme-accent-rgb), 0.12) 52%,
+      rgba(var(--theme-accent-3-rgb), 0.18) 100%
+    );
+  border: 1px solid rgba(var(--theme-accent-2-rgb), 0.28);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 16px rgba(var(--theme-accent-rgb), 0.12),
+    0 0 18px rgba(var(--theme-accent-2-rgb), 0.1);
+}
+
+.launcher-header-token-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 6px rgba(var(--theme-accent-rgb), 0.34))
+    drop-shadow(0 0 10px rgba(var(--theme-accent-rgb), 0.16));
 }
 
 .role-applicant {
@@ -200,6 +291,87 @@
   background: rgba(255, 96, 96, 0.14);
   color: #ffb3b3;
   border: 1px solid rgba(255, 96, 96, 0.32);
+}
+
+body[data-premium-nameplate="obsidian"] .launcher-header-usertext {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12)),
+    radial-gradient(circle at top, rgba(var(--theme-accent-rgb), 0.18), transparent 68%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 16px rgba(var(--theme-accent-rgb), 0.1);
+}
+
+body[data-premium-avatar-frame="reliquary"] .launcher-header-avatar {
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.4);
+  box-shadow:
+    0 0 0 2px rgba(var(--theme-accent-rgb), 0.12),
+    0 0 18px rgba(var(--theme-accent-rgb), 0.18);
+}
+
+body[data-premium-role-pill="signet"] .launcher-header-role {
+  background:
+    linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.28), rgba(0, 0, 0, 0.16));
+  border-color: rgba(var(--theme-accent-rgb), 0.5);
+  box-shadow: 0 0 18px rgba(var(--theme-accent-rgb), 0.14);
+}
+
+body[data-premium-token-pill="coinpress"] .launcher-header-token-pill {
+  background:
+    linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.32), rgba(0, 0, 0, 0.22));
+  border-color: rgba(var(--theme-accent-rgb), 0.52);
+  box-shadow:
+    0 0 0 1px rgba(var(--theme-accent-rgb), 0.16),
+    0 0 18px rgba(var(--theme-accent-rgb), 0.16);
+}
+
+body[data-premium-title-flair="gilded"] .launcher-header-username {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--theme-accent) 88%, white);
+}
+
+body[data-premium-banner-effect="eclipse"] .launcher-header-profile::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, transparent, rgba(var(--theme-accent-rgb), 0.28), transparent);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: launcherHeaderPremiumSweep 4.8s linear infinite;
+}
+
+body[data-premium-emblem="onyx"] .launcher-header-brand-group::after,
+body[data-premium-emblem="grand"] .launcher-header-brand-group::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(var(--theme-accent-rgb), 0.96), rgba(var(--theme-accent-rgb), 0.18));
+  box-shadow:
+    0 0 12px rgba(var(--theme-accent-rgb), 0.34),
+    inset 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+@keyframes launcherHeaderPremiumSweep {
+  0% {
+    opacity: 0.12;
+    transform: translateX(-30%);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: translateX(0%);
+  }
+
+  100% {
+    opacity: 0.12;
+    transform: translateX(30%);
+  }
 }
 
 .launcher-header-menu {

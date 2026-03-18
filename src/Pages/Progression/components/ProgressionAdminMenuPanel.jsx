@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProgressionPanelShell from "./ProgressionPanelShell";
 import { useUser } from "../../../context/UserContext";
 import { supabase } from "../../../lib/supabase";
 import ReportBracketResultsModal from "./ReportBracketResultsModal";
+import { useProgression } from "../../../context/ProgressionContext";
 
 const ADMIN_MENU_ITEMS = [
-  { label: "Next Phase" },
+  { label: "Advance Phase" },
   { label: "Bracket Generator" },
   { label: "Report Results" },
   { label: "Reward Giver" },
+  { label: "Round Rewards" },
   { label: "Starter Deck Editor" },
   { label: "Container Maker" },
   { label: "Store Editor" },
@@ -47,80 +49,30 @@ function formatRoundLabel(roundNumber, roundStep) {
 function ProgressionAdminMenuPanel() {
   const navigate = useNavigate();
   const { user } = useUser();
+  const {
+    activeSeriesId,
+    state,
+    rewardErrors,
+    refresh,
+    clearRewardError,
+  } = useProgression();
 
-  const [activeSeriesId, setActiveSeriesId] = useState(null);
-  const [currentPhase, setCurrentPhase] = useState("");
-  const [roundNumber, setRoundNumber] = useState(0);
-  const [roundStep, setRoundStep] = useState(null);
+  const currentPhase = state?.currentPhase || "";
+  const roundNumber = Number(state?.roundNumber || 0);
+  const roundStep = state?.roundStep == null ? null : Number(state.roundStep);
 
   const [phaseBusy, setPhaseBusy] = useState(false);
   const [bracketBusy, setBracketBusy] = useState(false);
   const [phaseMessage, setPhaseMessage] = useState("");
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadActiveSeriesState() {
-      try {
-        const { data, error } = await supabase
-          .from("game_series")
-          .select("id, current_phase, round_number, round_step")
-          .eq("is_current", true)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (!isMounted) return;
-
-        setActiveSeriesId(data?.id || null);
-        setCurrentPhase(data?.current_phase || "");
-        setRoundNumber(Number(data?.round_number || 0));
-        setRoundStep(data?.round_step == null ? null : Number(data.round_step));
-      } catch (error) {
-        console.error("Failed to load current phase/round:", error);
-        if (isMounted) {
-          setActiveSeriesId(null);
-          setCurrentPhase("");
-          setRoundNumber(0);
-          setRoundStep(null);
-        }
-      }
-    }
-
-    loadActiveSeriesState();
-
-    function handleExternalPhaseChange(event) {
-      const nextPhase = event?.detail?.phase;
-      const nextRoundNumber = event?.detail?.roundNumber;
-      const nextRoundStep = event?.detail?.roundStep;
-
-      if (nextPhase) {
-        setCurrentPhase(nextPhase);
-      }
-
-      if (typeof nextRoundNumber === "number") {
-        setRoundNumber(nextRoundNumber);
-      }
-
-      if (nextRoundStep === null || typeof nextRoundStep === "number") {
-        setRoundStep(nextRoundStep);
-      }
-    }
-
-    window.addEventListener("onyx-phase-changed", handleExternalPhaseChange);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("onyx-phase-changed", handleExternalPhaseChange);
-    };
-  }, []);
+  const [advanceConfirmOpen, setAdvanceConfirmOpen] = useState(false);
+  const [forceAdvance, setForceAdvance] = useState(false);
 
   if (!user || (user.role !== "Admin" && user.role !== "Admin+")) {
     return null;
   }
 
-  async function handleAdvancePhase() {
+  async function handleAdvancePhase(force = false) {
     if (!activeSeriesId || phaseBusy) return;
 
     setPhaseBusy(true);
@@ -129,6 +81,7 @@ function ProgressionAdminMenuPanel() {
     try {
       const { data, error } = await supabase.rpc("advance_series_phase", {
         p_series_id: activeSeriesId,
+        p_force: force,
       });
 
       if (error) throw error;
@@ -138,11 +91,8 @@ function ProgressionAdminMenuPanel() {
       const nextRoundStep =
         data?.round_step == null ? null : Number(data.round_step);
 
-      setCurrentPhase(nextPhase);
-      setRoundNumber(nextRoundNumber);
-      setRoundStep(nextRoundStep);
       setPhaseMessage(
-        `Phase advanced to ${formatPhaseLabel(nextPhase)} • ${formatRoundLabel(
+        `Phase advanced to ${formatPhaseLabel(nextPhase)} | ${formatRoundLabel(
           nextRoundNumber,
           nextRoundStep
         )}`
@@ -157,6 +107,8 @@ function ProgressionAdminMenuPanel() {
           },
         })
       );
+
+      await refresh();
     } catch (error) {
       console.error("Failed to advance phase:", error);
       setPhaseMessage(error.message || "Failed to advance phase.");
@@ -187,6 +139,8 @@ function ProgressionAdminMenuPanel() {
           },
         })
       );
+
+      await refresh();
     } catch (error) {
       console.error("Failed to generate bracket:", error);
       setPhaseMessage(error.message || "Failed to generate bracket.");
@@ -196,8 +150,9 @@ function ProgressionAdminMenuPanel() {
   }
 
   function handleAdminMenuClick(label) {
-    if (label === "Next Phase") {
-      handleAdvancePhase();
+    if (label === "Advance Phase") {
+      setForceAdvance(false);
+      setAdvanceConfirmOpen(true);
       return;
     }
 
@@ -216,6 +171,11 @@ function ProgressionAdminMenuPanel() {
       return;
     }
 
+    if (label === "Round Rewards") {
+      navigate("/mode/progression/admin/round-rewards");
+      return;
+    }
+
     if (label === "Starter Deck Editor") {
       navigate("/mode/progression/admin/starter-decks");
       return;
@@ -227,12 +187,12 @@ function ProgressionAdminMenuPanel() {
     }
 
     if (label === "Store Editor") {
-      window.alert("Store Editor is not built yet.");
+      navigate("/mode/progression/admin/store-editor");
       return;
     }
 
     if (label === "Player Items") {
-      window.alert("Player Items is not built yet.");
+      navigate("/mode/progression/admin/player-items");
     }
   }
 
@@ -259,7 +219,7 @@ function ProgressionAdminMenuPanel() {
 
         <div className="progression-action-grid progression-action-grid-series">
           {ADMIN_MENU_ITEMS.map((item) => {
-            const isPhaseButton = item.label === "Next Phase";
+            const isPhaseButton = item.label === "Advance Phase";
             const isBracketButton = item.label === "Bracket Generator";
 
             return (
@@ -276,12 +236,41 @@ function ProgressionAdminMenuPanel() {
                 {isPhaseButton && phaseBusy
                   ? "Advancing Phase..."
                   : isBracketButton && bracketBusy
-                  ? "Generating Bracket..."
-                  : item.label}
+                    ? "Generating Bracket..."
+                    : item.label}
               </button>
             );
           })}
         </div>
+
+        {rewardErrors.length > 0 ? (
+          <div className="progression-admin-error-stack">
+            <div className="progression-admin-error-title">Reward Fix List</div>
+            {rewardErrors.map((row) => (
+              <div className="progression-admin-error-row" key={row.id}>
+                <div className="progression-admin-error-copy">
+                  <strong>{row.user_id || "Series Error"}</strong>
+                  <span>{row.message || "Reward processing failed."}</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="progression-results-score-btn"
+                  onClick={async () => {
+                    try {
+                      await clearRewardError(row.id);
+                    } catch (error) {
+                      console.error("Failed to clear reward error:", error);
+                      window.alert(error.message || "Failed to clear reward error.");
+                    }
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </ProgressionPanelShell>
 
       <ReportBracketResultsModal
@@ -298,14 +287,82 @@ function ProgressionAdminMenuPanel() {
           );
 
           if (data?.bracket_completed) {
-            window.alert(
-              "Grand Final recorded. Placements, scoreboard, and shard rewards have been applied."
+            setPhaseMessage(
+              "Grand Final recorded. The round state, scoreboard, and reward flow were updated."
             );
+          } else {
+            setPhaseMessage("Match result recorded successfully.");
           }
+
+          refresh();
         }}
       />
+
+      {advanceConfirmOpen ? (
+        <div className="progression-results-modal-overlay">
+          <div className="progression-results-modal">
+            <div className="progression-results-modal-header">
+              <div>
+                <div className="progression-results-modal-kicker">ADMIN</div>
+                <h2 className="progression-results-modal-title">Advance Phase</h2>
+              </div>
+
+              <button
+                type="button"
+                className="progression-results-modal-close-btn"
+                onClick={() => setAdvanceConfirmOpen(false)}
+              >
+                x
+              </button>
+            </div>
+
+            <div className="progression-results-modal-body">
+              <p className="progression-readyup-copy">
+                Advance from {formatPhaseLabel(currentPhase)} into the next phase
+                for {formatRoundLabel(roundNumber, roundStep)}.
+              </p>
+
+              <label className="progression-admin-force-toggle">
+                <input
+                  type="checkbox"
+                  checked={forceAdvance}
+                  onChange={(event) => setForceAdvance(event.target.checked)}
+                />
+                <span>Force advance even if the normal phase conditions are not met.</span>
+              </label>
+
+              <div className="progression-readyup-actions">
+                <button
+                  type="button"
+                  className="progression-results-score-btn"
+                  onClick={() => setAdvanceConfirmOpen(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className="progression-results-score-btn"
+                  disabled={phaseBusy}
+                  onClick={async () => {
+                    await handleAdvancePhase(forceAdvance);
+                    setAdvanceConfirmOpen(false);
+                  }}
+                >
+                  {phaseBusy
+                    ? "Advancing..."
+                    : forceAdvance
+                      ? "Force Advance"
+                      : "Advance"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
 
 export default ProgressionAdminMenuPanel;
+

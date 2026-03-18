@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
+import useResponsiveGridPageSize from "../../hooks/useResponsiveGridPageSize";
 
 import BinderFilters from "./Components/BinderFilters";
 import BinderGrid from "./Components/BinderGrid";
@@ -12,7 +13,6 @@ import BinderPagination from "./Components/BinderPagination";
 
 import "./BinderPage.css";
 
-const PAGE_SIZE = 24;
 const CARD_IMAGE_FALLBACK =
   "https://dgbgfhzcinlomghohxdq.supabase.co/storage/v1/object/public/card-images-upload/fallback_image.jpg";
 
@@ -185,6 +185,7 @@ function BinderPage() {
   const [loadingSeries, setLoadingSeries] = useState(true);
 
   const [binderGroups, setBinderGroups] = useState([]);
+  const [vaultSummary, setVaultSummary] = useState(null);
   const [loadingBinder, setLoadingBinder] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -199,9 +200,27 @@ function BinderPage() {
   const [hoveredGroupKey, setHoveredGroupKey] = useState(null);
   const [hoverPreview, setHoverPreview] = useState(null);
   const [modalGroupKey, setModalGroupKey] = useState(null);
+  const binderGridCardRef = useRef(null);
 
   const [page, setPage] = useState(1);
   const [pageJumpInput, setPageJumpInput] = useState("1");
+
+  const binderPageSizeOptions = useMemo(
+    () => ({
+      fallback: 24,
+      minPageSize: 6,
+      minColumnWidth: 172,
+      columnGap: 14,
+      rowGap: 16,
+      paddingX: 32,
+      paddingY: 32,
+      textHeight: 34,
+      extraHeight: 34,
+    }),
+    []
+  );
+
+  const pageSize = useResponsiveGridPageSize(binderGridCardRef, binderPageSizeOptions);
 
   async function loadBinderData(seriesIdOverride = activeSeriesId) {
     if (!user?.id || !seriesIdOverride) {
@@ -214,19 +233,27 @@ function BinderPage() {
     setLoadError("");
 
     try {
-      const { data, error } = await supabase
-        .from("binder_cards_view")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("series_id", seriesIdOverride)
-        .order("card_name", { ascending: true })
-        .order("rarity_sort_order", { ascending: true });
+      const [
+        { data: binderData, error: binderError },
+        { data: summaryData, error: summaryError },
+      ] = await Promise.all([
+        supabase.rpc("get_my_binder_cards", {
+          p_series_id: seriesIdOverride,
+        }),
+        supabase.rpc("get_my_vault_summary", {
+          p_series_id: seriesIdOverride,
+        }),
+      ]);
 
-      if (error) throw error;
-      setBinderGroups(groupBinderCards(normalizeBinderRows(data || [])));
+      if (binderError) throw binderError;
+      if (summaryError) throw summaryError;
+
+      setBinderGroups(groupBinderCards(normalizeBinderRows(binderData || [])));
+      setVaultSummary(summaryData || null);
     } catch (error) {
       console.error("Failed to fetch binder:", error);
       setBinderGroups([]);
+      setVaultSummary(null);
       setLoadError("Failed to load binder.");
     } finally {
       setLoadingBinder(false);
@@ -379,7 +406,7 @@ function BinderPage() {
   ]);
 
   const totalCount = filteredGroups.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = clampPage(page, totalPages);
 
   const visiblePages = useMemo(
@@ -394,9 +421,9 @@ function BinderPage() {
   }, [page, safePage]);
 
   const paginatedGroups = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return filteredGroups.slice(start, start + PAGE_SIZE);
-  }, [filteredGroups, safePage]);
+    const start = (safePage - 1) * pageSize;
+    return filteredGroups.slice(start, start + pageSize);
+  }, [filteredGroups, safePage, pageSize]);
 
   useEffect(() => {
     const hoveredStillExists = filteredGroups.some(
@@ -472,6 +499,17 @@ function BinderPage() {
     return data;
   }
 
+  async function handleVaultCards({ binderCardId }) {
+    const { data, error } = await supabase.rpc("move_binder_card_family_to_vault", {
+      p_binder_card_id: binderCardId,
+    });
+
+    if (error) throw error;
+
+    await loadBinderData();
+    return data;
+  }
+
   if (authLoading) return null;
   if (!user) return <Navigate to="/" replace />;
   if (user.role === "Blocked") return <Navigate to="/" replace />;
@@ -494,6 +532,8 @@ function BinderPage() {
 
         <div className="binder-layout">
           <BinderFilters
+            panelTitle="Binder"
+            countLabel="cards"
             totalCount={totalCount}
             searchInput={searchInput}
             setSearchInput={setSearchInput}
@@ -520,6 +560,7 @@ function BinderPage() {
               loadingBinder={loadingBinder || loadingSeries}
               hasActiveSeries={Boolean(activeSeriesId)}
               groups={paginatedGroups}
+              gridCardRef={binderGridCardRef}
               activeGroupKey={modalGroupKey}
               hoveredGroupKey={hoveredGroupKey}
               onHoverGroup={handleHoverGroup}
@@ -552,6 +593,9 @@ function BinderPage() {
         buildCardImageUrl={buildCardImageUrl}
         CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
         onSellCards={handleSellCards}
+        onVaultCards={handleVaultCards}
+        vaultSlotsUsed={Number(vaultSummary?.vault_slots_used || 0)}
+        vaultSlotsTotal={Number(vaultSummary?.vault_slots_total || 0)}
         onClose={() => setModalGroupKey(null)}
       />
     </LauncherLayout>

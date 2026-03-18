@@ -3,6 +3,7 @@ function BinderGrid({
   loadingBinder,
   hasActiveSeries,
   groups,
+  gridCardRef,
   activeGroupKey,
   hoveredGroupKey,
   onHoverGroup,
@@ -13,7 +14,7 @@ function BinderGrid({
 }) {
   if (loadingBinder) {
     return (
-      <div className="binder-grid-card">
+      <div className="binder-grid-card" ref={gridCardRef}>
         <div className="binder-empty-state">Loading binder...</div>
       </div>
     );
@@ -21,7 +22,7 @@ function BinderGrid({
 
   if (!hasActiveSeries) {
     return (
-      <div className="binder-grid-card">
+      <div className="binder-grid-card" ref={gridCardRef}>
         <div className="binder-empty-state">No active series.</div>
       </div>
     );
@@ -29,7 +30,7 @@ function BinderGrid({
 
   if (loadError) {
     return (
-      <div className="binder-grid-card">
+      <div className="binder-grid-card" ref={gridCardRef}>
         <div className="binder-empty-state">{loadError}</div>
       </div>
     );
@@ -37,14 +38,14 @@ function BinderGrid({
 
   if (!groups.length) {
     return (
-      <div className="binder-grid-card">
+      <div className="binder-grid-card" ref={gridCardRef}>
         <div className="binder-empty-state">Your binder is empty.</div>
       </div>
     );
   }
 
   return (
-    <div className="binder-grid-card">
+    <div className="binder-grid-card" ref={gridCardRef}>
       <div className="binder-grid">
         {groups.map((group) => {
           const isSelected = activeGroupKey === group.groupKey;

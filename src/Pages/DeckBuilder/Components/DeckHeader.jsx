@@ -14,6 +14,10 @@ function DeckHeader({
   onSetActive,
   saveDisabled = false,
   setActiveDisabled = false,
+  duplicateDisabled = false,
+  deleteDisabled = false,
+  nameDisabled = false,
+  helperText = "",
 }) {
   return (
     <div className="deck-header">
@@ -34,6 +38,7 @@ function DeckHeader({
             className="deck-header-name-input"
             placeholder="Deck Name"
             maxLength={60}
+            disabled={nameDisabled}
           />
 
           <div className="deck-header-controls">
@@ -50,6 +55,7 @@ function DeckHeader({
               type="button"
               className="deck-builder-action-btn"
               onClick={onDuplicate}
+              disabled={duplicateDisabled}
             >
               Duplicate
             </button>
@@ -58,6 +64,7 @@ function DeckHeader({
               type="button"
               className="deck-builder-action-btn"
               onClick={onDelete}
+              disabled={deleteDisabled}
             >
               Delete
             </button>
@@ -78,6 +85,10 @@ function DeckHeader({
           <span>Spells {spellCount}</span>
           <span>Traps {trapCount}</span>
         </div>
+
+        {helperText ? (
+          <div className="deck-header-helper-text">{helperText}</div>
+        ) : null}
       </div>
 
       <div className="deck-header-right">

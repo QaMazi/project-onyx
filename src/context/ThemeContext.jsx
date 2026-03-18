@@ -1,5 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import themes, { DEFAULT_THEME_ID } from "../data/themes";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import themes, { DEFAULT_THEME_ID } from "../data/themes.js";
+import { getThemePremiumCode } from "../data/premiumCatalog.js";
+import { usePremium } from "./PremiumContext";
 
 const ThemeContext = createContext(null);
 
@@ -89,14 +98,101 @@ function setThemeCssVariables(root, theme) {
     "--onyx-accent-glow-strong",
     `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.4)`
   );
+  root.style.setProperty(
+    "--onyx-accent-secondary-soft",
+    `rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.14)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-secondary-border",
+    `rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.32)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-secondary-glow",
+    `rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.22)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-tertiary-soft",
+    `rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.16)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-tertiary-border",
+    `rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.28)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-tertiary-glow",
+    `rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.22)`
+  );
+  root.style.setProperty(
+    "--onyx-accent-spectrum",
+    `linear-gradient(135deg, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.92) 0%, rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.88) 48%, rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.9) 100%)`
+  );
+  root.style.setProperty(
+    "--onyx-title-gradient",
+    `linear-gradient(90deg, ${theme.accent2} 0%, #ffffff 42%, ${theme.accent} 76%, ${theme.accent2} 100%)`
+  );
+  root.style.setProperty(
+    "--onyx-title-shadow",
+    `0 3px 18px rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.28), 0 0 22px rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.16)`
+  );
+  root.style.setProperty(
+    "--onyx-surface-raised",
+    `linear-gradient(180deg, rgba(8, 11, 16, 0.9), rgba(3, 5, 8, 0.97)), linear-gradient(135deg, rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.18), transparent 42%), radial-gradient(circle at top left, rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.16) 0%, transparent 46%), radial-gradient(circle at top right, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.12) 0%, transparent 38%)`
+  );
+  root.style.setProperty(
+    "--onyx-surface-soft",
+    `linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.022)), linear-gradient(135deg, rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.12), transparent 52%), radial-gradient(circle at top left, rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.12) 0%, transparent 58%), radial-gradient(circle at bottom right, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.1) 0%, transparent 44%)`
+  );
+  root.style.setProperty(
+    "--onyx-surface-accent",
+    `linear-gradient(135deg, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.24) 0%, rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.18) 44%, rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.28) 100%), linear-gradient(180deg, rgba(9, 12, 18, 0.94), rgba(2, 4, 8, 0.98))`
+  );
+  root.style.setProperty(
+    "--onyx-input-bg",
+    `linear-gradient(180deg, rgba(7, 10, 15, 0.94), rgba(12, 16, 22, 0.96)), linear-gradient(135deg, rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.1), transparent 58%), radial-gradient(circle at top right, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.08), transparent 36%)`
+  );
+  root.style.setProperty(
+    "--onyx-button-primary-bg",
+    `linear-gradient(135deg, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.96) 0%, rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.92) 48%, rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.9) 100%)`
+  );
+  root.style.setProperty(
+    "--onyx-button-secondary-bg",
+    `linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)), linear-gradient(135deg, rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.12), rgba(${accent3Rgb.r}, ${accent3Rgb.g}, ${accent3Rgb.b}, 0.14))`
+  );
+  root.style.setProperty(
+    "--onyx-focus-ring",
+    `0 0 0 3px rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.16)`
+  );
+  root.style.setProperty(
+    "--onyx-panel-shadow",
+    `0 22px 60px rgba(0, 0, 0, 0.42), 0 0 30px rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.04)`
+  );
+  root.style.setProperty(
+    "--onyx-panel-shadow-hover",
+    `0 18px 46px rgba(0, 0, 0, 0.56), 0 0 28px rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.16), 0 0 34px rgba(${accent2Rgb.r}, ${accent2Rgb.g}, ${accent2Rgb.b}, 0.12)`
+  );
+  root.style.setProperty(
+    "--onyx-text-accent",
+    `color-mix(in srgb, ${theme.accent2} 78%, white)`
+  );
 }
 
 export function ThemeProvider({ children }) {
-  const [selectedThemeId, setSelectedThemeId] = useState(getInitialThemeId);
+  const { catalogByCode, equippedBySlot, equipItem } = usePremium();
+  const [selectedThemeId, setSelectedThemeIdState] = useState(getInitialThemeId);
 
   const currentTheme = useMemo(() => {
     return getThemeById(selectedThemeId);
   }, [selectedThemeId]);
+
+  useEffect(() => {
+    const equippedThemeId = equippedBySlot?.theme?.metadata?.themeId;
+
+    if (equippedThemeId) {
+      setSelectedThemeIdState(equippedThemeId);
+    } else if (!selectedThemeId || !isThemeOwned(selectedThemeId)) {
+      setSelectedThemeIdState(DEFAULT_THEME_ID);
+    }
+  }, [equippedBySlot, selectedThemeId, catalogByCode]);
 
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, selectedThemeId);
@@ -109,14 +205,45 @@ export function ThemeProvider({ children }) {
     setThemeCssVariables(root, currentTheme);
   }, [currentTheme]);
 
+  const selectPremiumTheme = useCallback(
+    async (themeId) => {
+      const premiumItem = catalogByCode.get(getThemePremiumCode(themeId));
+
+      if (themeId === DEFAULT_THEME_ID) {
+        setSelectedThemeIdState(themeId);
+        if (premiumItem?.is_owned) {
+          await equipItem(premiumItem.id);
+        }
+        return;
+      }
+
+      if (!premiumItem?.is_owned) {
+        throw new Error("Theme is locked. Purchase it in Premium Store first.");
+      }
+
+      await equipItem(premiumItem.id);
+      setSelectedThemeIdState(themeId);
+    },
+    [catalogByCode, equipItem]
+  );
+
+  const isThemeOwned = useCallback(
+    (themeId) => {
+      if (themeId === DEFAULT_THEME_ID) return true;
+      return Boolean(catalogByCode.get(getThemePremiumCode(themeId))?.is_owned);
+    },
+    [catalogByCode]
+  );
+
   const value = useMemo(
     () => ({
       themes,
       currentTheme,
       selectedThemeId,
-      setSelectedThemeId,
+      setSelectedThemeId: selectPremiumTheme,
+      isThemeOwned,
     }),
-    [currentTheme, selectedThemeId]
+    [currentTheme, selectedThemeId, selectPremiumTheme, isThemeOwned]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

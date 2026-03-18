@@ -7,6 +7,7 @@ import "./RewardGiverPage.css";
 
 const REWARD_TABS = [
   { value: "shards", label: "Shards" },
+  { value: "feature_coins", label: "Feature Coins" },
   { value: "items", label: "Items" },
   { value: "cards", label: "Cards" },
 ];
@@ -27,6 +28,7 @@ function RewardGiverPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
 
   const [shardAmount, setShardAmount] = useState(50);
+  const [featureCoinAmount, setFeatureCoinAmount] = useState(5);
 
   const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState("");
   const [itemQuantity, setItemQuantity] = useState(1);
@@ -73,9 +75,7 @@ function RewardGiverPage() {
           .order("name", { ascending: true })
           .limit(20);
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         if (!cancelled) {
           setCardSearchResults(data || []);
@@ -144,12 +144,11 @@ function RewardGiverPage() {
       }
 
       const { data: playerData, error: playersError } = await supabase
-  .from("series_players_view")
-  .select("user_id, username, is_owner")
-  .eq("series_id", activeSeriesData.id)
-  .order("is_owner", { ascending: false })
-  .order("username", { ascending: true });
-
+        .from("series_players_view")
+        .select("user_id, username, is_owner")
+        .eq("series_id", activeSeriesData.id)
+        .order("is_owner", { ascending: false })
+        .order("username", { ascending: true });
 
       if (playersError) throw playersError;
 
@@ -188,11 +187,41 @@ function RewardGiverPage() {
       if (error) throw error;
 
       setStatusMessage(
-        `Gave ${Number(shardAmount || 0)} shards to ${selectedPlayer?.username || "player"}.`
+        `Gave ${Number(shardAmount || 0)} shards to ${
+          selectedPlayer?.username || "player"
+        }.`
       );
     } catch (error) {
       console.error("Failed to give shards:", error);
       setErrorMessage(error.message || "Failed to give shards.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGiveFeatureCoins() {
+    if (!activeSeries?.id || !selectedUserId) return;
+
+    setSubmitting(true);
+    resetMessages();
+
+    try {
+      const { error } = await supabase.rpc("give_series_player_feature_coins", {
+        p_series_id: activeSeries.id,
+        p_target_user_id: selectedUserId,
+        p_feature_coins: Number(featureCoinAmount || 0),
+      });
+
+      if (error) throw error;
+
+      setStatusMessage(
+        `Gave ${Number(featureCoinAmount || 0)} Feature Coins to ${
+          selectedPlayer?.username || "player"
+        }.`
+      );
+    } catch (error) {
+      console.error("Failed to give Feature Coins:", error);
+      setErrorMessage(error.message || "Failed to give Feature Coins.");
     } finally {
       setSubmitting(false);
     }
@@ -217,7 +246,9 @@ function RewardGiverPage() {
       if (error) throw error;
 
       setStatusMessage(
-        `Gave ${Number(itemQuantity || 0)} × ${item?.name || "item"} to ${selectedPlayer?.username || "player"}.`
+        `Gave ${Number(itemQuantity || 0)} x ${item?.name || "item"} to ${
+          selectedPlayer?.username || "player"
+        }.`
       );
     } catch (error) {
       console.error("Failed to give item:", error);
@@ -228,7 +259,9 @@ function RewardGiverPage() {
   }
 
   async function handleGiveCard() {
-    if (!activeSeries?.id || !selectedUserId || !selectedCardId || !selectedRarityId) return;
+    if (!activeSeries?.id || !selectedUserId || !selectedCardId || !selectedRarityId) {
+      return;
+    }
 
     setSubmitting(true);
     resetMessages();
@@ -247,7 +280,9 @@ function RewardGiverPage() {
       if (error) throw error;
 
       setStatusMessage(
-        `Gave ${Number(cardQuantity || 0)} × ${selectedCardName || "card"} (${rarity?.name || "rarity"}) to ${selectedPlayer?.username || "player"}.`
+        `Gave ${Number(cardQuantity || 0)} x ${selectedCardName || "card"} (${
+          rarity?.name || "rarity"
+        }) to ${selectedPlayer?.username || "player"}.`
       );
     } catch (error) {
       console.error("Failed to give card:", error);
@@ -258,14 +293,8 @@ function RewardGiverPage() {
   }
 
   if (authLoading) return null;
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (!canUsePage) {
-    return <Navigate to="/mode/progression" replace />;
-  }
+  if (!user) return <Navigate to="/" replace />;
+  if (!canUsePage) return <Navigate to="/mode/progression" replace />;
 
   return (
     <LauncherLayout>
@@ -275,7 +304,8 @@ function RewardGiverPage() {
             <div className="reward-giver-kicker">ADMIN</div>
             <h1 className="reward-giver-title">Reward Giver</h1>
             <p className="reward-giver-subtitle">
-              Give shards, store items, or specific cards with chosen rarity to players in the active series.
+              Give shards, Feature Coins, store items, or specific cards with chosen
+              rarity to players in the active series.
             </p>
           </div>
 
@@ -336,11 +366,7 @@ function RewardGiverPage() {
                     {selectedPlayer?.username || "No player selected"}
                   </div>
                   <div className="reward-giver-target-meta">
-                    {selectedPlayer?.is_owner
-                      ? "Owner"
-                      : selectedPlayer?.role === "admin"
-                      ? "Admin"
-                      : "Duelist"}
+                    {selectedPlayer?.is_owner ? "Owner" : "Duelist"}
                   </div>
                 </div>
 
@@ -364,7 +390,7 @@ function RewardGiverPage() {
               </section>
 
               <section className="reward-giver-card reward-giver-main">
-                {selectedTab === "shards" && (
+                {selectedTab === "shards" ? (
                   <>
                     <div className="reward-giver-section-header">
                       <h2>Give Shards</h2>
@@ -395,9 +421,42 @@ function RewardGiverPage() {
                       </button>
                     </div>
                   </>
-                )}
+                ) : null}
 
-                {selectedTab === "items" && (
+                {selectedTab === "feature_coins" ? (
+                  <>
+                    <div className="reward-giver-section-header">
+                      <h2>Give Feature Coins</h2>
+                    </div>
+
+                    <div className="reward-giver-form-grid">
+                      <div className="reward-giver-field">
+                        <label>Feature Coin Amount</label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="reward-giver-input"
+                          value={featureCoinAmount}
+                          onChange={(event) => setFeatureCoinAmount(event.target.value)}
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="reward-giver-actions">
+                      <button
+                        type="button"
+                        className="reward-giver-primary-btn"
+                        onClick={handleGiveFeatureCoins}
+                        disabled={submitting || !selectedUserId || !activeSeries?.id}
+                      >
+                        {submitting ? "Giving..." : "Give Feature Coins"}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+
+                {selectedTab === "items" ? (
                   <>
                     <div className="reward-giver-section-header">
                       <h2>Give Store Item</h2>
@@ -449,9 +508,9 @@ function RewardGiverPage() {
                       </button>
                     </div>
                   </>
-                )}
+                ) : null}
 
-                {selectedTab === "cards" && (
+                {selectedTab === "cards" ? (
                   <>
                     <div className="reward-giver-section-header">
                       <h2>Give Card</h2>
@@ -556,7 +615,7 @@ function RewardGiverPage() {
                       </button>
                     </div>
                   </>
-                )}
+                ) : null}
               </section>
             </div>
           </>

@@ -17,6 +17,7 @@ function DeckMainSection({
   onShowHoverCard,
   onHideHoverCard,
   buildCardImageUrl,
+  interactionDisabled = false,
 }) {
   const isDropActive = activeDropSection === "main";
 
@@ -61,7 +62,7 @@ function DeckMainSection({
                 <div
                   key={`main-card-${slot.instanceKey || `${slot.cardId}-${index}`}`}
                   className="deck-slot deck-slot-filled"
-                  draggable
+                  draggable={!interactionDisabled}
                   onClick={() => onOpenCardModal(slot.cardId)}
                   onMouseEnter={(event) => onShowHoverCard(slot.cardId, event.currentTarget)}
                   onMouseLeave={onHideHoverCard}
@@ -81,6 +82,7 @@ function DeckMainSection({
                       event.stopPropagation();
                       onRemoveCard(slot.cardId, "main");
                     }}
+                    disabled={interactionDisabled}
                     aria-label={`Remove ${slot.card?.name || "card"} from main deck`}
                   >
                     -

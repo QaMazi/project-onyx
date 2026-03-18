@@ -1,5 +1,28 @@
 [
   {
+    "version": "0.1.0",
+    "channel": "Beta",
+    "title": "Progression Beta Systems, Premium Expansion, and UI Overhaul",
+    "date": "2026-03-17",
+    "changes": [
+      "Progression phase flow expanded into a full lobby, Round 0 standby, deckbuilding, dueling, and reward system.",
+      "Round 0 starter deck claiming and kickoff flow now gates progression properly for the whole series.",
+      "Ready-up, reward handling, and round advancement were rebuilt around live server-side progression RPCs.",
+      "Vault system added as a full separate page with binder-to-vault and vault-to-binder movement support.",
+      "Feature Slots was split out from container opening and upgraded into animated machine-style flows.",
+      "Store, inventory, exchange, rewards, and item backend systems were expanded to support feature coins and advanced item rules.",
+      "Dedicated modal-driven item usage was added for progression inventory effects instead of placeholder redirects.",
+      "Container opener now has a cinematic pack reveal sequence and improved box/pack presentation.",
+      "Phases and Banlist now open real in-app modal views from the series menu.",
+      "Card Database clicks now open full-screen card art previews like the rest of the system.",
+      "Premium Store systems were added for themes, music, showcase cosmetics, UI cosmetics, and premium loadouts.",
+      "Settings and profile flows were reorganized so showcase settings, owned cosmetics, and purchased UI effects are easier to manage.",
+      "Theme styling was reworked across the app to use richer multi-accent color treatment on panels, borders, glows, and hover states.",
+      "New theme backgrounds and palettes were added for Cyber Dragon, Egyptian God, Kuriboh, and Traptrix.",
+      "Admin tooling was expanded with Round Rewards, Store Editor improvements, Player Items inspection/removal tools, and container/store management polish."
+    ]
+  },
+  {
     "version": "0.0.7",
     "channel": "Alpha",
     "title": "Card Database & Gameplay Data Layer",

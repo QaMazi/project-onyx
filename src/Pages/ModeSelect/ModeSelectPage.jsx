@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
+import CommunityShowcaseCard from "../../components/premium/CommunityShowcaseCard";
+import { usePremium } from "../../context/PremiumContext";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
 import "./ModeSelectPage.css";
@@ -12,10 +14,13 @@ function isBlockedUser(user) {
 function ModeSelectPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
+  const { fetchRandomPublicShowcase } = usePremium();
 
   const [activeSeries, setActiveSeries] = useState(null);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [publicShowcase, setPublicShowcase] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showcaseLoading, setShowcaseLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -44,12 +49,31 @@ function ModeSelectPage() {
       }
     }
 
+    async function loadShowcase() {
+      try {
+        setShowcaseLoading(true);
+        const showcase = await fetchRandomPublicShowcase();
+        if (!isMounted) return;
+        setPublicShowcase(showcase || null);
+      } catch (error) {
+        console.error("Public showcase load error:", error);
+        if (isMounted) {
+          setPublicShowcase(null);
+        }
+      } finally {
+        if (isMounted) {
+          setShowcaseLoading(false);
+        }
+      }
+    }
+
     loadSeriesState();
+    loadShowcase();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchRandomPublicShowcase]);
 
   if (authLoading || loading) return null;
 
@@ -158,7 +182,96 @@ function ModeSelectPage() {
               </div>
             </div>
           </div>
+
+          <div className="mode-grid mode-grid--secondary">
+            <div className="mode-panel mode-panel-image mode-panel-locked-card">
+              <img
+                src="/ui/mini_games_mode.png"
+                className="mode-panel-bg"
+                alt="Mini-Games"
+              />
+
+              <div className="mode-panel-overlay"></div>
+
+              <div className="mode-panel-content">
+                <div className="mode-panel-bottom">
+                  <h2 className="mode-panel-title">MINI-GAMES</h2>
+                  <p className="mode-panel-description">
+                    Future systems live here. This card stays locked for now.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="mode-panel mode-panel-image mode-panel-clickable"
+              onClick={() => navigate("/mode/premium-store")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  navigate("/mode/premium-store");
+                }
+              }}
+            >
+              <img
+                src="/ui/premium_store_mode.png"
+                className="mode-panel-bg"
+                alt="Premium Store"
+              />
+
+              <div className="mode-panel-overlay"></div>
+
+              <div className="mode-panel-content">
+                <div className="mode-panel-bottom">
+                  <h2 className="mode-panel-title">PREMIUM STORE</h2>
+                  <p className="mode-panel-description">
+                    Permanent account unlocks, cosmetics, showcase objects, and
+                    Onyx Token spending.
+                  </p>
+                  <div className="mode-panel-cta">Enter Premium Store</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <section className="mode-showcase-section">
+          <div className="mode-showcase-header">
+            <div>
+              <p className="mode-showcase-kicker">Community Showcase</p>
+              <h2>Public Player Spotlight</h2>
+              <p>
+                A random public showcase appears here. If no player showcase is live,
+                the Project Onyx promo fallback stays in rotation.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="mode-showcase-refresh-btn"
+              onClick={() => {
+                setShowcaseLoading(true);
+                fetchRandomPublicShowcase()
+                  .then((showcase) => setPublicShowcase(showcase || null))
+                  .catch((error) => {
+                    console.error("Showcase refresh failed:", error);
+                    setPublicShowcase(null);
+                  })
+                  .finally(() => setShowcaseLoading(false));
+              }}
+            >
+              {showcaseLoading ? "Refreshing..." : "Refresh Spotlight"}
+            </button>
+          </div>
+
+          <CommunityShowcaseCard
+            showcase={showcaseLoading ? null : publicShowcase}
+            className="mode-showcase-card"
+            fallbackLabel="Project Onyx Release Showcase"
+          />
+        </section>
 
         {infoModalOpen && (
           <div className="progression-modal" onClick={() => setInfoModalOpen(false)}>

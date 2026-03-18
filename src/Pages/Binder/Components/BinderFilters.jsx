@@ -1,4 +1,6 @@
 function BinderFilters({
+  panelTitle = "Binder",
+  countLabel = "cards",
   totalCount,
   searchInput,
   setSearchInput,
@@ -21,8 +23,10 @@ function BinderFilters({
   return (
     <aside className="binder-filter-panel">
       <div className="binder-filter-panel-header">
-        <h2 className="binder-filter-title">Binder</h2>
-        <span className="binder-filter-count">{totalCount} cards</span>
+        <h2 className="binder-filter-title">{panelTitle}</h2>
+        <span className="binder-filter-count">
+          {totalCount} {countLabel}
+        </span>
       </div>
 
       <div className="binder-filter-scroll">

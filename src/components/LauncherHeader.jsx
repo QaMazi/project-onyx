@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { usePremium } from "../context/PremiumContext";
 import { useUser } from "../context/UserContext";
 import "./LauncherHeader.css";
 
@@ -29,9 +31,12 @@ function resolveUsername(user) {
 function LauncherHeader({
   openSettings,
   openProfile = () => {},
+  openShowcaseSettings = () => {},
   openAdminPanel = () => {},
 }) {
   const { user, reloadUser, signOut } = useUser();
+  const { tokens } = usePremium();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;
@@ -87,22 +92,37 @@ function LauncherHeader({
     openProfile();
   }
 
+  function handleOpenShowcaseSettings() {
+    setIsOpen(false);
+    openShowcaseSettings();
+  }
+
   function handleOpenAdminPanel() {
     setIsOpen(false);
     openAdminPanel();
   }
 
+  function handleReturnToModeSelect() {
+    setIsOpen(false);
+    navigate("/mode");
+  }
+
   return (
     <header className="launcher-header">
       <div className="launcher-header-left">
-        <div className="launcher-header-brand-group">
+        <button
+          className="launcher-header-brand-group"
+          type="button"
+          onClick={handleReturnToModeSelect}
+          aria-label="Return to Mode Select"
+        >
           <img
             src="/ui/onyx_logo.png"
             className="launcher-header-logo"
             alt="Onyx"
           />
           <span className="launcher-header-brand">PROJECT ONYX</span>
-        </div>
+        </button>
       </div>
 
       <div className="launcher-header-right">
@@ -132,7 +152,17 @@ function LauncherHeader({
 
             <div className={roleClass}>{displayedRole}</div>
 
-            <span className="launcher-header-caret">▾</span>
+            <div className="launcher-header-token-pill">
+              <img
+                src="/ui/gentlemens_token.png"
+                className="launcher-header-token-icon"
+                alt=""
+                aria-hidden="true"
+              />
+              <span>{tokens}</span>
+            </div>
+
+            <span className="launcher-header-caret">v</span>
           </button>
 
           {isOpen && (
@@ -151,6 +181,14 @@ function LauncherHeader({
                 type="button"
               >
                 Settings
+              </button>
+
+              <button
+                className="launcher-header-menu-item"
+                onClick={handleOpenShowcaseSettings}
+                type="button"
+              >
+                Showcase Settings
               </button>
 
               {hasHeaderAdminAccess && (

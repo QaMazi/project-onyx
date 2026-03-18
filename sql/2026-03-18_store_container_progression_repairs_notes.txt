@@ -1,0 +1,18 @@
+2026-03-18 live/backend repair summary
+
+- Applied: 2026-03-18_store_container_progression_repairs.sql
+- Store cleanup:
+  - deactivated `feature_tokens` and `collection_notices` store items
+  - cleared retired items from active carts
+  - fixed `store_checkout` so zero-cost carts no longer fail as "Cart is empty"
+- Progression repair:
+  - `_resolve_common_rarity_id()` now resolves `base` when `common` does not exist
+  - Round 0 starter-deck claiming is no longer admin-blocked by the frontend-only bypass assumption
+  - `begin_series_for_player` / `claim_random_starter_deck` now align with Round 0 flow
+- Container system repair:
+  - added `slot_index` support on `container_cards`
+  - normalized container content mode to `official` / `curated`
+  - synced `cards_per_open` from the admin card-count editor field
+  - added `delete_container_admin`
+  - added missing `open_inventory_container`
+  - created public `container-images` storage bucket with admin-only upload/update/delete policies

@@ -35,13 +35,105 @@ function parseMassCardNames(rawText) {
     .filter(Boolean);
 }
 
-function ContainerMakerPage() {
+const PACK_TYPE_CODES = new Set(["full_pack", "draft_pack"]);
+const CONTENT_MODE_OPTIONS = [
+  { value: "official", label: "Official" },
+  { value: "curated", label: "Curated" },
+];
+const CONTAINER_IMAGE_BUCKET = "container-images";
+
+function normalizeTypeCode(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isPackTypeCode(value) {
+  return PACK_TYPE_CODES.has(normalizeTypeCode(value));
+}
+
+function filterTypeOptionsForMode(options, mode) {
+  return (options || []).filter((option) => {
+    const isPackType = isPackTypeCode(option?.code);
+    return mode === "pack" ? isPackType : !isPackType;
+  });
+}
+
+function filterContainersForMode(containers, typeOptions, mode) {
+  const typeCodeById = new Map(
+    (typeOptions || []).map((option) => [option.id, normalizeTypeCode(option.code)])
+  );
+
+  return (containers || []).filter((container) => {
+    const isPackContainer = isPackTypeCode(typeCodeById.get(container.container_type_id));
+    return mode === "pack" ? isPackContainer : !isPackContainer;
+  });
+}
+
+function buildModeCopy(mode) {
+  if (mode === "pack") {
+    return {
+      title: "Pack Maker",
+      subtitle:
+        "Create pack products from a dedicated 9-slot builder. Draft and full pack variants are handled separately here.",
+      collectionLabel: "Packs",
+      newLabel: "New Pack",
+      emptyLabel: "No packs created yet.",
+      editLabel: "Edit Pack",
+      createLabel: "Create Pack",
+      saveLabel: "Save Pack",
+      savingLabel: "Saving Pack...",
+      duplicateLabel: "Duplicate Pack",
+      lockLabel: "Lock Pack",
+      unlockLabel: "Unlock Pack",
+      deleteLabel: "Delete Pack",
+      deletedLabel: "Pack deleted.",
+      deleteConfirm:
+        "Delete this pack? This removes the pack and its card pool from the admin list.",
+      duplicateMessage: "Pack duplicated into a new unsaved copy.",
+      uploadMessage: "Pack image uploaded.",
+      loadingLabel: "Loading pack maker...",
+      saveSuccess: "Pack saved successfully.",
+      topbarKicker: "ADMIN",
+      formTypeLabel: "Pack Type",
+      cardsHeader: "Pack Cards",
+    };
+  }
+
+  return {
+    title: "Box Maker",
+    subtitle:
+      "Create promo boxes, deck boxes, and other non-pack container products from the live box system.",
+    collectionLabel: "Boxes",
+    newLabel: "New Box",
+    emptyLabel: "No boxes created yet.",
+    editLabel: "Edit Box",
+    createLabel: "Create Box",
+    saveLabel: "Save Box",
+    savingLabel: "Saving Box...",
+    duplicateLabel: "Duplicate Box",
+    lockLabel: "Lock Box",
+    unlockLabel: "Unlock Box",
+    deleteLabel: "Delete Box",
+    deletedLabel: "Box deleted.",
+    deleteConfirm:
+      "Delete this box? This removes the box and its card pool from the admin list.",
+    duplicateMessage: "Box duplicated into a new unsaved copy.",
+    uploadMessage: "Box image uploaded.",
+    loadingLabel: "Loading box maker...",
+    saveSuccess: "Box saved successfully.",
+    topbarKicker: "ADMIN",
+    formTypeLabel: "Box Type",
+    cardsHeader: "Box Cards",
+  };
+}
+
+function ContainerMakerPage({ mode = "box" }) {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [massImportBusy, setMassImportBusy] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [containers, setContainers] = useState([]);
   const [containerTypeOptions, setContainerTypeOptions] = useState([]);
@@ -66,6 +158,7 @@ function ContainerMakerPage() {
   const [cardSearch, setCardSearch] = useState("");
   const [cardSearchResults, setCardSearchResults] = useState([]);
   const [selectedTierId, setSelectedTierId] = useState("");
+  const [selectedPackSlot, setSelectedPackSlot] = useState("1");
 
   const [massCardNames, setMassCardNames] = useState("");
 
@@ -73,11 +166,47 @@ function ContainerMakerPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const canUsePage = user?.role === "Admin+";
+  const modeCopy = useMemo(() => buildModeCopy(mode), [mode]);
+
+  const visibleContainerTypeOptions = useMemo(
+    () => filterTypeOptionsForMode(containerTypeOptions, mode),
+    [containerTypeOptions, mode]
+  );
+
+  const visibleContainers = useMemo(
+    () => filterContainersForMode(containers, containerTypeOptions, mode),
+    [containers, containerTypeOptions, mode]
+  );
 
   const selectedContainer = useMemo(
-    () => containers.find((container) => container.id === selectedContainerId) || null,
-    [containers, selectedContainerId]
+    () =>
+      visibleContainers.find((container) => container.id === selectedContainerId) || null,
+    [visibleContainers, selectedContainerId]
   );
+
+  const selectedContainerTypeCode = useMemo(
+    () =>
+      containerTypeOptions.find((option) => option.id === containerTypeId)?.code || "",
+    [containerTypeId, containerTypeOptions]
+  );
+
+  const isPackType = isPackTypeCode(selectedContainerTypeCode);
+
+  const packSlotNumbers = useMemo(() => {
+    const safeCount = Math.max(1, Number(cardCount || 1));
+    return Array.from({ length: safeCount }, (_, index) => index + 1);
+  }, [cardCount]);
+
+  const groupedContainerCards = useMemo(() => {
+    if (!isPackType) return [];
+
+    return packSlotNumbers.map((slotNumber) => ({
+      slotNumber,
+      rows: containerCards.filter(
+        (row) => Number(row.slot_index || 0) === Number(slotNumber)
+      ),
+    }));
+  }, [containerCards, isPackType, packSlotNumbers]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -124,6 +253,18 @@ function ContainerMakerPage() {
     };
   }, [cardSearch]);
 
+  useEffect(() => {
+    if (!isPackType) {
+      setSelectedPackSlot("1");
+      return;
+    }
+
+    const maxSlot = Math.max(1, Number(cardCount || 1));
+    if (Number(selectedPackSlot || 1) > maxSlot) {
+      setSelectedPackSlot(String(maxSlot));
+    }
+  }, [cardCount, isPackType, selectedPackSlot]);
+
   async function hydrateContainerCards(rows) {
     if (!rows.length) return [];
 
@@ -142,6 +283,51 @@ function ContainerMakerPage() {
       ...row,
       card_name: nameMap.get(Number(row.card_id)) || `Card ${row.card_id}`,
     }));
+  }
+
+  async function handleImageUpload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    setUploadingImage(true);
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      const extension = file.name.includes(".")
+        ? file.name.split(".").pop().toLowerCase()
+        : "png";
+
+      const baseCode = buildContainerCode(code || name || "container") || "CONTAINER";
+      const filePath = `${baseCode.toLowerCase()}-${Date.now()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(CONTAINER_IMAGE_BUCKET)
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type || undefined,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from(CONTAINER_IMAGE_BUCKET)
+        .getPublicUrl(filePath);
+
+      if (!publicUrlData?.publicUrl) {
+        throw new Error("Failed to generate a public image URL.");
+      }
+
+      setImageUrl(publicUrlData.publicUrl);
+      setStatusMessage(modeCopy.uploadMessage);
+    } catch (error) {
+      console.error("Failed to upload container image:", error);
+      setErrorMessage(error.message || "Failed to upload the image.");
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function loadPage() {
@@ -170,8 +356,17 @@ function ContainerMakerPage() {
       if (typesError) throw typesError;
       if (tiersError) throw tiersError;
 
-      setContainers(containerRows || []);
-      setContainerTypeOptions(typeRows || []);
+      const nextContainerRows = containerRows || [];
+      const nextTypeRows = typeRows || [];
+      const filteredContainers = filterContainersForMode(
+        nextContainerRows,
+        nextTypeRows,
+        mode
+      );
+      const filteredTypes = filterTypeOptionsForMode(nextTypeRows, mode);
+
+      setContainers(nextContainerRows);
+      setContainerTypeOptions(nextTypeRows);
       setCardTiers(tierRows || []);
 
       if (!selectedTierId && tierRows?.length) {
@@ -179,18 +374,18 @@ function ContainerMakerPage() {
       }
 
       const nextSelected =
-        (containerRows || []).find((row) => row.id === selectedContainerId) ||
-        (containerRows || [])[0] ||
+        filteredContainers.find((row) => row.id === selectedContainerId) ||
+        filteredContainers[0] ||
         null;
 
       if (nextSelected) {
         await loadContainerIntoEditor(nextSelected);
       } else {
-        resetEditor(typeRows || [], tierRows || []);
+        resetEditor(filteredTypes, tierRows || []);
       }
     } catch (error) {
-      console.error("Failed to load container maker:", error);
-      setErrorMessage(error.message || "Failed to load container maker.");
+      console.error(`Failed to load ${mode} maker:`, error);
+      setErrorMessage(error.message || `Failed to load ${mode} maker.`);
     } finally {
       setLoading(false);
     }
@@ -213,6 +408,7 @@ function ContainerMakerPage() {
     setContainerCards([]);
     setCardSearch("");
     setCardSearchResults([]);
+    setSelectedPackSlot("1");
     setMassCardNames("");
     if (tierRows?.length) {
       setSelectedTierId(tierRows[0].id);
@@ -226,8 +422,12 @@ function ContainerMakerPage() {
     setDescription(container.description || "");
     setContainerTypeId(container.container_type_id || "");
     setImageUrl(container.image_url || "");
-    setCardCount(Number(container.card_count || 5));
-    setContentMode(container.content_mode || "curated");
+    setCardCount(Number(container.cards_per_open || container.card_count || 5));
+    setContentMode(
+      String(container.content_mode || "curated").toLowerCase() === "filtered"
+        ? "official"
+        : container.content_mode || "curated"
+    );
     setSelectionCount(
       container.selection_count == null ? "" : String(container.selection_count)
     );
@@ -237,6 +437,7 @@ function ContainerMakerPage() {
     setRarityMode(container.rarity_mode || "normal");
     setIsEnabled(Boolean(container.is_enabled));
     setIsLocked(Boolean(container.is_locked));
+    setSelectedPackSlot("1");
     setMassCardNames("");
 
     const { data: cardRows, error } = await supabase
@@ -257,7 +458,7 @@ function ContainerMakerPage() {
       return;
     }
 
-    const container = containers.find((row) => row.id === containerId);
+    const container = visibleContainers.find((row) => row.id === containerId);
     if (!container) return;
 
     setStatusMessage("");
@@ -282,6 +483,8 @@ function ContainerMakerPage() {
         card_id: Number(card.id),
         tier_id: selectedTierId,
         is_enabled: true,
+        slot_index: isPackType ? Number(selectedPackSlot || 1) : null,
+        weight: 1,
         card_name: card.name,
       },
     ]);
@@ -332,6 +535,8 @@ function ContainerMakerPage() {
           card_id: Number(card.id),
           tier_id: selectedTierId,
           is_enabled: true,
+          slot_index: isPackType ? Number(selectedPackSlot || 1) : null,
+          weight: 1,
           card_name: card.name,
         })),
       ]);
@@ -377,6 +582,28 @@ function ContainerMakerPage() {
     });
   }
 
+  function handleChangeCardSlot(index, slotIndex) {
+    setContainerCards((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        slot_index: slotIndex == null ? null : Number(slotIndex),
+      };
+      return next;
+    });
+  }
+
+  function handleChangeCardWeight(index, weight) {
+    setContainerCards((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        weight: Math.max(1, Number(weight || 1)),
+      };
+      return next;
+    });
+  }
+
   function handleDuplicateContainer() {
     if (!selectedContainer) return;
 
@@ -386,8 +613,15 @@ function ContainerMakerPage() {
     setDescription(selectedContainer.description || "");
     setContainerTypeId(selectedContainer.container_type_id || "");
     setImageUrl(selectedContainer.image_url || "");
-    setCardCount(Number(selectedContainer.card_count || 5));
-    setContentMode(selectedContainer.content_mode || "curated");
+    setCardCount(
+      Number(selectedContainer.cards_per_open || selectedContainer.card_count || 5)
+    );
+    setContentMode(
+      String(selectedContainer.content_mode || "curated").toLowerCase() ===
+        "filtered"
+        ? "official"
+        : selectedContainer.content_mode || "curated"
+    );
     setSelectionCount(
       selectedContainer.selection_count == null
         ? ""
@@ -401,6 +635,7 @@ function ContainerMakerPage() {
     setRarityMode(selectedContainer.rarity_mode || "normal");
     setIsEnabled(Boolean(selectedContainer.is_enabled));
     setIsLocked(false);
+    setSelectedPackSlot("1");
     setMassCardNames("");
 
     setContainerCards((prev) =>
@@ -411,7 +646,7 @@ function ContainerMakerPage() {
       }))
     );
 
-    setStatusMessage("Container duplicated into a new unsaved copy.");
+    setStatusMessage(modeCopy.duplicateMessage);
     setErrorMessage("");
   }
 
@@ -471,13 +706,16 @@ function ContainerMakerPage() {
             card_id: Number(row.card_id),
             tier_id: row.tier_id,
             is_enabled: Boolean(row.is_enabled),
+            slot_index:
+              isPackType && row.slot_index != null ? Number(row.slot_index) : null,
+            weight: Math.max(1, Number(row.weight || 1)),
           })),
         }
       );
 
       if (saveCardsError) throw saveCardsError;
 
-      setStatusMessage("Container saved successfully.");
+      setStatusMessage(modeCopy.saveSuccess);
       await loadPage();
 
       if (containerId) {
@@ -516,11 +754,43 @@ function ContainerMakerPage() {
       if (error) throw error;
 
       setIsLocked((prev) => !prev);
-      setStatusMessage(`Container ${isLocked ? "unlocked" : "locked"} successfully.`);
+      setStatusMessage(
+        `${mode === "pack" ? "Pack" : "Box"} ${
+          isLocked ? "unlocked" : "locked"
+        } successfully.`
+      );
       await loadPage();
     } catch (error) {
       console.error("Failed to lock/unlock container:", error);
       setErrorMessage(error.message || "Failed to change lock state.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteContainer() {
+    if (!selectedContainerId || saving) return;
+    if (!window.confirm(modeCopy.deleteConfirm)) {
+      return;
+    }
+
+    setSaving(true);
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      const { error } = await supabase.rpc("delete_container_admin", {
+        p_container_id: selectedContainerId,
+      });
+
+      if (error) throw error;
+
+      setStatusMessage(modeCopy.deletedLabel);
+      await loadPage();
+      resetEditor();
+    } catch (error) {
+      console.error("Failed to delete container:", error);
+      setErrorMessage(error.message || "Failed to delete container.");
     } finally {
       setSaving(false);
     }
@@ -542,10 +812,8 @@ function ContainerMakerPage() {
         <div className="container-maker-topbar">
           <div>
             <div className="container-maker-kicker">ADMIN</div>
-            <h1 className="container-maker-title">Container Maker</h1>
-            <p className="container-maker-subtitle">
-              Create packs, promo boxes, and deck boxes from one unified container system.
-            </p>
+            <h1 className="container-maker-title">{modeCopy.title}</h1>
+            <p className="container-maker-subtitle">{modeCopy.subtitle}</p>
           </div>
 
           <div className="container-maker-topbar-actions">
@@ -561,7 +829,7 @@ function ContainerMakerPage() {
 
         {loading ? (
           <div className="container-maker-card container-maker-empty">
-            Loading container maker...
+            {modeCopy.loadingLabel}
           </div>
         ) : (
           <>
@@ -578,7 +846,7 @@ function ContainerMakerPage() {
             <div className="container-maker-layout">
               <section className="container-maker-card container-maker-sidebar">
                 <div className="container-maker-section-header">
-                  <h2>Containers</h2>
+                  <h2>{modeCopy.collectionLabel}</h2>
                 </div>
 
                 <button
@@ -590,16 +858,16 @@ function ContainerMakerPage() {
                     resetEditor();
                   }}
                 >
-                  New Container
+                  {modeCopy.newLabel}
                 </button>
 
                 <div className="container-maker-container-list">
-                  {containers.length === 0 ? (
+                  {visibleContainers.length === 0 ? (
                     <div className="container-maker-empty small">
-                      No containers created yet.
+                      {modeCopy.emptyLabel}
                     </div>
                   ) : (
-                    containers.map((container) => (
+                    visibleContainers.map((container) => (
                       <button
                         key={container.id}
                         type="button"
@@ -624,7 +892,7 @@ function ContainerMakerPage() {
 
               <section className="container-maker-card container-maker-main">
                 <div className="container-maker-section-header">
-                  <h2>{selectedContainerId ? "Edit Container" : "Create Container"}</h2>
+                  <h2>{selectedContainerId ? modeCopy.editLabel : modeCopy.createLabel}</h2>
                 </div>
 
                 <div className="container-maker-form-grid">
@@ -657,7 +925,7 @@ function ContainerMakerPage() {
                   </div>
 
                   <div className="container-maker-field">
-                    <label>Container Type</label>
+                    <label>{modeCopy.formTypeLabel}</label>
                     <select
                       className="container-maker-select"
                       value={containerTypeId}
@@ -665,7 +933,7 @@ function ContainerMakerPage() {
                       disabled={saving}
                     >
                       <option value="">Choose type...</option>
-                      {containerTypeOptions.map((option) => (
+                      {visibleContainerTypeOptions.map((option) => (
                         <option key={option.id} value={option.id}>
                           {option.label}
                         </option>
@@ -674,18 +942,31 @@ function ContainerMakerPage() {
                   </div>
 
                   <div className="container-maker-field">
-                    <label>Image URL</label>
-                    <input
-                      className="container-maker-input"
-                      value={imageUrl}
-                      onChange={(event) => setImageUrl(event.target.value)}
-                      placeholder="https://..."
-                      disabled={saving}
-                    />
+                    <label>Container Image</label>
+                    <div className="container-maker-image-controls">
+                      <input
+                        className="container-maker-input"
+                        value={imageUrl}
+                        onChange={(event) => setImageUrl(event.target.value)}
+                        placeholder="https://..."
+                        disabled={saving || uploadingImage}
+                      />
+
+                      <label className="container-maker-secondary-btn container-maker-upload-btn">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleImageUpload}
+                          disabled={saving || uploadingImage}
+                          hidden
+                        />
+                        {uploadingImage ? "Uploading..." : "Upload"}
+                      </label>
+                    </div>
                   </div>
 
                   <div className="container-maker-field">
-                    <label>Card Count</label>
+                    <label>Cards Per Open</label>
                     <input
                       type="number"
                       min="1"
@@ -698,13 +979,18 @@ function ContainerMakerPage() {
 
                   <div className="container-maker-field">
                     <label>Content Mode</label>
-                    <input
-                      className="container-maker-input"
+                    <select
+                      className="container-maker-select"
                       value={contentMode}
                       onChange={(event) => setContentMode(event.target.value)}
-                      placeholder="curated"
                       disabled={saving}
-                    />
+                    >
+                      {CONTENT_MODE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="container-maker-field">
@@ -754,6 +1040,16 @@ function ContainerMakerPage() {
                   />
                 </div>
 
+                {imageUrl ? (
+                  <div className="container-maker-image-preview-shell">
+                    <img
+                      src={imageUrl}
+                      alt={name || "Container preview"}
+                      className="container-maker-image-preview"
+                    />
+                  </div>
+                ) : null}
+
                 <div className="container-maker-toggle-row">
                   <label className="container-maker-checkbox">
                     <input
@@ -783,7 +1079,7 @@ function ContainerMakerPage() {
                     onClick={handleSaveContainer}
                     disabled={saving || !name || !code || !containerTypeId}
                   >
-                    {saving ? "Saving..." : "Save Container"}
+                    {saving ? modeCopy.savingLabel : modeCopy.saveLabel}
                   </button>
 
                   {selectedContainerId ? (
@@ -794,7 +1090,7 @@ function ContainerMakerPage() {
                         onClick={handleDuplicateContainer}
                         disabled={saving}
                       >
-                        Duplicate Container
+                        {modeCopy.duplicateLabel}
                       </button>
 
                       <button
@@ -803,7 +1099,16 @@ function ContainerMakerPage() {
                         onClick={handleToggleLock}
                         disabled={saving}
                       >
-                        {isLocked ? "Unlock Container" : "Lock Container"}
+                        {isLocked ? modeCopy.unlockLabel : modeCopy.lockLabel}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="container-maker-danger-btn"
+                        onClick={handleDeleteContainer}
+                        disabled={saving}
+                      >
+                        {modeCopy.deleteLabel}
                       </button>
                     </>
                   ) : null}
@@ -812,8 +1117,8 @@ function ContainerMakerPage() {
             </div>
 
             <div className="container-maker-card container-maker-cards-card">
-              <div className="container-maker-section-header">
-                <h2>Container Cards</h2>
+                <div className="container-maker-section-header">
+                <h2>{modeCopy.cardsHeader}</h2>
               </div>
 
               <div className="container-maker-mass-import-block">
@@ -865,6 +1170,21 @@ function ContainerMakerPage() {
                     </option>
                   ))}
                 </select>
+
+                {isPackType ? (
+                  <select
+                    className="container-maker-select"
+                    value={selectedPackSlot}
+                    onChange={(event) => setSelectedPackSlot(event.target.value)}
+                    disabled={saving}
+                  >
+                    {packSlotNumbers.map((slotNumber) => (
+                      <option key={slotNumber} value={slotNumber}>
+                        Pack Slot {slotNumber}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
 
               <div className="container-maker-search-results">
@@ -900,6 +1220,110 @@ function ContainerMakerPage() {
               <div className="container-maker-card-list">
                 {containerCards.length === 0 ? (
                   <div className="container-maker-empty">No cards in this container yet.</div>
+                ) : isPackType ? (
+                  groupedContainerCards.map((slotGroup) => (
+                    <div
+                      key={`slot-${slotGroup.slotNumber}`}
+                      className="container-maker-slot-group"
+                    >
+                      <div className="container-maker-slot-header">
+                        <h3>Pack Slot {slotGroup.slotNumber}</h3>
+                        <span>{slotGroup.rows.length} cards</span>
+                      </div>
+
+                      {slotGroup.rows.length === 0 ? (
+                        <div className="container-maker-empty small">
+                          No cards assigned to this slot yet.
+                        </div>
+                      ) : (
+                        slotGroup.rows.map((row, index) => {
+                          const rowIndex = containerCards.indexOf(row);
+                          return (
+                            <div
+                              key={`${row.id || "temp"}-${slotGroup.slotNumber}-${index}`}
+                              className="container-maker-card-row"
+                            >
+                              <div>
+                                <div className="container-maker-row-name">
+                                  {row.card_name || `Card ${row.card_id}`}
+                                </div>
+                                <div className="container-maker-row-meta">
+                                  Card ID: {row.card_id}
+                                </div>
+                              </div>
+
+                              <div className="container-maker-card-row-actions">
+                                <select
+                                  className="container-maker-select small"
+                                  value={row.slot_index || slotGroup.slotNumber}
+                                  onChange={(event) =>
+                                    handleChangeCardSlot(rowIndex, event.target.value)
+                                  }
+                                  disabled={saving}
+                                >
+                                  {packSlotNumbers.map((slotNumber) => (
+                                    <option key={slotNumber} value={slotNumber}>
+                                      Slot {slotNumber}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <select
+                                  className="container-maker-select small"
+                                  value={row.tier_id}
+                                  onChange={(event) =>
+                                    handleChangeCardTier(rowIndex, event.target.value)
+                                  }
+                                  disabled={saving}
+                                >
+                                  {cardTiers.map((tier) => (
+                                    <option key={tier.id} value={tier.id}>
+                                      {tier.name}
+                                      {tier.weight_percent != null
+                                        ? ` (${tier.weight_percent}%)`
+                                        : ""}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <input
+                                  type="number"
+                                  min="1"
+                                  className="container-maker-input container-maker-weight-input"
+                                  value={row.weight || 1}
+                                  title="Weight"
+                                  placeholder="Weight"
+                                  onChange={(event) =>
+                                    handleChangeCardWeight(rowIndex, event.target.value)
+                                  }
+                                  disabled={saving}
+                                />
+
+                                <label className="container-maker-inline-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(row.is_enabled)}
+                                    onChange={() => handleToggleCardEnabled(rowIndex)}
+                                    disabled={saving}
+                                  />
+                                  <span>Enabled</span>
+                                </label>
+
+                                <button
+                                  type="button"
+                                  className="container-maker-danger-btn small"
+                                  onClick={() => handleRemoveCard(rowIndex)}
+                                  disabled={saving}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ))
                 ) : (
                   containerCards.map((row, index) => (
                     <div
@@ -933,6 +1357,19 @@ function ContainerMakerPage() {
                             </option>
                           ))}
                         </select>
+
+                        <input
+                          type="number"
+                          min="1"
+                          className="container-maker-input container-maker-weight-input"
+                          value={row.weight || 1}
+                          title="Weight"
+                          placeholder="Weight"
+                          onChange={(event) =>
+                            handleChangeCardWeight(index, event.target.value)
+                          }
+                          disabled={saving}
+                        />
 
                         <label className="container-maker-inline-checkbox">
                           <input

@@ -1,0 +1,11 @@
+2026-03-18 pack rarity-mode constraint fix
+
+- Problem: Pack Maker saves pack containers with `rarity_mode = 'pack_slots'`.
+- Live DB was still enforcing the older `containers_rarity_mode_check`, which only allowed:
+  - `normal`
+  - `common_only`
+  - `boosted`
+- Result: saving a pack failed with:
+  - `new row for relation "containers" violates check constraint "containers_rarity_mode_check"`
+- Fix: updated the `containers_rarity_mode_check` constraint to also allow `pack_slots`.
+- No frontend code change was required for this fix.

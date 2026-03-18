@@ -1,5 +1,8 @@
 import themes, { DEFAULT_THEME_ID } from "./themes.js";
-import audioTracks, { DEFAULT_TRACK_ID } from "./audioTracks.js";
+import audioTracks, {
+  DEFAULT_TRACK_ID,
+  audioTrackGroups,
+} from "./audioTracks.js";
 
 export const PREMIUM_CATEGORY_ORDER = [
   "themes",
@@ -61,6 +64,9 @@ export const PREMIUM_SLOT_LABELS = {
   title_flair: "Title Flair",
 };
 
+export const PREMIUM_STORE_DISCLAIMER =
+  "Wallpaper art on premium themes may be swapped or refreshed at any time.";
+
 export const SHOWCASE_SLOT_CODES = [
   "showcase_frame",
   "showcase_pedestal",
@@ -116,6 +122,226 @@ export const SETTINGS_SLOT_GROUPS = [
 const sharedCardPreview = "/ui/project_onyx_logo.png";
 const sharedPanelPreview = "/ui/backgrounds/project_onyx_theme.png";
 const sharedAccentPreview = "/ui/onyx_logo.png";
+const comingSoonPreview = "/ui/backgrounds/coming_soon.png";
+
+export const PREMIUM_THEME_COLLECTIONS = [
+  {
+    id: "base-yugioh-1",
+    label: "Yu-Gi-Oh Set I",
+    subtitle: "3 Onyx Tokens each",
+    themeIds: [
+      "konami",
+      "omega",
+      "progression",
+      "yugioh",
+      "yugioh-2",
+      "yugioh-3",
+      "yugioh-4",
+      "yugioh-5",
+    ],
+  },
+  {
+    id: "base-minimalist-1",
+    label: "Minimalist Set I",
+    subtitle: "3 Onyx Tokens each",
+    themeIds: [
+      "minimalist-1",
+      "minimalist-2",
+      "minimalist-3",
+      "minimalist-4",
+      "minimalist-5",
+      "minimalist-6",
+      "minimalist-7",
+      "minimalist-8",
+    ],
+  },
+  {
+    id: "character-dm",
+    label: "Yu-Gi-Oh Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "anzu-mazaki",
+      "ishizu-ishtar",
+      "joey-wheeler",
+      "kaiba",
+      "maximillion-pegasus",
+      "serenity-wheeler",
+      "soloman-muto",
+      "yami-yugi",
+    ],
+  },
+  {
+    id: "character-gx",
+    label: "GX Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "alexis-rhodes",
+      "aster-phoenix",
+      "atticus-rhodes",
+      "blair-flannigan",
+      "chazz-princeton",
+      "jaden-yuki",
+      "sartorius",
+      "syrus-truesdale",
+    ],
+  },
+  {
+    id: "character-5ds",
+    label: "5D's Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "akiza-izinski",
+      "crow-hogan",
+      "demak",
+      "jack-atlas",
+      "kalin-kessler",
+      "luna-and-leo",
+      "yeager",
+      "yusei-fudo",
+    ],
+  },
+  {
+    id: "character-zexal",
+    label: "Zexal Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "flip-turner",
+      "kari-tsukumo",
+      "kite-tenjo",
+      "nistro",
+      "reginald-kastle",
+      "rio-kastle",
+      "tori-meadows",
+      "yuma-tsukumo",
+    ],
+  },
+  {
+    id: "character-arc-v",
+    label: "ARC-V Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "declan-akaba",
+      "gong-strong",
+      "skip-boyle",
+      "yoko-sakaki",
+      "yuto",
+      "yuya-sakaki",
+      "zarc",
+      "zuzu-boyle",
+    ],
+  },
+  {
+    id: "character-vrains",
+    label: "VRAINS Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "akira-zaizen",
+      "cal-kolter",
+      "george-gore",
+      "go-onizuka",
+      "ryoken-kogami",
+      "takeru-homura",
+      "theodor-hamilton",
+      "yusaku-fujiki",
+    ],
+  },
+  {
+    id: "character-sevens",
+    label: "SEVENS Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: [
+      "gakuto-sogetsu",
+      "kaizo",
+      "mimi-imimi",
+      "romin-kassidy",
+      "romin-kirishima",
+      "saburamen",
+      "yuga-ohdo",
+      "yuka-goha",
+    ],
+  },
+  {
+    id: "character-go-rush",
+    label: "GO RUSH Character Set",
+    subtitle: "5 Onyx Tokens each",
+    themeIds: ["nyandestar", "yudias-velgear", "zweejo"],
+  },
+  {
+    id: "monster-deluxe-1",
+    label: "Deluxe Monster Set I",
+    subtitle: "8 Onyx Tokens each",
+    themeIds: [
+      "rose-dragon",
+      "blue-eyes",
+      "cyber-dragon",
+      "dark-magician",
+      "exodia",
+      "jinzo",
+      "starving-venom",
+      "goblin",
+    ],
+  },
+  {
+    id: "monster-premium-1",
+    label: "Premium Monster Set I",
+    subtitle: "12 Onyx Tokens each",
+    themeIds: [
+      "elemental-heroes",
+      "egyptian-god",
+      "ghost-girls",
+      "kuriboh",
+      "ojama",
+      "pots",
+      "sacred-beasts",
+      "traptrix",
+    ],
+  },
+];
+
+export const PREMIUM_THEME_COMING_SOON_ITEMS = [
+  {
+    code: "theme:manabu-sogetsu",
+    name: "Manabu Sogetsu",
+    collectionId: "character-go-rush",
+    imageUrl: comingSoonPreview,
+    price: 5,
+  },
+  {
+    code: "theme:yuhi-odo",
+    name: "Yuhi Odo",
+    collectionId: "character-go-rush",
+    imageUrl: comingSoonPreview,
+    price: 5,
+  },
+  {
+    code: "theme:yuamu-odo",
+    name: "Yuamu Odo",
+    collectionId: "character-go-rush",
+    imageUrl: comingSoonPreview,
+    price: 5,
+  },
+  {
+    code: "theme:maho-yojo-meegu-chan",
+    name: "Maho Yojo Meegu-Chan",
+    collectionId: "character-go-rush",
+    imageUrl: comingSoonPreview,
+    price: 5,
+  },
+  {
+    code: "theme:dohl",
+    name: "Dohl",
+    collectionId: "character-go-rush",
+    imageUrl: comingSoonPreview,
+    price: 5,
+  },
+];
+
+export const PREMIUM_AUDIO_COLLECTIONS = audioTrackGroups.map((group) => ({
+  id: group.label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+  label: group.label,
+  subtitle: "Permanent track unlocks",
+  match: group.match,
+}));
 
 const themeItems = themes.map((theme, index) => ({
   code: `theme:${theme.id}`,
@@ -130,6 +356,9 @@ const themeItems = themes.map((theme, index) => ({
     accent: theme.accent,
     accent2: theme.accent2,
     accent3: theme.accent3,
+    storeGroupCode: theme.storeGroupCode,
+    storeGroupLabel: theme.storeGroupLabel,
+    isStoreDefault: theme.isStoreDefault,
   },
   sortOrder: index + 1,
 }));
@@ -600,6 +829,7 @@ export const PREMIUM_DEFAULT_CODES = [
   DEFAULT_THEME_PREMIUM_CODE,
   DEFAULT_TRACK_PREMIUM_CODE,
 ];
+export const PREMIUM_STORE_HIDDEN_CODES = [...PREMIUM_DEFAULT_CODES];
 
 export function getPremiumItemsForCategory(categoryCode) {
   return premiumItems.filter((item) => item.categoryCode === categoryCode);

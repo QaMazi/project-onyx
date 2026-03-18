@@ -18,6 +18,7 @@ const CATEGORY_ORDER = [
   "protection",
   "special",
   "container_openers",
+  "pack_opener",
   "currency_exchange",
 ];
 

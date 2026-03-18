@@ -6,11 +6,20 @@ import { usePremium } from "../../context/PremiumContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
 import {
+  PREMIUM_AUDIO_COLLECTIONS,
   PREMIUM_CATEGORY_LABELS,
   PREMIUM_CATEGORY_ORDER,
   PREMIUM_SLOT_LABELS,
+  PREMIUM_STORE_DISCLAIMER,
+  PREMIUM_STORE_HIDDEN_CODES,
+  PREMIUM_THEME_COLLECTIONS,
+  PREMIUM_THEME_COMING_SOON_ITEMS,
 } from "../../data/premiumCatalog.js";
 import "./PremiumStorePage.css";
+
+function sortByName(left, right) {
+  return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+}
 
 function PremiumStorePage() {
   const navigate = useNavigate();
@@ -32,6 +41,19 @@ function PremiumStorePage() {
   const [statusText, setStatusText] = useState("");
   const [actioningId, setActioningId] = useState("");
   const [previewingId, setPreviewingId] = useState("");
+  const [collapsedCollections, setCollapsedCollections] = useState(() => {
+    const nextState = {};
+
+    PREMIUM_THEME_COLLECTIONS.forEach((collection) => {
+      nextState[`themes:${collection.id}`] = true;
+    });
+
+    PREMIUM_AUDIO_COLLECTIONS.forEach((collection) => {
+      nextState[`music:${collection.id}`] = true;
+    });
+
+    return nextState;
+  });
 
   useEffect(() => {
     return () => {
@@ -46,17 +68,107 @@ function PremiumStorePage() {
     };
   }, []);
 
+  const storeHiddenCodes = useMemo(
+    () => new Set(PREMIUM_STORE_HIDDEN_CODES),
+    []
+  );
+
+  const visibleCatalog = useMemo(() => {
+    return catalog.filter((item) => !storeHiddenCodes.has(item.code));
+  }, [catalog, storeHiddenCodes]);
+
   const itemsByCategory = useMemo(() => {
     return PREMIUM_CATEGORY_ORDER.reduce((accumulator, categoryCode) => {
-      accumulator[categoryCode] = catalog.filter(
-        (item) => item.category_code === categoryCode
-      );
+      accumulator[categoryCode] = visibleCatalog
+        .filter((item) => item.category_code === categoryCode)
+        .sort(sortByName);
       return accumulator;
     }, {});
-  }, [catalog]);
+  }, [visibleCatalog]);
+
+  const themeItemsByCode = useMemo(() => {
+    return new Map(
+      (itemsByCategory.themes || []).map((item) => [item.code, item])
+    );
+  }, [itemsByCategory.themes]);
+
+  const themeCollections = useMemo(() => {
+    return PREMIUM_THEME_COLLECTIONS.map((collection) => {
+      const unlockedItems = collection.themeIds
+        .map((themeId) => themeItemsByCode.get(`theme:${themeId}`))
+        .filter(Boolean);
+
+      const comingSoonItems = PREMIUM_THEME_COMING_SOON_ITEMS.filter(
+        (item) => item.collectionId === collection.id
+      ).map((item) => ({
+        id: item.code,
+        code: item.code,
+        name: item.name,
+        description: `${item.name} is marked for a future premium theme release.`,
+        image_url: item.imageUrl,
+        price: item.price,
+        slot_code: "theme",
+        preview_audio_url: null,
+        is_owned: false,
+        is_equipped: false,
+        metadata: {
+          comingSoon: true,
+        },
+      }));
+
+      const items = [...unlockedItems, ...comingSoonItems].sort(sortByName);
+
+      return {
+        ...collection,
+        items,
+      };
+    });
+  }, [themeItemsByCode]);
+
+  const musicCollections = useMemo(() => {
+    const musicItems = itemsByCategory.music || [];
+    const assignedCodes = new Set();
+
+    const grouped = PREMIUM_AUDIO_COLLECTIONS.map((collection) => {
+      const items = musicItems.filter((item) => {
+        const matches = collection.match(item);
+        if (matches) {
+          assignedCodes.add(item.code);
+        }
+        return matches;
+      });
+
+      return {
+        ...collection,
+        items: [...items].sort(sortByName),
+      };
+    });
+
+    const ungroupedItems = musicItems
+      .filter((item) => !assignedCodes.has(item.code))
+      .sort(sortByName);
+
+    if (ungroupedItems.length > 0) {
+      grouped.push({
+        id: "music-other",
+        label: "More Tracks",
+        subtitle: "Permanent track unlocks",
+        items: ungroupedItems,
+      });
+    }
+
+    return grouped;
+  }, [itemsByCategory.music]);
 
   if (authLoading || loading) return null;
   if (!user) return <Navigate to="/" replace />;
+
+  function toggleCollection(key) {
+    setCollapsedCollections((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }
 
   async function handlePreview(item) {
     if (!item.preview_audio_url) return;
@@ -64,10 +176,18 @@ function PremiumStorePage() {
     try {
       if (previewTimeoutRef.current) {
         window.clearTimeout(previewTimeoutRef.current);
+        previewTimeoutRef.current = 0;
       }
 
       if (!previewAudioRef.current) {
         previewAudioRef.current = new Audio();
+      }
+
+      if (previewingId === item.id) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current.currentTime = 0;
+        setPreviewingId("");
+        return;
       }
 
       previewAudioRef.current.pause();
@@ -80,6 +200,7 @@ function PremiumStorePage() {
         if (!previewAudioRef.current) return;
         previewAudioRef.current.pause();
         previewAudioRef.current.currentTime = 0;
+        previewTimeoutRef.current = 0;
         setPreviewingId("");
       }, 10000);
     } catch (error) {
@@ -90,6 +211,8 @@ function PremiumStorePage() {
   }
 
   async function handleItemAction(item) {
+    if (item?.metadata?.comingSoon) return;
+
     setActioningId(item.id);
     setStatusText("");
 
@@ -110,6 +233,131 @@ function PremiumStorePage() {
     } finally {
       setActioningId("");
     }
+  }
+
+  function renderItemCard(item) {
+    const isBusy = actioningId === item.id;
+    const isPreviewing = previewingId === item.id;
+    const isComingSoon = Boolean(item?.metadata?.comingSoon);
+
+    return (
+      <article
+        key={item.code || item.id}
+        className={`premium-item-card ${
+          item.is_equipped ? "is-equipped" : ""
+        } ${item.is_owned ? "is-owned" : "is-locked"} ${
+          isComingSoon ? "is-coming-soon" : ""
+        }`}
+      >
+        <div
+          className="premium-item-card-preview"
+          style={{ backgroundImage: `url(${item.image_url})` }}
+        />
+        <div className="premium-item-card-overlay" />
+
+        <div className="premium-item-card-content">
+          <div className="premium-item-card-topline">
+            <span className="premium-item-chip">
+              {PREMIUM_SLOT_LABELS[item.slot_code] || item.slot_code}
+            </span>
+            {item.season_code ? (
+              <span className="premium-item-chip premium-item-chip--seasonal">
+                {item.season_code}
+              </span>
+            ) : null}
+            {isComingSoon ? (
+              <span className="premium-item-chip premium-item-chip--coming-soon">
+                Coming Soon
+              </span>
+            ) : null}
+          </div>
+
+          <h3>{item.name}</h3>
+          <p>{item.description}</p>
+
+          <div className="premium-item-footer">
+            <div className="premium-item-price">
+              <img src="/ui/gentlemens_token.png" alt="" aria-hidden="true" />
+              <span>{item.price}</span>
+            </div>
+
+            <div className="premium-item-actions">
+              {item.preview_audio_url ? (
+                <button
+                  type="button"
+                  className="premium-item-secondary-btn"
+                  onClick={() => void handlePreview(item)}
+                >
+                  {isPreviewing ? "Stop Preview" : "Preview 10s"}
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                className="premium-item-primary-btn"
+                onClick={() => void handleItemAction(item)}
+                disabled={isBusy || isComingSoon}
+              >
+                {isComingSoon
+                  ? "Coming Soon"
+                  : !item.is_owned
+                    ? isBusy
+                      ? "Unlocking..."
+                      : "Unlock"
+                    : item.is_equipped
+                      ? isBusy
+                        ? "Updating..."
+                        : "Unequip"
+                      : isBusy
+                        ? "Equipping..."
+                        : "Equip"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  function renderCollection(collectionKey, collection, options = {}) {
+    const isCollapsed = collapsedCollections[collectionKey] !== false;
+    const themeCollectionClass = options.themeCollection
+      ? "premium-store-grid premium-store-grid--themes"
+      : "premium-store-grid";
+
+    return (
+      <article key={collectionKey} className="premium-store-collection">
+        <button
+          type="button"
+          className={`premium-store-collection-toggle ${
+            isCollapsed ? "is-collapsed" : ""
+          }`}
+          onClick={() => toggleCollection(collectionKey)}
+        >
+          <div>
+            <h3>{collection.label}</h3>
+            <p>{collection.subtitle}</p>
+          </div>
+
+          <div className="premium-store-collection-meta">
+            <span>{collection.items.length} items</span>
+            <strong>{isCollapsed ? "Open" : "Hide"}</strong>
+          </div>
+        </button>
+
+        {!isCollapsed ? (
+          collection.items.length > 0 ? (
+            <div className={themeCollectionClass}>
+              {collection.items.map((item) => renderItemCard(item))}
+            </div>
+          ) : (
+            <div className="premium-store-empty">
+              No items available in this collection yet.
+            </div>
+          )
+        ) : null}
+      </article>
+    );
   }
 
   return (
@@ -160,6 +408,8 @@ function PremiumStorePage() {
           />
         </div>
 
+        <div className="premium-store-disclaimer">{PREMIUM_STORE_DISCLAIMER}</div>
+
         {errorText ? <div className="premium-store-inline-error">{errorText}</div> : null}
         {statusText ? <div className="premium-store-inline-status">{statusText}</div> : null}
 
@@ -172,7 +422,11 @@ function PremiumStorePage() {
                 <div className="premium-store-section-header">
                   <div>
                     <h2>{PREMIUM_CATEGORY_LABELS[categoryCode]}</h2>
-                    {categoryCode === "seasonal" ? (
+                    {categoryCode === "themes" ? (
+                      <p>Theme sets are grouped by collection and priced per wallpaper.</p>
+                    ) : categoryCode === "music" ? (
+                      <p>Audio tracks are grouped to keep the storefront lighter to load.</p>
+                    ) : categoryCode === "seasonal" ? (
                       <p>Season 0: Release cosmetics and showcase flex items.</p>
                     ) : (
                       <p>Permanent account unlocks for this premium category.</p>
@@ -180,87 +434,25 @@ function PremiumStorePage() {
                   </div>
                 </div>
 
-                {items.length === 0 ? (
+                {categoryCode === "themes" ? (
+                  <div className="premium-store-collections">
+                    {themeCollections.map((collection) =>
+                      renderCollection(`themes:${collection.id}`, collection, {
+                        themeCollection: true,
+                      })
+                    )}
+                  </div>
+                ) : categoryCode === "music" ? (
+                  <div className="premium-store-collections">
+                    {musicCollections.map((collection) =>
+                      renderCollection(`music:${collection.id}`, collection)
+                    )}
+                  </div>
+                ) : items.length === 0 ? (
                   <div className="premium-store-empty">No items available in this section yet.</div>
                 ) : (
-                  <div
-                    className={`premium-store-grid ${
-                      categoryCode === "themes" ? "premium-store-grid--themes" : ""
-                    }`}
-                  >
-                    {items.map((item) => {
-                      const isBusy = actioningId === item.id;
-                      const isPreviewing = previewingId === item.id;
-
-                      return (
-                        <article
-                          key={item.id}
-                          className={`premium-item-card ${
-                            item.is_equipped ? "is-equipped" : ""
-                          } ${item.is_owned ? "is-owned" : "is-locked"}`}
-                        >
-                          <div
-                            className="premium-item-card-preview"
-                            style={{ backgroundImage: `url(${item.image_url})` }}
-                          />
-                          <div className="premium-item-card-overlay" />
-
-                          <div className="premium-item-card-content">
-                            <div className="premium-item-card-topline">
-                              <span className="premium-item-chip">
-                                {PREMIUM_SLOT_LABELS[item.slot_code] || item.slot_code}
-                              </span>
-                              {item.season_code ? (
-                                <span className="premium-item-chip premium-item-chip--seasonal">
-                                  {item.season_code}
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <h3>{item.name}</h3>
-                            <p>{item.description}</p>
-
-                            <div className="premium-item-footer">
-                              <div className="premium-item-price">
-                                <img src="/ui/gentlemens_token.png" alt="" aria-hidden="true" />
-                                <span>{item.price}</span>
-                              </div>
-
-                              <div className="premium-item-actions">
-                                {item.preview_audio_url ? (
-                                  <button
-                                    type="button"
-                                    className="premium-item-secondary-btn"
-                                    onClick={() => void handlePreview(item)}
-                                  >
-                                    {isPreviewing ? "Previewing..." : "Preview 10s"}
-                                  </button>
-                                ) : null}
-
-                                <button
-                                  type="button"
-                                  className="premium-item-primary-btn"
-                                  onClick={() => void handleItemAction(item)}
-                                  disabled={isBusy}
-                                >
-                                  {!item.is_owned
-                                    ? isBusy
-                                      ? "Unlocking..."
-                                      : "Unlock"
-                                    : item.is_equipped
-                                      ? isBusy
-                                        ? "Updating..."
-                                        : "Unequip"
-                                      : isBusy
-                                        ? "Equipping..."
-                                        : "Equip"}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
+                  <div className="premium-store-grid">
+                    {items.map((item) => renderItemCard(item))}
                   </div>
                 )}
               </section>

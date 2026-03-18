@@ -1,0 +1,29 @@
+2026-03-18 Premium Store Update 2
+
+Frontend updates:
+- Replaced the old single Base Themes collection with:
+  - Yu-Gi-Oh Set I
+  - Minimalist Set I
+- Both new base theme sets stay under the Themes category and inherit the existing collapsed/minimized storefront behavior.
+- Added local theme definitions and palette metadata for:
+  - Yu-Gi-Oh II
+  - Yu-Gi-Oh III
+  - Yu-Gi-Oh IV
+  - Yu-Gi-Oh V
+  - Konami
+  - Omega
+  - Theme 1
+  - Theme 2
+  - Theme 3
+  - Theme 4
+  - Theme 5
+  - Theme 6
+  - Theme 7
+  - Theme 8
+
+Live DB updates:
+- Upserted the corresponding public.premium_store_items theme rows directly in Supabase.
+- Verified all 14 new/expanded base theme entries exist at 3 Onyx Tokens each.
+
+No default theme behavior changed:
+- Project Onyx remains default-owned and hidden from the storefront.

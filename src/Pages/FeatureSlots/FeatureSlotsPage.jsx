@@ -55,7 +55,7 @@ function getSlotModeCopy(mode) {
     case "boosted":
       return {
         headline: "Boosted run",
-        body: "Load boosts before the pull to chase extra volume and sharper rarity hits.",
+        body: "Load boosts before the pull to buy extra cards and raise the minimum rarity floor.",
       };
     case "regen":
       return {
@@ -98,6 +98,24 @@ function buildReelSymbols(offers, finalOffer, reelIndex) {
   return symbols;
 }
 
+function getRaisedRarity(cardRarities, baseRarityId, boostCount) {
+  const rows = Array.isArray(cardRarities) ? cardRarities : [];
+  if (!rows.length) return null;
+
+  const sorted = [...rows].sort(
+    (left, right) =>
+      Number(left.sort_order ?? 9999) - Number(right.sort_order ?? 9999) ||
+      String(left.name || "").localeCompare(String(right.name || ""))
+  );
+
+  const baseIndex = Math.max(
+    sorted.findIndex((row) => row.id === baseRarityId),
+    0
+  );
+  const targetIndex = Math.min(baseIndex + Math.max(Number(boostCount || 0), 0), sorted.length - 1);
+  return sorted[targetIndex] || null;
+}
+
 function FeatureSlotsPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
@@ -110,6 +128,7 @@ function FeatureSlotsPage() {
 
   const [activeSeries, setActiveSeries] = useState(null);
   const [slotState, setSlotState] = useState(null);
+  const [cardRarities, setCardRarities] = useState([]);
   const [players, setPlayers] = useState([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [selectedAdminSlotId, setSelectedAdminSlotId] = useState("");
@@ -162,6 +181,11 @@ function FeatureSlotsPage() {
       5,
     0
   );
+  const boostedPreviewFloor = useMemo(
+    () =>
+      getRaisedRarity(cardRarities, selectedSlot?.min_rarity_floor || null, rarityBoosts),
+    [cardRarities, rarityBoosts, selectedSlot]
+  );
 
   async function loadPage(currentUser) {
     if (!currentUser?.id) return;
@@ -185,6 +209,10 @@ function FeatureSlotsPage() {
         supabase.rpc("get_my_feature_slot_state", {
           p_series_id: currentSeries.id,
         }),
+        supabase
+          .from("card_rarities")
+          .select("id, code, name, sort_order")
+          .order("sort_order", { ascending: true }),
       ];
 
       if (isSeriesAdmin) {
@@ -199,16 +227,19 @@ function FeatureSlotsPage() {
 
       const results = await Promise.all(requests);
       const slotResponse = results[0];
+      const rarityResponse = results[1];
 
       if (slotResponse.error) throw slotResponse.error;
+      if (rarityResponse.error) throw rarityResponse.error;
 
       const nextSlotState = slotResponse.data || null;
       const nextSlots = nextSlotState?.slots || [];
+      setCardRarities(rarityResponse.data || []);
 
       setSlotState(nextSlotState);
 
       if (isSeriesAdmin) {
-        const playerResponse = results[1];
+        const playerResponse = results[2];
         if (playerResponse?.error) throw playerResponse.error;
 
         const nextPlayers = playerResponse?.data || [];
@@ -892,6 +923,20 @@ function FeatureSlotsPage() {
                           </strong>
                         </div>
 
+                        {modalMode === "boosted" ||
+                        machineState?.min_rarity_floor_name ||
+                        modalSession?.minimum_rarity_name ? (
+                          <div className="feature-slots-slot-meta-row">
+                            <span>Minimum Rarity</span>
+                            <strong>
+                              {modalSession?.minimum_rarity_name ||
+                                boostedPreviewFloor?.name ||
+                                machineState?.min_rarity_floor_name ||
+                                "Base"}
+                            </strong>
+                          </div>
+                        ) : null}
+
                         {modalSession?.rerolls_remaining > 0 ? (
                           <div className="feature-slots-slot-meta-row">
                             <span>Rerolls Remaining</span>
@@ -946,7 +991,7 @@ function FeatureSlotsPage() {
 
                               <div className="feature-slots-field">
                                 <label htmlFor="feature-slot-rarity-boost">
-                                  Rarity Runner Boosts
+                                  Minimum Rarity Boosts
                                 </label>
                                 <input
                                   id="feature-slot-rarity-boost"
@@ -959,6 +1004,13 @@ function FeatureSlotsPage() {
                                   }
                                 />
                               </div>
+                            </div>
+                          ) : null}
+
+                          {modalMode === "boosted" ? (
+                            <div className="feature-slots-slot-meta-row">
+                              <span>Minimum Rarity Floor</span>
+                              <strong>{boostedPreviewFloor?.name || "Base"}</strong>
                             </div>
                           ) : null}
 

@@ -11,6 +11,11 @@ import {
 
 import "./StorePage.css";
 
+const HIDDEN_STORE_CATEGORY_CODES = new Set([
+  "feature_tokens",
+  "collection_notices",
+]);
+
 function StorePage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
@@ -112,6 +117,7 @@ function StorePage() {
 
     for (const item of catalog) {
       const code = normalizeStoreCategoryCode(item.category_code);
+      if (HIDDEN_STORE_CATEGORY_CODES.has(code)) continue;
 
       if (!map.has(code)) {
         map.set(code, {
@@ -315,6 +321,17 @@ function StorePage() {
           <div className="store-layout">
             <div className="store-left">
               <div className="store-category-grid">
+                <button
+                  type="button"
+                  className="onyx-panel store-category-card store-category-card--shortcut"
+                  onClick={() => navigate("/mode/progression/opener")}
+                >
+                  <div className="store-category-card-label">Pack Opener</div>
+                  <div className="store-category-card-count">
+                    Open packs and boxes from inventory
+                  </div>
+                </button>
+
                 {categoryGroups.map((group) => (
                   <button
                     key={group.code}

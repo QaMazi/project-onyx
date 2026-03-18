@@ -63,6 +63,10 @@ function buildTierMap(rows) {
   return map;
 }
 
+function resolveTypeCode(typeRow) {
+  return normalizeText(typeRow?.code || typeRow?.name || "");
+}
+
 function buildCardNameMap(rows) {
   const map = new Map();
   (rows || []).forEach((row) => {
@@ -77,6 +81,12 @@ function buildTypeMap(rows) {
     map.set(row.id, row);
   });
   return map;
+}
+
+function formatPoolWeight(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return "Weight --";
+  return `Weight ${num % 1 === 0 ? num : num.toFixed(2)}`;
 }
 
 function formatPercent(value) {
@@ -142,6 +152,8 @@ function ContainerDatabasePage() {
         { data: typeRows, error: typesError },
         { data: containerCardRows, error: containerCardsError },
         { data: tierRows, error: tiersError },
+        { data: packPoolTierRows, error: packPoolTiersError },
+        { data: rarityRows, error: rarityRowsError },
       ] = await Promise.all([
         supabase
           .from("containers")
@@ -162,19 +174,36 @@ function ContainerDatabasePage() {
           .from("card_tiers")
           .select("id, name, weight_percent, sort_order")
           .order("sort_order", { ascending: true }),
+
+        supabase
+          .from("pack_pool_tiers")
+          .select("id, code, name, sort_order")
+          .order("sort_order", { ascending: true }),
+
+        supabase
+          .from("card_rarities")
+          .select("id, name"),
       ]);
 
       if (containersError) throw containersError;
       if (typesError) throw typesError;
       if (containerCardsError) throw containerCardsError;
       if (tiersError) throw tiersError;
+      if (packPoolTiersError) throw packPoolTiersError;
+      if (rarityRowsError) throw rarityRowsError;
 
       const typeMap = buildTypeMap(typeRows || []);
       const tierMap = buildTierMap(tierRows || []);
+      const packPoolTierMap = buildTierMap(packPoolTierRows || []);
+      const rarityMap = buildTierMap(rarityRows || []);
 
       const matchingContainers = (containerRows || []).filter((container) => {
         const typeRow = typeMap.get(container.container_type_id);
-        return matchesType(typeRow, typeConfig.matcher);
+        if (!matchesType(typeRow, typeConfig.matcher)) return false;
+        if (typeSlug === "packs" && resolveTypeCode(typeRow) === "draft_pack") {
+          return false;
+        }
+        return true;
       });
 
       const cardsForMatchingContainers = (containerCardRows || []).filter((row) =>
@@ -205,21 +234,29 @@ function ContainerDatabasePage() {
           cardsByContainerId.set(row.container_id, []);
         }
 
-        const tier = tierMap.get(row.tier_id);
+        const packPoolTier = packPoolTierMap.get(row.pack_pool_tier_id);
+        const tier = packPoolTier || tierMap.get(row.tier_id);
 
         cardsByContainerId.get(row.container_id).push({
           ...row,
           card_name: cardNameMap.get(Number(row.card_id)) || `Card ${row.card_id}`,
           tier_name: tier?.name || "Unknown Tier",
-          weight_percent: tier?.weight_percent ?? null,
+          tier_sort_order: Number(tier?.sort_order ?? 9999),
+          weight_percent: packPoolTier ? null : tier?.weight_percent ?? null,
+          pool_weight: row.weight ?? null,
+          is_pack_pool: Boolean(packPoolTier),
+          rarity_name: rarityMap.get(row.rarity_id)?.name || null,
         });
       });
 
       const hydratedContainers = matchingContainers.map((container) => ({
         ...container,
-        cards: (cardsByContainerId.get(container.id) || []).sort((a, b) =>
-          String(a.card_name).localeCompare(String(b.card_name))
-        ),
+        cards: (cardsByContainerId.get(container.id) || []).sort((a, b) => {
+          const tierDiff =
+            Number(a.tier_sort_order ?? 9999) - Number(b.tier_sort_order ?? 9999);
+          if (tierDiff !== 0) return tierDiff;
+          return String(a.card_name).localeCompare(String(b.card_name));
+        }),
         type_label: resolveTypeLabel(typeMap.get(container.container_type_id)),
       }));
 
@@ -388,6 +425,7 @@ function ContainerDatabasePage() {
                               </div>
                               <div className="container-database-card-meta">
                                 Card ID: {row.card_id}
+                                {row.rarity_name ? ` | ${row.rarity_name}` : ""}
                               </div>
                             </div>
 
@@ -395,12 +433,25 @@ function ContainerDatabasePage() {
                               <span className="container-database-tier-pill">
                                 {row.tier_name}
                               </span>
-                              <span className="container-database-odds-pill">
-                                {formatPercent(row.weight_percent)}
-                              </span>
-                              <span className="container-database-odds-pill subtle">
-                                {formatOneInX(row.weight_percent)}
-                              </span>
+                              {row.is_pack_pool ? (
+                                <>
+                                  <span className="container-database-odds-pill">
+                                    {formatPoolWeight(row.pool_weight)}
+                                  </span>
+                                  <span className="container-database-odds-pill subtle">
+                                    Tier Pool
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="container-database-odds-pill">
+                                    {formatPercent(row.weight_percent)}
+                                  </span>
+                                  <span className="container-database-odds-pill subtle">
+                                    {formatOneInX(row.weight_percent)}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         ))}

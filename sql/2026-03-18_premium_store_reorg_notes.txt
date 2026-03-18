@@ -1,0 +1,29 @@
+2026-03-18 Premium Store Reorg
+
+Frontend updates:
+- Reworked the Premium Store theme section into collapsible set collections that start minimized.
+- Reworked the music section into collapsible audio groups that start minimized.
+- Hidden the two default unlocks from the store UI only:
+  - Project Onyx theme
+  - Egyptian 1 music track
+- Added the wallpaper disclaimer at the top of the Premium Store.
+- Alphabetized items within their visible store groups.
+- Added GO RUSH coming-soon placeholder cards that use /ui/backgrounds/coming_soon.png.
+
+Theme registry updates:
+- Added all currently available character and monster wallpaper themes to src/data/themes.js.
+- Renamed existing display labels where requested:
+  - Kaiba -> Seto Kaiba
+  - Egyptian God -> Egyptian Gods
+
+Live DB updates:
+- Upserted premium_store_items theme rows directly in Supabase.
+- Verified 78 active theme rows now exist in public.premium_store_items.
+- Updated individual theme prices to the new per-theme pricing bands:
+  - Base Themes: 3
+  - Character Sets: 5
+  - Deluxe Monster Set I: 8
+  - Premium Monster Set I: 12
+
+Important note:
+- The two default unlocks were not deactivated in Supabase because they still need to appear in Settings as always-owned defaults. They are hidden from the store in frontend logic instead.

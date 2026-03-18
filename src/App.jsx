@@ -17,7 +17,8 @@ import TradePage from "./Pages/Trade/TradePage";
 import BanlistPage from "./Pages/Banlist/BanlistPage";
 import StarterDeckEditorPage from "./Pages/Admin/StarterDeck/StarterDeckEditorPage";
 import RewardGiverPage from "./Pages/Admin/RewardGiver/RewardGiverPage";
-import ContainerMakerPage from "./Pages/Admin/ContainerMaker/ContainerMakerPage";
+import BoxMakerPage from "./Pages/Admin/BoxMaker/BoxMakerPage";
+import PackMakerPage from "./Pages/Admin/PackMaker/PackMakerPage";
 import StoreEditorPage from "./Pages/Admin/StoreEditor/StoreEditorPage";
 import PlayerItemsPage from "./Pages/Admin/PlayerItems/PlayerItemsPage";
 import RoundRewardsPage from "./Pages/Admin/RoundRewards/RoundRewardsPage";
@@ -391,12 +392,26 @@ function App() {
       />
 
       <Route
-        path="/mode/progression/admin/container-maker"
+        path="/mode/progression/admin/box-maker"
         element={
           <ProgressionAdminRoute>
-            <ContainerMakerPage />
+            <BoxMakerPage />
           </ProgressionAdminRoute>
         }
+      />
+
+      <Route
+        path="/mode/progression/admin/pack-maker"
+        element={
+          <ProgressionAdminRoute>
+            <PackMakerPage />
+          </ProgressionAdminRoute>
+        }
+      />
+
+      <Route
+        path="/mode/progression/admin/container-maker"
+        element={<Navigate to="/mode/progression/admin/box-maker" replace />}
       />
 
       <Route

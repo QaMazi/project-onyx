@@ -1,0 +1,516 @@
+.pack-maker-editor-shell {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+  align-items: start;
+}
+
+.pack-maker-cover-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.pack-maker-cover-frame {
+  aspect-ratio: 5 / 8;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 54%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.pack-maker-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pack-maker-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 28px;
+  color: rgba(236, 241, 255, 0.88);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.pack-maker-cover-placeholder span {
+  display: block;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(232, 238, 255, 0.6);
+}
+
+.pack-maker-cover-placeholder strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 42px;
+  line-height: 1.1;
+}
+
+.pack-maker-cover-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pack-maker-editor-stack {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.pack-maker-editor-topbar {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr) 160px;
+  gap: 14px;
+  padding: 14px;
+  align-items: stretch;
+}
+
+.pack-maker-editor-topfield {
+  display: grid;
+  gap: 8px;
+}
+
+.pack-maker-editor-topfield span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(235, 240, 255, 0.72);
+  text-transform: uppercase;
+}
+
+.pack-maker-toolbar-btn {
+  width: 100%;
+  height: 100%;
+  min-height: 74px;
+}
+
+.pack-maker-editor-card {
+  padding: 18px;
+}
+
+.pack-maker-editor-header {
+  margin-bottom: 18px;
+}
+
+.pack-maker-editor-copy {
+  margin: 8px 0 0;
+  color: rgba(232, 238, 255, 0.72);
+  line-height: 1.6;
+}
+
+.pack-maker-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 18px;
+  align-items: start;
+}
+
+.pack-maker-editor-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.pack-maker-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pack-maker-meta-grid-image {
+  grid-column: span 3;
+}
+
+.pack-maker-description {
+  min-height: 120px;
+  margin-bottom: 0;
+}
+
+.pack-maker-search-results {
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.pack-maker-interactive-row {
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.pack-maker-interactive-row:hover {
+  border-color: rgba(200, 168, 93, 0.32);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pack-maker-interactive-row.is-preview-selected {
+  border-color: rgba(200, 168, 93, 0.5);
+  background:
+    linear-gradient(180deg, rgba(200, 168, 93, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 14px rgba(200, 168, 93, 0.12);
+}
+
+.pack-maker-preview-column {
+  position: sticky;
+  top: 16px;
+}
+
+.pack-maker-preview-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 60%),
+    rgba(7, 10, 18, 0.66);
+}
+
+.pack-maker-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pack-maker-preview-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.pack-maker-preview-header span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(200, 168, 93, 0.14);
+  border: 1px solid rgba(200, 168, 93, 0.28);
+  color: #f2dfb0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pack-maker-preview-image-shell {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pack-maker-preview-image {
+  width: 100%;
+  display: block;
+}
+
+.pack-maker-preview-meta {
+  display: grid;
+  gap: 6px;
+}
+
+.pack-maker-preview-meta strong {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.pack-maker-preview-meta span,
+.pack-maker-preview-empty {
+  color: rgba(232, 238, 255, 0.72);
+  line-height: 1.6;
+}
+
+.pack-maker-preview-empty {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pack-maker-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 5, 10, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.pack-maker-picker-modal {
+  width: min(880px, calc(100vw - 40px));
+  max-height: min(80vh, 900px);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.pack-maker-picker-copy {
+  margin: 0;
+  color: rgba(232, 238, 255, 0.72);
+  line-height: 1.6;
+}
+
+.pack-maker-picker-groups {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
+  display: grid;
+  gap: 16px;
+}
+
+.pack-maker-picker-group {
+  display: grid;
+  gap: 10px;
+}
+
+.pack-maker-picker-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px;
+}
+
+.pack-maker-picker-group-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pack-maker-picker-group-header span {
+  color: rgba(232, 238, 255, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pack-maker-picker-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pack-maker-autonote {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(232, 238, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.pack-maker-slot-card,
+.pack-maker-variant-card {
+  margin-bottom: 18px;
+}
+
+.pack-maker-slot-copy {
+  margin: 0 0 16px;
+  color: rgba(232, 238, 255, 0.72);
+  line-height: 1.6;
+}
+
+.pack-maker-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pack-maker-slot-panel {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+    rgba(10, 14, 22, 0.72);
+  display: grid;
+  gap: 12px;
+}
+
+.pack-maker-slot-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pack-maker-slot-panel-header > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.pack-maker-slot-panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.pack-maker-slot-panel-header span {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(232, 238, 255, 0.6);
+  text-align: right;
+}
+
+.pack-maker-slot-panel-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pack-maker-slot-total {
+  min-width: 84px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.pack-maker-slot-total.is-valid {
+  background: rgba(83, 179, 125, 0.14);
+  color: #c3f4d0;
+  border-color: rgba(83, 179, 125, 0.3);
+}
+
+.pack-maker-slot-total.is-invalid {
+  background: rgba(201, 80, 80, 0.14);
+  color: #ffd0d0;
+  border-color: rgba(201, 80, 80, 0.3);
+}
+
+.pack-maker-normalize-btn {
+  min-width: auto;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.pack-maker-slot-tier-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pack-maker-slot-tier-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pack-maker-slot-weight-input {
+  height: 38px;
+  min-width: 0;
+  text-align: center;
+}
+
+.pack-maker-search-controls {
+  grid-template-columns: minmax(0, 1fr) 220px 220px;
+}
+
+.pack-maker-tier-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.pack-maker-variant-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.pack-maker-variant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pack-maker-variant-row span {
+  color: rgba(232, 238, 255, 0.72);
+  font-size: 13px;
+}
+
+.pack-maker-variant-row strong {
+  text-align: right;
+  color: #fff;
+  font-size: 13px;
+}
+
+@media (max-width: 1180px) {
+  .pack-maker-editor-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .pack-maker-cover-frame,
+  .pack-maker-cover-placeholder {
+    aspect-ratio: 5 / 8;
+  }
+
+  .pack-maker-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pack-maker-preview-column {
+    position: static;
+  }
+
+  .pack-maker-slot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .pack-maker-editor-topbar,
+  .pack-maker-meta-grid,
+  .pack-maker-slot-grid,
+  .pack-maker-search-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .pack-maker-meta-grid-image {
+    grid-column: auto;
+  }
+
+  .pack-maker-cover-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .pack-maker-slot-tier-row,
+  .pack-maker-variant-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pack-maker-variant-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pack-maker-variant-row strong {
+    text-align: left;
+  }
+}

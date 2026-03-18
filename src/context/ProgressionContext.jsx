@@ -39,17 +39,7 @@ function getPageAllowance(pageKey, state, user) {
     };
   }
 
-  if (user?.role === "Admin+" || user?.role === "Admin") {
-    return {
-      allowed: true,
-      reason: "",
-      showBeginModal: false,
-      showLobbyModal: false,
-      showRoundZeroWaitingModal: false,
-      showWaitingOverlay: false,
-    };
-  }
-
+  const isAdmin = user?.role === "Admin+" || user?.role === "Admin";
   const roundNumber = Number(state.roundNumber || 0);
   const phase = String(state.currentPhase || "standby").toLowerCase();
   const duelStatus = String(state.duelingStatus || "idle").toLowerCase();
@@ -57,6 +47,17 @@ function getPageAllowance(pageKey, state, user) {
   const everyoneStarterClaimed = Boolean(state.everyoneStarterClaimed);
 
   if (phase === "lobby") {
+    if (isAdmin) {
+      return {
+        allowed: true,
+        reason: "",
+        showBeginModal: false,
+        showLobbyModal: false,
+        showRoundZeroWaitingModal: false,
+        showWaitingOverlay: false,
+      };
+    }
+
     const reason =
       "Series setup is still in Lobby. Wait for an admin to advance into Round 0.";
 
@@ -67,6 +68,17 @@ function getPageAllowance(pageKey, state, user) {
       showLobbyModal: pageKey === "progression",
       showRoundZeroWaitingModal: false,
       showWaitingOverlay: pageKey !== "progression",
+    };
+  }
+
+  if (isAdmin) {
+    return {
+      allowed: true,
+      reason: "",
+      showBeginModal: false,
+      showLobbyModal: false,
+      showRoundZeroWaitingModal: false,
+      showWaitingOverlay: false,
     };
   }
 

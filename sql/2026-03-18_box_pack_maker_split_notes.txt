@@ -1,0 +1,26 @@
+2026-03-18
+
+Applied live:
+- sql/2026-03-18_box_pack_maker_split.sql
+
+Summary:
+- Split the old combined admin container maker into a Box Maker workflow and a dedicated Pack Maker workflow.
+- Added pack-only pull pool tiers:
+  - Common
+  - Rare
+  - Super Rare
+  - Ultra Rare
+  - Secret Rare
+- Added 9-slot pack tier rules through public.container_pack_slot_tiers.
+- Added grouped pack product metadata on public.containers:
+  - pack_group_code
+  - pack_variant
+- Added admin RPCs for pack product loading/saving/deleting.
+- Pack save now maintains both full and draft variants together.
+- Updated open_inventory_container so pack/box tier selection chooses the card pool first, then rarity is rolled separately with the shared weighted rarity helper.
+- Backfilled the existing live test pack into the new grouped pack system and seeded default slot rules for it.
+
+Live sanity checks completed:
+- New RPCs exist in Supabase.
+- pack_pool_tiers table seeded successfully.
+- npm run build passes after frontend route/menu/page changes.

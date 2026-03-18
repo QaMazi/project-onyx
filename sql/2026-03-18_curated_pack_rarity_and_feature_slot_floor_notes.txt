@@ -1,0 +1,24 @@
+2026-03-18
+
+Applied live:
+- sql/2026-03-18_curated_pack_rarity_and_feature_slot_floor.sql
+
+Summary:
+- Packs now use curated rarity per pack entry instead of the shared weighted rarity roller.
+- Pack Maker now assigns both:
+  - pack pool tier
+  - explicit binder rarity
+- Pack opening now respects the saved rarity on each selected pack entry.
+- Existing live pack rows were backfilled to common/base rarity where missing so old packs still open cleanly.
+- Boxes continue using the shared weighted card_rarities roller.
+- Feature Slots now also use the shared weighted rarity system.
+- Boosted Slots no longer improves rarity odds directly; it now raises the minimum rarity floor per paid boost step.
+- Added helper functions for:
+  - raising a rarity floor
+  - rolling a weighted rarity with a floor
+- Feature Slot machine state now exposes the effective minimum rarity for open sessions.
+
+Verification:
+- npm run build passes
+- live pack rows now all have non-null rarity_id values
+- new helper functions and updated RPCs are present in Supabase

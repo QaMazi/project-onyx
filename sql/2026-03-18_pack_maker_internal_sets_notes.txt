@@ -1,0 +1,14 @@
+2026-03-18
+
+Applied live:
+- sql/2026-03-18_pack_maker_internal_sets.sql
+
+Summary:
+- Added an internal-only pack set organizer for Pack Maker through containers.pack_set_name.
+- Updated Pack Maker admin RPCs so the Set field saves and loads with full/draft pack variants.
+- Pack picker modal can now group large pack libraries by internal Set without exposing that organizer publicly.
+- get_pack_product_admin now also returns card image URLs for the Pack Maker preview rail.
+
+Live sanity checks completed:
+- Migration applied successfully in Supabase.
+- Pack admin RPCs now expose pack_set_name.

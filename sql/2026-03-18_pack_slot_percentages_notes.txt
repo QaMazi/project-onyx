@@ -1,0 +1,15 @@
+2026-03-18
+
+Applied live:
+- sql/2026-03-18_pack_slot_percentages.sql
+
+Summary:
+- Pack Maker slot tier rules now use explicit percentages per slot instead of loose relative weights.
+- Added backend validation so every enabled pack slot must total exactly 100% before save.
+- Normalized older live container_pack_slot_tiers rows from legacy weight values into 100-based percentages.
+- Left per-card pack pool weights unchanged; this pass only affects slot-tier chances.
+- Frontend Pack Maker now shows per-slot totals and blocks save until all 9 slots equal 100%.
+
+Live sanity checks completed:
+- Migration applied successfully in Supabase.
+- Existing live test pack slot rows were normalized to 100% totals.

@@ -1,0 +1,10 @@
+2026-03-18 one-off live data fix
+
+- User: SKX
+- Reason: free-test premium purchase before real prices were implemented
+- Revoked unlock/equip:
+  - `theme:rose-dragon` / `Black Rose Dragon`
+- Scope:
+  - removed matching row from `profile_premium_unlocks`
+  - removed matching row from `profile_premium_equips`
+  - no broader wallet or ledger reset performed

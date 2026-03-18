@@ -13,7 +13,8 @@ const ADMIN_MENU_ITEMS = [
   { label: "Reward Giver" },
   { label: "Round Rewards" },
   { label: "Starter Deck Editor" },
-  { label: "Container Maker" },
+  { label: "Box Maker" },
+  { label: "Pack Maker" },
   { label: "Store Editor" },
   { label: "Player Items" },
 ];
@@ -181,8 +182,13 @@ function ProgressionAdminMenuPanel() {
       return;
     }
 
-    if (label === "Container Maker") {
-      navigate("/mode/progression/admin/container-maker");
+    if (label === "Box Maker") {
+      navigate("/mode/progression/admin/box-maker");
+      return;
+    }
+
+    if (label === "Pack Maker") {
+      navigate("/mode/progression/admin/pack-maker");
       return;
     }
 

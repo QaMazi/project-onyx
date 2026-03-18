@@ -200,7 +200,8 @@
   min-height: 0;
   flex: 1 1 auto;
   padding: 16px;
-  overflow-y: auto;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 .binder-grid {

@@ -1,0 +1,20 @@
+2026-03-19 premium Onyx track family rename
+
+- Kept the default track as `Project Onyx`
+- Renamed the rest of the old Egyptian/default music family to:
+  - `Onyx 1`
+  - `Onyx 2`
+  - `Onyx 3`
+  - `Onyx 4`
+  - `Onyx 5`
+  - `Onyx 6`
+  - `Onyx 7`
+- Specifically:
+  - `music:egyptian-2` -> `Onyx 1`
+  - `music:egyptian-3` -> `Onyx 2`
+  - `music:egyptian-4` -> `Onyx 3`
+  - `music:egyptian-5` -> `Onyx 4`
+  - `music:egyptian-6` -> `Onyx 5`
+  - `music:desert-of-set` -> `Onyx 6`
+  - `music:obelisk-of-thunder` -> `Onyx 7`
+- Track ids and audio file paths were intentionally left unchanged

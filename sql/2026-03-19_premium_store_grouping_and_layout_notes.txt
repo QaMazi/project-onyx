@@ -1,0 +1,14 @@
+2026-03-19 premium store grouping + layout pass
+
+- Music collections were reduced to two storefront groups:
+  - `Project Onyx / Onyx`
+  - `Anime Tracks`
+- UI Effects were grouped into collapsible storefront collections:
+  - `Visual Polish`
+  - `UI Sound Packs`
+- Premium Store browse flow was redesigned to feel closer to the progression store:
+  - category browser cards
+  - one active category section at a time
+  - sticky right-side premium summary panel
+  - reduced long-scroll behavior
+- This pass was frontend-only and did not require a Supabase migration.

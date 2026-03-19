@@ -1,0 +1,13 @@
+2026-03-19 Pack reward toggle and grouping
+
+- Replaced the old `RWD` pack-number special case with a dedicated `is_reward_pack` flag.
+- Pack numbering is now:
+  - `001-999` for Normal Packs
+  - `001-999` for Reward Packs
+- Removed the internal Set organizer from the live pack admin flow.
+- Pack picker grouping is now driven by two internal categories:
+  - `Normal Packs`
+  - `Reward Packs`
+- Added `public.containers.is_reward_pack boolean not null default false`.
+- Added a unique full-pack product scope on `(is_reward_pack, pack_number_code)` so number collisions are prevented within each category.
+- Any legacy `RWD`-numbered pack products are migrated into the reward category and assigned sequential `001+` reward numbers.

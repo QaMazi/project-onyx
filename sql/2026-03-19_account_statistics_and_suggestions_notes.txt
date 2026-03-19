@@ -1,0 +1,25 @@
+2026-03-19 Account Statistics + Suggestions
+
+Live DB
+- Applied `2026-03-19_account_statistics_and_suggestions.sql` directly to Supabase.
+- Added `public.user_suggestions`.
+- Added RPCs:
+  - `get_my_account_statistics`
+  - `submit_user_suggestion`
+  - `get_my_user_suggestions`
+  - `get_admin_user_suggestions`
+  - `update_user_suggestion_admin`
+
+Frontend
+- Removed the old placeholder stat blocks from the profile modal.
+- Added a new `Your Statistics` page off Mode Select.
+- Added a new `Suggestions` page off Mode Select.
+- Added an Admin+ `Suggestions Inbox` panel inside the Admin+ modal.
+- Reworked Mode Select so Community Showcase sits above the 6-card layout:
+  - Casual Mode / Ranked Mode
+  - Mini-Games / Your Statistics
+  - Suggestions / Premium Store
+
+Notes
+- Progression and premium sections on the new statistics page use real live data.
+- Deck Game and Mini-Game sections are intentionally honest placeholders because no dedicated stat tables exist yet.

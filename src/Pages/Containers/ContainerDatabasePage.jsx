@@ -5,6 +5,8 @@ import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
 import "./ContainerDatabasePage.css";
 
+const RANDOM_PACK_RARITY_LABEL = "Random (Weighted Table)";
+
 function getTypeConfig(typeSlug) {
   switch (typeSlug) {
     case "packs":
@@ -245,7 +247,9 @@ function ContainerDatabasePage() {
           weight_percent: packPoolTier ? null : tier?.weight_percent ?? null,
           pool_weight: row.weight ?? null,
           is_pack_pool: Boolean(packPoolTier),
-          rarity_name: rarityMap.get(row.rarity_id)?.name || null,
+          rarity_name:
+            rarityMap.get(row.rarity_id)?.name ||
+            (packPoolTier ? RANDOM_PACK_RARITY_LABEL : null),
         });
       });
 

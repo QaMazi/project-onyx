@@ -1,0 +1,10 @@
+2026-03-19 premium default track rename
+
+- Renamed the default music track display from `Egyptian 1` to `Project Onyx`
+- Shifted the numbered Egyptian track labels down by one:
+  - `music:egyptian-2` -> `Egyptian 1`
+  - `music:egyptian-3` -> `Egyptian 2`
+  - `music:egyptian-4` -> `Egyptian 3`
+  - `music:egyptian-5` -> `Egyptian 4`
+  - `music:egyptian-6` -> `Egyptian 5`
+- Kept the underlying track ids and file paths unchanged so the default-owned logic stays stable

@@ -435,6 +435,71 @@
   gap: 14px;
 }
 
+.admin-suggestions-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.admin-suggestions-filter-row {
+  width: min(260px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-suggestion-card {
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
+}
+
+.admin-suggestion-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.admin-suggestion-message-shell {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.08);
+}
+
+.admin-suggestion-message {
+  margin: 10px 0 0;
+  color: #fff1ca;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.admin-suggestion-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.admin-form-row-full {
+  min-width: 0;
+}
+
+.admin-suggestion-note {
+  min-height: 110px;
+}
+
 .admin-profile-card,
 .admin-series-card,
 .admin-player-card,
@@ -708,7 +773,8 @@
   .admin-panel-header,
   .admin-section-header,
   .admin-series-card-top,
-  .admin-series-create-header {
+  .admin-series-create-header,
+  .admin-suggestions-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
@@ -725,6 +791,10 @@
   }
 
   .admin-series-create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-suggestion-edit-grid {
     grid-template-columns: 1fr;
   }
 }

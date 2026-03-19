@@ -1,0 +1,12 @@
+2026-03-19 Box Maker split follow-up
+
+- Added a dedicated box-product admin backend instead of keeping boxes on the old generic container editor path.
+- Added containers.box_number_code with 001-999 validation.
+- Box numbering is category-scoped so Deck Box 001 and Promo Box 001 can both exist.
+- Added:
+  - public._normalize_box_number_code(text)
+  - public.get_box_products_admin()
+  - public.get_box_product_admin(uuid)
+  - public.upsert_box_product_admin(...)
+  - public.delete_box_product_admin(uuid)
+- Box products still use the normal box tier + weighted rarity flow; this only changes the editor/product management layer.

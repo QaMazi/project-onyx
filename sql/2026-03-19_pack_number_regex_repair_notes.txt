@@ -1,0 +1,13 @@
+2026-03-19 Pack number regex repair
+
+- Root cause: Postgres validation used `\d`, which did not behave like the JavaScript regex.
+- Follow-up: Postgres also does not support the negative-lookahead form used in the first repair pass.
+- Result: valid numbers like `001` were being rejected by the backend.
+- Repaired both sides to use an explicit `001-999` pattern:
+  - only `001-999`
+  - `000` is invalid
+- Updated:
+  - `public.containers_pack_number_code_check`
+  - `public._normalize_pack_number_code(text)`
+  - `public.get_pack_products_admin()` sorting logic
+  - Pack Maker frontend regex

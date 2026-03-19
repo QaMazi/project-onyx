@@ -1,0 +1,7 @@
+2026-03-19 container opener batch flow
+
+- Added public.open_inventory_container_batch(uuid, integer) for the new opener UI flow.
+- Validates requested quantity before opening.
+- Opens the selected container multiple times in one transaction by reusing open_inventory_container(...).
+- Returns ordered opening results so the frontend can animate one pack/box at a time.
+- Keeps binder grants and opener consumption in the database layer instead of relying on client loops.

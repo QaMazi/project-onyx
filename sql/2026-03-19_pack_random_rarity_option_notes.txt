@@ -1,0 +1,14 @@
+2026-03-19 Pack random rarity option
+
+- Added a true `Random (Weighted Table)` rarity mode for curated pack cards.
+- Pack Maker can now save pack rows with `rarity_id = null`, which means:
+  - do not force a curated rarity
+  - roll from the global weighted `card_rarities` table when the pack is opened
+- Added `public._resolve_pack_card_pull_rarity(uuid)` to centralize:
+  - explicit curated rarity resolution
+  - fallback weighted rarity rolls for random pack rows
+- Updated `public.upsert_pack_product_admin(...)` so pack saves preserve `null` rarity choices instead of converting them to common.
+- Updated `public.open_inventory_container(uuid)` so packs:
+  - use explicit curated rarity when saved
+  - use weighted rarity rolling when the saved pack card rarity is null
+- Boxes and other non-pack containers keep their existing weighted rarity behavior.

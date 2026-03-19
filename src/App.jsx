@@ -6,6 +6,8 @@ import ModeSelectPage from "./Pages/ModeSelect/ModeSelectPage";
 import ProgressionPage from "./Pages/Progression/ProgressionPage";
 import CardDatabasePage from "./Pages/CardDatabase/CardDatabasePage";
 import DeckGamePage from "./Pages/DeckGame/DeckGamePage";
+import StatisticsPage from "./Pages/Statistics/StatisticsPage";
+import SuggestionsPage from "./Pages/Suggestions/SuggestionsPage";
 import AdminPanelPage from "./Pages/Admin/AdminPanelPage";
 import BinderPage from "./Pages/Binder/BinderPage";
 import VaultPage from "./Pages/Vault/VaultPage";
@@ -447,6 +449,24 @@ function App() {
           <DeckGameRoute>
             <DeckGamePage />
           </DeckGameRoute>
+        }
+      />
+
+      <Route
+        path="/mode/statistics"
+        element={
+          <ProtectedRoute>
+            <StatisticsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/mode/suggestions"
+        element={
+          <ProtectedRoute>
+            <SuggestionsPage />
+          </ProtectedRoute>
         }
       />
 

@@ -1,0 +1,13 @@
+2026-03-19 Pack number code
+
+- Added `public.containers.pack_number_code text` for pack products.
+- Validation accepts only:
+  - `001` style 3-digit codes
+  - `RWD` for reward packs
+- Added `public._normalize_pack_number_code(text)` so pack saves normalize and validate server-side.
+- Updated pack admin RPCs:
+  - `get_pack_products_admin()`
+  - `get_pack_product_admin(text)`
+  - `upsert_pack_product_admin(...)`
+- Pack number is stored on both the full and draft variants for the pack product.
+- This field is intended for internal pack-library organization and later tooling.

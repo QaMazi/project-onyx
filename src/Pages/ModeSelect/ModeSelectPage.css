@@ -80,10 +80,6 @@
   min-width: 0;
 }
 
-.mode-grid--secondary {
-  margin-top: 18px;
-}
-
 .mode-panel {
   position: relative;
   min-width: 0;
@@ -99,6 +95,15 @@
 .mode-panel-image {
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
   background: rgba(255, 255, 255, 0.04);
+}
+
+.mode-panel-surface {
+  border: 1px solid rgba(var(--theme-accent-2-rgb), 0.24);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(var(--theme-accent-rgb), 0.26), transparent 30%),
+    linear-gradient(135deg, rgba(var(--theme-accent-3-rgb), 0.24), rgba(7, 10, 14, 0.92));
+  background-size: cover;
+  background-position: center;
 }
 
 .mode-panel-bg {
@@ -289,6 +294,10 @@
 
 .mode-showcase-card {
   width: 100%;
+}
+
+.mode-grid--triple .mode-panel {
+  min-height: 238px;
 }
 
 .progression-modal {

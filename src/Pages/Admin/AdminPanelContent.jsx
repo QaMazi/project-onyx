@@ -4,6 +4,7 @@ import AdminSeriesPanel from "./components/AdminSeriesPanel";
 import AdminSeriesArchivesPanel from "./components/AdminSeriesArchivesPanel";
 import AdminSystemLogsPanel from "./components/AdminSystemLogsPanel";
 import AdminDeckGameControlPanel from "./components/AdminDeckGameControlPanel";
+import AdminSuggestionsPanel from "./components/AdminSuggestionsPanel";
 
 function AdminPanelContent({ onBack, backLabel = "Back" }) {
   return (
@@ -32,6 +33,7 @@ function AdminPanelContent({ onBack, backLabel = "Back" }) {
 
       <div className="admin-main-column admin-main-column-full">
         <AdminProfilesPanel />
+        <AdminSuggestionsPanel />
         <AdminPremiumStorePanel />
         <AdminDeckGameControlPanel />
         <AdminSeriesPanel />

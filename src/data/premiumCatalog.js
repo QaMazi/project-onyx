@@ -343,6 +343,35 @@ export const PREMIUM_AUDIO_COLLECTIONS = audioTrackGroups.map((group) => ({
   match: group.match,
 }));
 
+export const PREMIUM_UI_EFFECT_COLLECTIONS = [
+  {
+    id: "ui-visual-polish",
+    label: "Visual Polish",
+    subtitle: "Animated chrome, glows, motion, borders, and particles",
+    slotCodes: [
+      "header_line_style",
+      "footer_line_style",
+      "accent_motion_style",
+      "background_particle_style",
+      "panel_border_style",
+      "glow_style",
+      "modal_transition_style",
+      "page_transition_style",
+      "cursor_effect_style",
+    ],
+  },
+  {
+    id: "ui-sound-packs",
+    label: "UI Sound Packs",
+    subtitle: "Premium clicks, hovers, and interface audio beds",
+    slotCodes: [
+      "ui_sound_pack",
+      "menu_click_sound_pack",
+      "menu_hover_sound_pack",
+    ],
+  },
+];
+
 const themeItems = themes.map((theme, index) => ({
   code: `theme:${theme.id}`,
   name: theme.name,

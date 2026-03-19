@@ -9,15 +9,6 @@ const MAX_FILE_SIZE_BYTES = 1024 * 1024;
 const MAX_DIMENSION = 500;
 const ALLOWED_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
-function ProfileStatCard({ label, value }) {
-  return (
-    <div className="profile-stat-card">
-      <span className="profile-stat-label">{label}</span>
-      <span className="profile-stat-value">{value}</span>
-    </div>
-  );
-}
-
 function normalizeDisplayedRole(value) {
   const normalized = String(value || "").trim().toLowerCase();
 
@@ -395,40 +386,6 @@ function ProfileModal({ open, onClose }) {
           <p className="profile-note">
             Password changes update your account login directly.
           </p>
-        </div>
-
-        <div className="profile-section">
-          <div className="profile-stats-section-header">
-            <h3>Casual Stats</h3>
-            <p className="profile-stats-subtext">
-              Deck Game tracking placeholders for now.
-            </p>
-          </div>
-
-          <div className="profile-stats-grid">
-            <ProfileStatCard label="Decks Beaten" value="--" />
-            <ProfileStatCard label="Win Rate" value="--" />
-            <ProfileStatCard label="Decks Played" value="--" />
-            <ProfileStatCard label="Last Played Date" value="--" />
-          </div>
-        </div>
-
-        <div className="profile-section">
-          <div className="profile-stats-section-header">
-            <h3>Ranked Stats</h3>
-            <p className="profile-stats-subtext">
-              {canAccessProgression
-                ? "Progression placeholders for now. Ranked access comes from your global role."
-                : "This account does not currently have Progression access. Promote it to Duelist or Admin to unlock Ranked Mode."}
-            </p>
-          </div>
-
-          <div className="profile-stats-grid">
-            <ProfileStatCard label="Total 1st Place Wins" value="--" />
-            <ProfileStatCard label="Current Scoreboard Points" value="--" />
-            <ProfileStatCard label="Rounds Completed" value="--" />
-            <ProfileStatCard label="Series Joined" value="--" />
-          </div>
         </div>
 
         {statusText ? <p className="profile-note">{statusText}</p> : null}

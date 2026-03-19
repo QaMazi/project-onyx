@@ -1,0 +1,11 @@
+2026-03-19 Pack save tier_id fix
+
+- Root cause: `upsert_pack_product_admin` was inserting pack card rows into `public.container_cards` with `tier_id = null`.
+- Live schema still requires `public.container_cards.tier_id` to be non-null, even for curated pack rows that actually use `pack_pool_tier_id` for slot pulls.
+- Added `public._resolve_pack_pool_card_tier_id(p_pack_pool_tier_id uuid)` as a compatibility helper:
+  - maps a pack pool tier to the card tier with the same `sort_order`
+  - falls back to the lowest card tier if no exact match exists
+- Updated `public.upsert_pack_product_admin(...)` to write the resolved compatibility `tier_id` instead of `null`.
+- This does not change actual pack pull behavior:
+  - packs still use `pack_pool_tier_id` and slot weights
+  - curated `rarity_id` still stays explicit per saved pack card

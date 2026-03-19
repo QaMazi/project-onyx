@@ -6,6 +6,10 @@ import { supabase } from "../../lib/supabase";
 import "./ContainerOpenerPage.css";
 
 const TAB_ORDER = ["boxes", "packs"];
+const PACK_MODE_OPTIONS = [
+  { value: "normal", label: "Normal Mode" },
+  { value: "draft", label: "Draft Mode" },
+];
 
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
@@ -13,10 +17,8 @@ function normalizeText(value) {
 
 function getContainerBucket(typeCode) {
   const code = normalizeText(typeCode);
-
   if (code === "promo_box" || code === "deck_box") return "boxes";
   if (code === "full_pack" || code === "draft_pack") return "packs";
-
   return "boxes";
 }
 
@@ -38,7 +40,28 @@ function getTierClass(tierCode) {
     .replace(/[^a-z0-9_-]+/g, "-")}`;
 }
 
-function buildPackRevealPlaceholders(count) {
+function getContainerImageUrl(container) {
+  return container?.artwork_url || container?.image_url || "";
+}
+
+function normalizePackDisplayName(name) {
+  return String(name || "").replace(/\s+Draft$/i, "").trim();
+}
+
+function getPackVariant(container, containerTypeCode) {
+  return normalizeText(container?.pack_variant || containerTypeCode) === "draft" ||
+    normalizeText(containerTypeCode) === "draft_pack"
+    ? "draft"
+    : "normal";
+}
+
+function getNumberSortValue(value) {
+  const normalized = String(value || "").trim();
+  if (/^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/.test(normalized)) return Number(normalized);
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function buildRevealPlaceholders(count) {
   return Array.from({ length: Math.max(1, count) }).map((_, index) => ({
     id: `placeholder-${index}`,
     card_name: "Hidden Card",
@@ -51,15 +74,15 @@ function buildPackRevealPlaceholders(count) {
   }));
 }
 
-function buildDisplayPackCards(cards, revealCount, placeholderCount) {
+function buildDisplayRevealCards(cards, revealCount, placeholderCount) {
   const total = Math.max(cards.length, placeholderCount, 1);
-  const placeholders = buildPackRevealPlaceholders(total);
+  const placeholders = buildRevealPlaceholders(total);
 
   return placeholders.map((placeholder, index) => {
     if (index < revealCount && cards[index]) {
       return {
         ...cards[index],
-        revealKey: `revealed-${cards[index].id || cards[index].card_id || index}-${index}`,
+        revealKey: `revealed-${cards[index].card_id || cards[index].id || index}-${index}`,
         isRevealed: true,
       };
     }
@@ -72,32 +95,22 @@ function buildDisplayPackCards(cards, revealCount, placeholderCount) {
   });
 }
 
-function buildBoxReelCards(cards, winnerIndex) {
-  if (!cards.length) return [];
+function sumOpeningPulls(openings) {
+  return (openings || []).reduce(
+    (sum, opening) => sum + ((opening?.pulls || []).length || 0),
+    0
+  );
+}
 
-  const reel = [];
-  const total = 36;
-  const safeWinner = Math.min(Math.max(winnerIndex, 0), cards.length - 1);
+function sortLibraryItems(left, right, numberField = "packNumberCode") {
+  const numberDiff =
+    getNumberSortValue(left?.[numberField]) - getNumberSortValue(right?.[numberField]);
+  if (numberDiff !== 0) return numberDiff;
 
-  for (let index = 0; index < total; index += 1) {
-    if (index === total - 6) {
-      reel.push({
-        ...cards[safeWinner],
-        reelKey: `winner-${index}-${safeWinner}`,
-        isWinner: true,
-      });
-      continue;
-    }
+  const nameDiff = String(left?.name || "").localeCompare(String(right?.name || ""));
+  if (nameDiff !== 0) return nameDiff;
 
-    const randomIndex = Math.floor(Math.random() * cards.length);
-    reel.push({
-      ...cards[randomIndex],
-      reelKey: `reel-${index}-${randomIndex}-${Math.random()}`,
-      isWinner: false,
-    });
-  }
-
-  return reel;
+  return String(left?.code || "").localeCompare(String(right?.code || ""));
 }
 
 function ContainerOpenerPage() {
@@ -107,49 +120,227 @@ function ContainerOpenerPage() {
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [activeTab, setActiveTab] = useState("boxes");
+  const [packMode, setPackMode] = useState("normal");
 
+  const [catalogContainers, setCatalogContainers] = useState([]);
   const [inventoryRows, setInventoryRows] = useState([]);
-  const [selectedInventoryId, setSelectedInventoryId] = useState("");
-  const [selectedInventoryRow, setSelectedInventoryRow] = useState(null);
+  const [openerDefinitions, setOpenerDefinitions] = useState([]);
+  const [selectedLibraryItem, setSelectedLibraryItem] = useState(null);
+  const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+  const [openCount, setOpenCount] = useState(1);
 
-  const [boxReelCards, setBoxReelCards] = useState([]);
-  const [boxResult, setBoxResult] = useState(null);
-  const [packResults, setPackResults] = useState([]);
-  const [packRevealCount, setPackRevealCount] = useState(0);
-
-  const [boxSpinPhase, setBoxSpinPhase] = useState("idle");
-  const [packRevealPhase, setPackRevealPhase] = useState("idle");
-
-  const [resultModalOpen, setResultModalOpen] = useState(false);
-  const [resultModalMode, setResultModalMode] = useState("box");
+  const [sessionState, setSessionState] = useState(null);
+  const [revealPhase, setRevealPhase] = useState("idle");
+  const [revealCount, setRevealCount] = useState(0);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
-  const boxSpinTimeoutRef = useRef(null);
-  const packTimeoutsRef = useRef([]);
+  const revealTimersRef = useRef([]);
 
-  function clearPackTimers() {
-    packTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-    packTimeoutsRef.current = [];
+  function clearRevealTimers() {
+    revealTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+    revealTimersRef.current = [];
   }
 
-  function resetStageState() {
-    if (boxSpinTimeoutRef.current) {
-      clearTimeout(boxSpinTimeoutRef.current);
-      boxSpinTimeoutRef.current = null;
+  const inventoryByItemDefinitionId = useMemo(
+    () => new Map(inventoryRows.map((row) => [row.item_definition_id, row])),
+    [inventoryRows]
+  );
+
+  const openerDefinitionsByContainerId = useMemo(() => {
+    const map = new Map();
+    openerDefinitions.forEach((definition) => {
+      if (!definition?.target_id) return;
+      if (!map.has(definition.target_id)) {
+        map.set(definition.target_id, []);
+      }
+      map.get(definition.target_id).push(definition);
+    });
+    return map;
+  }, [openerDefinitions]);
+
+  const packSections = useMemo(() => {
+    const groupMap = new Map();
+
+    catalogContainers
+      .filter((container) => container.bucket === "packs")
+      .forEach((container) => {
+        const groupKey = container.pack_group_code || `pack:${container.id}`;
+        const variant = getPackVariant(container, container.container_type?.code);
+        const openerDefinition = (openerDefinitionsByContainerId.get(container.id) || [])[0] || null;
+        const inventoryRow = openerDefinition
+          ? inventoryByItemDefinitionId.get(openerDefinition.id) || null
+          : null;
+
+        if (!groupMap.has(groupKey)) {
+          groupMap.set(groupKey, {
+            key: groupKey,
+            type: "pack",
+            normalRow: null,
+            draftRow: null,
+            normalContainer: null,
+            draftContainer: null,
+            normalOpenerDefinition: null,
+            draftOpenerDefinition: null,
+          });
+        }
+
+        const entry = groupMap.get(groupKey);
+        if (variant === "draft") {
+          entry.draftRow = inventoryRow;
+          entry.draftContainer = container;
+          entry.draftOpenerDefinition = openerDefinition;
+        } else {
+          entry.normalRow = inventoryRow;
+          entry.normalContainer = container;
+          entry.normalOpenerDefinition = openerDefinition;
+        }
+      });
+
+    const sectionMap = new Map();
+
+    Array.from(groupMap.values()).forEach((entry) => {
+      const displayContainer = entry.normalContainer || entry.draftContainer;
+      if (!displayContainer) return;
+
+      const product = {
+        key: entry.key,
+        type: "pack",
+        name: normalizePackDisplayName(displayContainer.name),
+        code: displayContainer.code,
+        imageUrl: getContainerImageUrl(displayContainer),
+        description: displayContainer.description || "",
+        packNumberCode:
+          entry.normalContainer?.pack_number_code ||
+          entry.draftContainer?.pack_number_code ||
+          "",
+        isRewardPack: Boolean(
+          entry.normalContainer?.is_reward_pack ?? entry.draftContainer?.is_reward_pack
+        ),
+        cardsPerOpen:
+          entry.normalContainer?.cards_per_open ||
+          entry.draftContainer?.cards_per_open ||
+          9,
+        normalRow: entry.normalRow,
+        draftRow: entry.draftRow,
+        normalQuantity: Number(entry.normalRow?.available_quantity || 0),
+        draftQuantity: Number(entry.draftRow?.available_quantity || 0),
+        normalRequiredItemName: entry.normalOpenerDefinition?.name || "",
+        draftRequiredItemName: entry.draftOpenerDefinition?.name || "",
+        normalRequiredItemCode: entry.normalOpenerDefinition?.code || "",
+        draftRequiredItemCode: entry.draftOpenerDefinition?.code || "",
+      };
+
+      const sectionLabel = product.isRewardPack ? "Reward Packs" : "Normal Packs";
+      if (!sectionMap.has(sectionLabel)) {
+        sectionMap.set(sectionLabel, []);
+      }
+      sectionMap.get(sectionLabel).push(product);
+    });
+
+    return Array.from(sectionMap.entries())
+      .sort(([left], [right]) => {
+        const leftRank = left === "Normal Packs" ? 0 : 1;
+        const rightRank = right === "Normal Packs" ? 0 : 1;
+        if (leftRank !== rightRank) return leftRank - rightRank;
+        return left.localeCompare(right);
+      })
+      .map(([label, products]) => ({
+        label,
+        products: [...products].sort((left, right) => sortLibraryItems(left, right)),
+      }));
+  }, [catalogContainers, inventoryByItemDefinitionId, openerDefinitionsByContainerId]);
+
+  const boxSections = useMemo(() => {
+    const sectionMap = new Map();
+
+    catalogContainers
+      .filter((container) => container.bucket === "boxes")
+      .forEach((container) => {
+        const openerDefinition = (openerDefinitionsByContainerId.get(container.id) || [])[0] || null;
+        const inventoryRow = openerDefinition
+          ? inventoryByItemDefinitionId.get(openerDefinition.id) || null
+          : null;
+        const sectionLabel =
+          normalizeText(container.container_type?.code) === "deck_box"
+            ? "Deck Boxes"
+            : "Promo Boxes";
+
+        if (!sectionMap.has(sectionLabel)) {
+          sectionMap.set(sectionLabel, []);
+        }
+
+        sectionMap.get(sectionLabel).push({
+          key: `box:${container.id}`,
+          type: "box",
+          name: container.name,
+          code: container.code,
+          imageUrl: getContainerImageUrl(container),
+          description: container.description || openerDefinition?.description || "",
+          boxNumberCode: container.box_number_code || "",
+          cardsPerOpen: container.cards_per_open || 1,
+          inventoryRow,
+          availableQuantity: Number(inventoryRow?.available_quantity || 0),
+          categoryLabel: container.container_type?.name || "Box",
+          requiredItemName: openerDefinition?.name || "",
+          requiredItemCode: openerDefinition?.code || "",
+        });
+      });
+
+    return Array.from(sectionMap.entries())
+      .sort(([left], [right]) => {
+        const leftRank = left === "Promo Boxes" ? 0 : 1;
+        const rightRank = right === "Promo Boxes" ? 0 : 1;
+        if (leftRank !== rightRank) return leftRank - rightRank;
+        return left.localeCompare(right);
+      })
+      .map(([label, products]) => ({
+        label,
+        products: [...products].sort((left, right) =>
+          sortLibraryItems(left, right, "boxNumberCode")
+        ),
+      }));
+  }, [catalogContainers, inventoryByItemDefinitionId, openerDefinitionsByContainerId]);
+
+  const activeSections = activeTab === "packs" ? packSections : boxSections;
+
+  const selectedInventoryRow = useMemo(() => {
+    if (!selectedLibraryItem) return null;
+    if (selectedLibraryItem.type === "pack") {
+      return packMode === "draft"
+        ? selectedLibraryItem.draftRow || null
+        : selectedLibraryItem.normalRow || null;
     }
+    return selectedLibraryItem.inventoryRow || null;
+  }, [packMode, selectedLibraryItem]);
 
-    clearPackTimers();
-    setBoxSpinPhase("idle");
-    setPackRevealPhase("idle");
-    setPackRevealCount(0);
-    setResultModalOpen(false);
-  }
+  const selectedAvailableQuantity = useMemo(() => {
+    if (!selectedLibraryItem) return 0;
+    if (selectedLibraryItem.type === "pack") {
+      return packMode === "draft"
+        ? Number(selectedLibraryItem.draftQuantity || 0)
+        : Number(selectedLibraryItem.normalQuantity || 0);
+    }
+    return Number(selectedLibraryItem.availableQuantity || 0);
+  }, [packMode, selectedLibraryItem]);
 
-  const usableInventoryRows = useMemo(
-    () => inventoryRows.filter((row) => row.bucket === activeTab),
-    [inventoryRows, activeTab]
+  const currentOpening = useMemo(
+    () =>
+      sessionState?.openings?.[
+        Math.min(sessionState.activeIndex || 0, (sessionState?.openings?.length || 1) - 1)
+      ] || null,
+    [sessionState]
+  );
+
+  const displayRevealCards = useMemo(
+    () =>
+      buildDisplayRevealCards(
+        currentOpening?.pulls || [],
+        revealCount,
+        currentOpening?.cards_per_open || (currentOpening?.pulls || []).length || 1
+      ),
+    [currentOpening, revealCount]
   );
 
   useEffect(() => {
@@ -158,34 +349,21 @@ function ContainerOpenerPage() {
     }
 
     return () => {
-      resetStageState();
+      clearRevealTimers();
     };
   }, [authLoading, user]);
 
   useEffect(() => {
-    if (!usableInventoryRows.length) {
-      setSelectedInventoryId("");
-      setSelectedInventoryRow(null);
-      return;
-    }
-
-    const existingRow = usableInventoryRows.find(
-      (row) => row.id === selectedInventoryId
-    );
-
-    if (existingRow) {
-      setSelectedInventoryRow(existingRow);
-      return;
-    }
-
-    setSelectedInventoryId(usableInventoryRows[0].id);
-    setSelectedInventoryRow(usableInventoryRows[0]);
-  }, [usableInventoryRows, selectedInventoryId]);
+    if (!selectionModalOpen) return;
+    setOpenCount((previous) => {
+      if (selectedAvailableQuantity <= 0) return 1;
+      return Math.min(Math.max(previous, 1), selectedAvailableQuantity);
+    });
+  }, [selectedAvailableQuantity, selectionModalOpen]);
 
   async function loadPage() {
     setLoading(true);
     setErrorMessage("");
-    setStatusMessage("");
 
     try {
       const { data: currentSeries, error: currentSeriesError } = await supabase
@@ -195,87 +373,56 @@ function ContainerOpenerPage() {
         .maybeSingle();
 
       if (currentSeriesError) throw currentSeriesError;
+
       if (!currentSeries?.id) {
+        setCatalogContainers([]);
         setInventoryRows([]);
-        setLoading(false);
+        setOpenerDefinitions([]);
         return;
       }
 
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from("player_inventory_view")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("series_id", currentSeries.id)
-        .gt("available_quantity", 0)
-        .eq("behavior_code", "open_container")
-        .eq("target_kind", "container");
+      const [
+        { data: inventoryData, error: inventoryError },
+        { data: openerDefinitionData, error: openerDefinitionError },
+        { data: containersData, error: containersError },
+        { data: typeData, error: typeError },
+      ] = await Promise.all([
+        supabase
+          .from("player_inventory_view")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("series_id", currentSeries.id)
+          .eq("behavior_code", "open_container")
+          .eq("target_kind", "container"),
+        supabase
+          .from("item_definitions")
+          .select("id, code, name, description, target_id, exact_item_family")
+          .eq("behavior_code", "open_container")
+          .eq("target_kind", "container")
+          .eq("is_active", true),
+        supabase.from("containers").select("*").eq("is_enabled", true),
+        supabase.from("container_types").select("*"),
+      ]);
 
       if (inventoryError) throw inventoryError;
+      if (openerDefinitionError) throw openerDefinitionError;
+      if (containersError) throw containersError;
+      if (typeError) throw typeError;
 
-      const containerIds = [
-        ...new Set((inventoryData || []).map((row) => row.target_id).filter(Boolean)),
-      ];
+      const typeMap = new Map((typeData || []).map((row) => [row.id, row]));
+      const containerMap = new Map((containersData || []).map((row) => [row.id, row]));
 
-      let containers = [];
-      let containerTypes = [];
-      let containerCards = [];
-      let cards = [];
-
-      if (containerIds.length) {
-        const [
-          { data: containersData, error: containersError },
-          { data: typeData, error: typeError },
-          { data: containerCardsData, error: containerCardsError },
-        ] = await Promise.all([
-          supabase.from("containers").select("*").in("id", containerIds),
-          supabase.from("container_types").select("*"),
-          supabase
-            .from("container_cards")
-            .select("*")
-            .in("container_id", containerIds)
-            .eq("is_enabled", true),
-        ]);
-
-        if (containersError) throw containersError;
-        if (typeError) throw typeError;
-        if (containerCardsError) throw containerCardsError;
-
-        containers = containersData || [];
-        containerTypes = typeData || [];
-        containerCards = containerCardsData || [];
-
-        const cardIds = [
-          ...new Set(containerCards.map((row) => row.card_id).filter(Boolean)),
-        ];
-
-        if (cardIds.length) {
-          const { data: cardsData, error: cardsError } = await supabase
-            .from("cards")
-            .select("id, name, image_url")
-            .in("id", cardIds);
-
-          if (cardsError) throw cardsError;
-          cards = cardsData || [];
-        }
-      }
-
-      const typeMap = new Map(containerTypes.map((row) => [row.id, row]));
-      const containerMap = new Map(containers.map((row) => [row.id, row]));
-      const cardsByContainer = new Map();
-      const cardMap = new Map(cards.map((row) => [Number(row.id), row]));
-
-      containerCards.forEach((row) => {
-        if (!cardsByContainer.has(row.container_id)) {
-          cardsByContainer.set(row.container_id, []);
-        }
-
-        const cardMeta = cardMap.get(Number(row.card_id));
-        cardsByContainer.get(row.container_id).push({
-          ...row,
-          card_name: cardMeta?.name || `Card ${row.card_id}`,
-          image_url: cardMeta?.image_url || "",
-        });
-      });
+      const hydratedCatalog = (containersData || [])
+        .filter((container) => container.is_locked !== true)
+        .map((container) => {
+          const type = typeMap.get(container.container_type_id);
+          return {
+            ...container,
+            bucket: getContainerBucket(type?.code),
+            container_type: type || null,
+          };
+        })
+        .filter((container) => container.container_type);
 
       const hydratedRows = (inventoryData || [])
         .map((row) => {
@@ -287,324 +434,196 @@ function ContainerOpenerPage() {
             bucket: getContainerBucket(type?.code),
             container,
             container_type: type,
-            possible_cards: cardsByContainer.get(row.target_id) || [],
           };
         })
-        .filter((row) => row.container);
+        .filter((row) => row.container && row.container_type);
 
+      setCatalogContainers(hydratedCatalog);
       setInventoryRows(hydratedRows);
+      setOpenerDefinitions(openerDefinitionData || []);
     } catch (error) {
       console.error("Failed to load opener page:", error);
       setErrorMessage(error.message || "Failed to load opener page.");
+      setCatalogContainers([]);
       setInventoryRows([]);
+      setOpenerDefinitions([]);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleOpenSelected() {
+  function openSelectionModal(item) {
+    setSelectedLibraryItem(item);
+    setSelectionModalOpen(true);
+    setOpenCount(1);
+    setErrorMessage("");
+  }
+
+  function closeSelectionModal() {
+    setSelectionModalOpen(false);
+    setSelectedLibraryItem(null);
+  }
+
+  function startRevealSequence(openings, activeIndex) {
+    const safeIndex = Math.min(Math.max(activeIndex, 0), Math.max(openings.length - 1, 0));
+    const opening = openings[safeIndex];
+    const revealTotal = Math.max(opening?.pulls?.length || 0, opening?.cards_per_open || 0, 1);
+
+    clearRevealTimers();
+    setRevealPhase("charging");
+    setRevealCount(0);
+    setSessionState((previous) =>
+      previous
+        ? {
+            ...previous,
+            activeIndex: safeIndex,
+          }
+        : previous
+    );
+
+    revealTimersRef.current = [
+      setTimeout(() => {
+        setRevealPhase("sealed");
+      }, 140),
+      setTimeout(() => {
+        setRevealPhase("burst");
+      }, 760),
+      ...Array.from({ length: revealTotal }).map((_, index) =>
+        setTimeout(() => {
+          setRevealPhase("revealing");
+          setRevealCount(index + 1);
+        }, 1160 + index * 180)
+      ),
+      setTimeout(() => {
+        setRevealPhase("revealed");
+      }, 1160 + revealTotal * 180 + 220),
+    ];
+  }
+
+  async function handleOpenSelection() {
     if (!selectedInventoryRow || opening) return;
 
-    resetStageState();
+    if (selectedAvailableQuantity <= 0) {
+      setErrorMessage("You do not have the required opener for that mode.");
+      return;
+    }
+
+    const requestedCount = Math.min(Math.max(openCount, 1), selectedAvailableQuantity);
 
     setOpening(true);
     setErrorMessage("");
     setStatusMessage("");
-    setResultModalOpen(false);
 
     try {
-      const { data, error } = await supabase.rpc("open_inventory_container", {
+      const { data, error } = await supabase.rpc("open_inventory_container_batch", {
         p_inventory_id: selectedInventoryRow.id,
+        p_open_count: requestedCount,
       });
 
       if (error) throw error;
 
-      const pulls = data?.pulls || [];
-
-      if (selectedInventoryRow.bucket === "boxes") {
-        const reelSource = selectedInventoryRow.possible_cards.length
-          ? selectedInventoryRow.possible_cards
-          : pulls;
-
-        const winnerIndex = reelSource.findIndex(
-          (row) =>
-            normalizeText(row.card_name) === normalizeText(pulls[0]?.card_name)
-        );
-
-        setBoxReelCards(
-          buildBoxReelCards(reelSource, winnerIndex >= 0 ? winnerIndex : 0)
-        );
-        setBoxResult(pulls[0] || null);
-        setBoxSpinPhase("spinning");
-        setResultModalMode("box");
-
-        boxSpinTimeoutRef.current = setTimeout(() => {
-          setBoxSpinPhase("settled");
-          setResultModalOpen(true);
-        }, 3200);
-      } else {
-        const resolvedPackResults = pulls.length
-          ? pulls
-          : buildPackRevealPlaceholders(
-              pulls.length || selectedInventoryRow.container?.cards_per_open || 9
-            );
-        const revealTotal = resolvedPackResults.length;
-
-        setPackResults(resolvedPackResults);
-        setPackRevealCount(0);
-        setPackRevealPhase("charging");
-        setResultModalMode("pack");
-
-        packTimeoutsRef.current = [
-          setTimeout(() => {
-            setPackRevealPhase("sealed");
-          }, 140),
-          setTimeout(() => {
-            setPackRevealPhase("burst");
-          }, 760),
-          ...Array.from({ length: revealTotal }).map((_, index) =>
-            setTimeout(() => {
-              setPackRevealPhase("revealing");
-              setPackRevealCount(index + 1);
-            }, 1160 + index * 180)
-          ),
-          setTimeout(() => {
-            setPackRevealPhase("revealed");
-            setResultModalOpen(true);
-          }, 1160 + revealTotal * 180 + 220),
-        ];
+      const openings = data?.openings || [];
+      if (!openings.length) {
+        throw new Error("No openings were returned.");
       }
 
-      setStatusMessage(`Opened ${data?.container_name || "container"} successfully.`);
-      await loadPage();
+      closeSelectionModal();
+      setSessionState({
+        bucket: activeTab,
+        packMode: activeTab === "packs" ? packMode : null,
+        libraryItem: selectedLibraryItem,
+        requestedCount,
+        openings,
+        activeIndex: 0,
+      });
+      startRevealSequence(openings, 0);
     } catch (error) {
-      console.error("Failed to open container:", error);
-      setErrorMessage(error.message || "Failed to open container.");
+      console.error("Failed to open container batch:", error);
+      setErrorMessage(error.message || "Failed to open opener batch.");
     } finally {
       setOpening(false);
     }
   }
 
-  function renderInventoryList() {
-    if (!usableInventoryRows.length) {
-      return <div className="container-opener-empty">No openers available in this tab.</div>;
+  async function handleAdvanceSession() {
+    if (!sessionState) return;
+
+    const nextIndex = (sessionState.activeIndex || 0) + 1;
+    if (nextIndex < sessionState.openings.length) {
+      startRevealSequence(sessionState.openings, nextIndex);
+      return;
     }
 
-    return (
-      <div className="container-opener-list">
-        {usableInventoryRows.map((row) => (
-          <button
-            key={row.id}
-            type="button"
-            className={`container-opener-list-row ${
-              selectedInventoryId === row.id ? "is-selected" : ""
-            }`}
-            onClick={() => {
-              setSelectedInventoryId(row.id);
-              setSelectedInventoryRow(row);
-              resetStageState();
-            }}
-          >
-            <div className="container-opener-list-row-main">
-              <div className="container-opener-list-title">{row.item_name}</div>
-              <div className="container-opener-list-subtitle">{row.container?.name}</div>
-            </div>
-            <div className="container-opener-list-row-meta">x{row.available_quantity}</div>
-          </button>
-        ))}
-      </div>
+    const totalCards = sumOpeningPulls(sessionState.openings);
+    const noun = sessionState.bucket === "packs" ? "pack" : "box";
+    setStatusMessage(
+      `Opened ${sessionState.openings.length} ${noun}${
+        sessionState.openings.length === 1 ? "" : "es"
+      } and sent ${totalCards} card${totalCards === 1 ? "" : "s"} to your binder.`
     );
+
+    clearRevealTimers();
+    setSessionState(null);
+    setRevealPhase("idle");
+    setRevealCount(0);
+    await loadPage();
   }
 
-  function renderPossibleCards() {
-    if (!selectedInventoryRow?.possible_cards?.length) {
-      return <div className="container-opener-empty small">No visible card pool found.</div>;
-    }
+  function renderLibraryCard(item) {
+    const currentQuantity =
+      item.type === "pack"
+        ? packMode === "draft"
+          ? item.draftQuantity
+          : item.normalQuantity
+        : item.availableQuantity;
+    const currentRequiredItemName =
+      item.type === "pack"
+        ? packMode === "draft"
+          ? item.draftRequiredItemName
+          : item.normalRequiredItemName
+        : item.requiredItemName;
 
     return (
-      <div className="container-opener-possible-grid">
-        {selectedInventoryRow.possible_cards.map((card, index) => (
-          <div key={`${card.card_id}-${index}`} className="container-opener-possible-card">
-            <div className="container-opener-possible-name">{card.card_name}</div>
-            <div className="container-opener-possible-meta">
-              {card.weight != null ? `Weight ${card.weight}` : "Weighted"}
+      <button
+        key={item.key}
+        type="button"
+        className={`container-opener-library-card ${currentQuantity <= 0 ? "is-unavailable" : ""}`}
+        onClick={() => openSelectionModal(item)}
+      >
+        <div className="container-opener-library-art-shell">
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              className="container-opener-library-art"
+            />
+          ) : (
+            <div className="container-opener-library-art-placeholder">
+              <span>{item.type === "pack" ? "Pack" : "Box"}</span>
+              <strong>Preview</strong>
             </div>
+          )}
+        </div>
+
+        <div className="container-opener-library-body">
+          <div className="container-opener-library-head">
+            <strong>{item.name}</strong>
+            <span>
+              {item.type === "pack" ? item.packNumberCode || "---" : item.boxNumberCode || "---"}
+            </span>
           </div>
-        ))}
-      </div>
+
+          <div className="container-opener-library-meta">
+            <span>{item.code}</span>
+            <span>
+              Owned: {currentQuantity}
+              {item.type === "pack" ? ` (${packMode === "draft" ? "Draft" : "Normal"})` : ""}
+            </span>
+            <span>{currentRequiredItemName ? `Needs: ${currentRequiredItemName}` : "No opener assigned"}</span>
+          </div>
+        </div>
+      </button>
     );
-  }
-
-  function renderBoxOpener() {
-    return (
-      <div className="container-opener-stage">
-        <div className="container-opener-stage-header">
-          <div>
-            <h2>{selectedInventoryRow?.container?.name || "Select a Box"}</h2>
-            <p>
-              {selectedInventoryRow?.container?.description ||
-                "Single-card cinematic reel opener."}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="container-opener-primary-btn"
-            disabled={!selectedInventoryRow || opening}
-            onClick={handleOpenSelected}
-          >
-            {opening ? "Opening..." : "Open Box"}
-          </button>
-        </div>
-
-        <div className="container-opener-box-shell">
-          <div className="container-opener-reel-window">
-            <div
-              className={`container-opener-reel-track ${
-                boxSpinPhase === "spinning" ? "is-spinning" : ""
-              }`}
-            >
-              {boxReelCards.length ? (
-                boxReelCards.map((card) => (
-                  <div
-                    key={card.reelKey}
-                    className={`container-opener-reel-card ${getTierClass(
-                      card.tier_code
-                    )} ${card.isWinner ? "is-winner" : ""}`}
-                  >
-                    <div className="container-opener-reel-card-name">{card.card_name}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="container-opener-empty">Open a box to spin the reel.</div>
-              )}
-            </div>
-            <div className="container-opener-center-line" />
-          </div>
-        </div>
-
-        <div className="container-opener-info-grid">
-          <div className="container-opener-info-card">
-            <h3>Selected Box</h3>
-            <div className="container-opener-info-row">
-              <span>Item</span>
-              <strong>{selectedInventoryRow?.item_name || "-"}</strong>
-            </div>
-            <div className="container-opener-info-row">
-              <span>Container</span>
-              <strong>{selectedInventoryRow?.container?.name || "-"}</strong>
-            </div>
-            <div className="container-opener-info-row">
-              <span>Owned</span>
-              <strong>{selectedInventoryRow?.available_quantity ?? 0}</strong>
-            </div>
-          </div>
-
-          <div className="container-opener-info-card">
-            <h3>Possible Cards</h3>
-            {renderPossibleCards()}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function renderPackOpener() {
-    const displayPackCards = buildDisplayPackCards(
-      packResults,
-      packRevealCount,
-      selectedInventoryRow?.container?.cards_per_open || 9
-    );
-
-    return (
-      <div className="container-opener-stage">
-        <div className="container-opener-stage-header">
-          <div>
-            <h2>{selectedInventoryRow?.container?.name || "Select a Pack"}</h2>
-            <p>
-              {selectedInventoryRow?.container?.description || "9-card reveal opener."}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="container-opener-primary-btn"
-            disabled={!selectedInventoryRow || opening}
-            onClick={handleOpenSelected}
-          >
-            {opening ? "Opening..." : "Open Pack"}
-          </button>
-        </div>
-
-        <div className={`container-opener-pack-cinematic phase-${packRevealPhase}`}>
-          <div className="container-opener-pack-energy" />
-          <div className="container-opener-pack-burst-ring" />
-          <div className="container-opener-pack-sparks" />
-          <div className="container-opener-pack-foil">
-            <div className="container-opener-pack-foil-kicker">SEALED PACK</div>
-            <div className="container-opener-pack-foil-title">
-              {selectedInventoryRow?.container?.name || "Select a Pack"}
-            </div>
-            <div className="container-opener-pack-foil-copy">
-              {packRevealPhase === "idle"
-                ? "Choose a pack and crack it open."
-                : packRevealPhase === "revealed"
-                  ? "Reveal complete."
-                  : "Tearing the wrapper and revealing each card..."}
-            </div>
-            <div className="container-opener-pack-foil-progress">
-              <span>{packRevealCount}</span>
-              <small>
-                of {selectedInventoryRow?.container?.cards_per_open || displayPackCards.length}
-              </small>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className={`container-opener-pack-grid ${
-            packRevealPhase === "revealed" ? "is-revealed" : ""
-          }`}
-        >
-          {displayPackCards.map((card, index) => (
-              <div
-                key={card.revealKey || card.id || `${card.card_name}-${index}`}
-                className={`container-opener-pack-card ${
-                  card.isPlaceholder ? "is-placeholder" : ""
-                } ${card.isRevealed ? "is-revealed" : ""}
-                ${!card.isRevealed ? "is-hidden" : ""}
-                ${packRevealPhase === "burst" ? "is-bursting" : ""}
-                `}
-                style={{ "--reveal-index": index }}
-              >
-                <div
-                  className={`container-opener-pack-card-inner ${getRarityClass(
-                    card.rarity_code
-                  )} ${getTierClass(card.tier_code)}`}
-                >
-                  <div className="container-opener-pack-name">
-                    {card.isPlaceholder ? "?" : card.card_name}
-                  </div>
-                  <div className="container-opener-pack-meta">
-                    {card.isPlaceholder
-                      ? "Hidden"
-                      : `${card.tier_name} | ${card.rarity_name}`}
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
-
-        <div className="container-opener-info-card">
-          <h3>Pack Card Pool</h3>
-          {renderPossibleCards()}
-        </div>
-      </div>
-    );
-  }
-
-  function renderActiveStage() {
-    return activeTab === "packs" ? renderPackOpener() : renderBoxOpener();
   }
 
   if (authLoading) return null;
@@ -619,7 +638,8 @@ function ContainerOpenerPage() {
             <div className="container-opener-kicker">PROGRESSION</div>
             <h1 className="container-opener-title">Container Opener</h1>
             <p className="container-opener-subtitle">
-              Open boxes and packs from your live series inventory.
+              All unlocked boxes and packs stay visible here. Dimmed entries just mean you
+              do not currently own the right key or seal breaker for that mode.
             </p>
           </div>
 
@@ -642,96 +662,300 @@ function ContainerOpenerPage() {
         {loading ? (
           <div className="container-opener-card container-opener-empty">Loading opener...</div>
         ) : (
-          <div className="container-opener-layout">
-            <aside className="container-opener-card container-opener-sidebar">
-              <div className="container-opener-section-header">
-                <h2>Openers</h2>
+          <div className="container-opener-card container-opener-library-shell">
+            <div className="container-opener-library-header">
+              <div>
+                <h2>Choose Box or Pack</h2>
+                <p>
+                  Openers are grouped by type and sorted by their numbers where available.
+                  Unavailable options stay visible so you can always browse the full unlocked catalog.
+                </p>
               </div>
 
-              <div className="container-opener-tabs">
-                {TAB_ORDER.map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={`container-opener-tab-btn ${
-                      activeTab === tab ? "is-active" : ""
-                    }`}
-                    onClick={() => {
-                      setActiveTab(tab);
-                      resetStageState();
-                    }}
-                  >
-                    {getBucketLabel(tab)}
-                  </button>
+              <div className="container-opener-library-controls">
+                <div className="container-opener-tabs container-opener-tabs--row">
+                  {TAB_ORDER.map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      className={`container-opener-tab-btn ${
+                        activeTab === tab ? "is-active" : ""
+                      }`}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setSelectionModalOpen(false);
+                        setSelectedLibraryItem(null);
+                      }}
+                    >
+                      {getBucketLabel(tab)}
+                    </button>
+                  ))}
+                </div>
+
+                {activeTab === "packs" ? (
+                  <div className="container-opener-tabs container-opener-tabs--row">
+                    {PACK_MODE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`container-opener-tab-btn ${
+                          packMode === option.value ? "is-active" : ""
+                        }`}
+                        onClick={() => {
+                          setPackMode(option.value);
+                          setSelectionModalOpen(false);
+                          setSelectedLibraryItem(null);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {activeSections.length === 0 ? (
+              <div className="container-opener-empty">
+                No {activeTab === "packs" ? "packs" : "boxes"} are currently unlocked.
+              </div>
+            ) : (
+              <div className="container-opener-library-sections">
+                {activeSections.map((section) => (
+                  <section key={section.label} className="container-opener-library-section">
+                    <div className="container-opener-library-section-header">
+                      <h3>{section.label}</h3>
+                      <span>{section.products.length} options</span>
+                    </div>
+
+                    <div className="container-opener-library-grid">
+                      {section.products.map((item) => renderLibraryCard(item))}
+                    </div>
+                  </section>
                 ))}
               </div>
-
-              {renderInventoryList()}
-            </aside>
-
-            <section className="container-opener-card container-opener-main">
-              {renderActiveStage()}
-            </section>
+            )}
           </div>
         )}
 
-        {resultModalOpen ? (
-          <div
-            className="container-opener-modal-backdrop"
-            onClick={() => setResultModalOpen(false)}
-          >
+        {selectionModalOpen && selectedLibraryItem ? (
+          <div className="container-opener-modal-backdrop" onClick={closeSelectionModal}>
             <div
-              className="container-opener-modal"
+              className="container-opener-modal container-opener-choice-modal"
               onClick={(event) => event.stopPropagation()}
             >
-              <button
-                type="button"
-                className="container-opener-modal-close"
-                onClick={() => setResultModalOpen(false)}
-              >
-                x
-              </button>
+              <div className="container-opener-modal-kicker">
+                {selectedLibraryItem.type === "pack"
+                  ? packMode === "draft"
+                    ? "DRAFT PACK"
+                    : "NORMAL PACK"
+                  : "BOX"}
+              </div>
+              <h2 className="container-opener-modal-title">{selectedLibraryItem.name}</h2>
 
-              {resultModalMode === "pack" ? (
-                <>
-                  <div className="container-opener-modal-kicker">PACK OPENED</div>
-                  <h2 className="container-opener-modal-title">Pack Results</h2>
-                  <div className="container-opener-modal-pack-grid">
-                    {packResults.map((card, index) => (
-                      <div
-                        key={`${card.card_name}-${index}`}
-                        className={`container-opener-modal-pack-card ${getRarityClass(
-                          card.rarity_code
-                        )} ${getTierClass(card.tier_code)}`}
-                      >
-                        <div className="container-opener-modal-pack-name">{card.card_name}</div>
-                        <div className="container-opener-modal-pack-meta">
-                          {card.tier_name} | {card.rarity_name}
-                        </div>
+              <div className="container-opener-choice-layout">
+                <div className="container-opener-choice-art-shell">
+                  {selectedLibraryItem.imageUrl ? (
+                    <img
+                      src={selectedLibraryItem.imageUrl}
+                      alt={selectedLibraryItem.name}
+                      className="container-opener-choice-art"
+                    />
+                  ) : (
+                    <div className="container-opener-choice-art-placeholder">
+                      No container art uploaded yet.
+                    </div>
+                  )}
+                </div>
+
+                <div className="container-opener-choice-main">
+                  <div className="container-opener-choice-info-grid">
+                    <div className="container-opener-info-row">
+                      <span>Category</span>
+                      <strong>
+                        {selectedLibraryItem.type === "pack"
+                          ? packMode === "draft"
+                            ? "Draft Pack"
+                            : "Normal Pack"
+                          : selectedLibraryItem.categoryLabel}
+                      </strong>
+                    </div>
+                    <div className="container-opener-info-row">
+                      <span>Number</span>
+                      <strong>
+                        {selectedLibraryItem.type === "pack"
+                          ? selectedLibraryItem.packNumberCode || "---"
+                          : selectedLibraryItem.boxNumberCode || "---"}
+                      </strong>
+                    </div>
+                    <div className="container-opener-info-row">
+                      <span>Cards Per Open</span>
+                      <strong>{selectedLibraryItem.cardsPerOpen}</strong>
+                    </div>
+                    <div className="container-opener-info-row">
+                      <span>Owned Openers</span>
+                      <strong>{selectedAvailableQuantity}</strong>
+                    </div>
+                    <div className="container-opener-info-row">
+                      <span>Required Item</span>
+                      <strong>
+                        {selectedInventoryRow?.item_name ||
+                          (selectedLibraryItem.type === "pack"
+                            ? packMode === "draft"
+                              ? selectedLibraryItem.draftRequiredItemName || "No opener assigned"
+                              : selectedLibraryItem.normalRequiredItemName || "No opener assigned"
+                            : selectedLibraryItem.requiredItemName || "No opener assigned")}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <p className="container-opener-choice-copy">
+                    {selectedLibraryItem.description ||
+                      "Choose how many to open, then run through the reveal sequence one container at a time."}
+                  </p>
+
+                  {selectedAvailableQuantity > 0 ? (
+                    <div className="container-opener-quantity-block">
+                      <div className="container-opener-quantity-header">
+                        <strong>How many do you want to open?</strong>
+                        <span>
+                          {openCount} / {selectedAvailableQuantity}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </>
-              ) : boxResult ? (
-                <>
-                  <div className="container-opener-modal-kicker">BOX OPENED</div>
-                  <h2 className="container-opener-modal-title">{boxResult.card_name}</h2>
-                  <div
-                    className={`container-opener-result-card ${getRarityClass(
-                      boxResult.rarity_code
-                    )} ${getTierClass(boxResult.tier_code)}`}
-                  >
-                    <div className="container-opener-result-card-name">
-                      {boxResult.card_name}
+
+                      <input
+                        type="range"
+                        min="1"
+                        max={selectedAvailableQuantity}
+                        value={Math.min(openCount, selectedAvailableQuantity)}
+                        className="container-opener-quantity-slider"
+                        onChange={(event) => setOpenCount(Number(event.target.value))}
+                      />
                     </div>
-                    <div className="container-opener-result-card-meta">
-                      {boxResult.tier_name} | {boxResult.rarity_name}
+                  ) : (
+                    <div className="container-opener-error">
+                      You do not have the required opener for this selection.
                     </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="container-opener-choice-actions">
+                <button
+                  type="button"
+                  className="container-opener-secondary-btn"
+                  onClick={closeSelectionModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="container-opener-primary-btn"
+                  onClick={handleOpenSelection}
+                  disabled={opening || selectedAvailableQuantity <= 0}
+                >
+                  {opening
+                    ? "Opening..."
+                    : `Open ${Math.min(openCount, Math.max(selectedAvailableQuantity, 1))}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {sessionState && currentOpening ? (
+          <div className="container-opener-modal-backdrop">
+            <div className="container-opener-modal container-opener-session-modal">
+              <div className="container-opener-modal-kicker">
+                {sessionState.bucket === "packs" ? "PACK OPENING" : "BOX OPENING"}{" "}
+                {sessionState.activeIndex + 1} / {sessionState.openings.length}
+              </div>
+              <h2 className="container-opener-modal-title">{currentOpening.container_name}</h2>
+
+              <div className={`container-opener-pack-cinematic phase-${revealPhase}`}>
+                <div className="container-opener-pack-energy" />
+                <div className="container-opener-pack-burst-ring" />
+                <div className="container-opener-pack-sparks" />
+                <div className="container-opener-cinematic-art-shell">
+                  {currentOpening.container_image_url ? (
+                    <img
+                      src={currentOpening.container_image_url}
+                      alt={currentOpening.container_name}
+                      className="container-opener-cinematic-art"
+                    />
+                  ) : (
+                    <div className="container-opener-cinematic-art-placeholder">
+                      No art uploaded for this container yet.
+                    </div>
+                  )}
+                  <div className="container-opener-cinematic-tear-line" />
+                  <div className="container-opener-cinematic-label">
+                    <span>{sessionState.bucket === "packs" ? "Seal Breaker" : "Key Open"}</span>
+                    <strong>{currentOpening.container_name}</strong>
                   </div>
-                </>
-              ) : (
-                <div className="container-opener-empty">No result.</div>
-              )}
+                </div>
+              </div>
+
+              <div className="container-opener-session-results">
+                <div className="container-opener-session-results-header">
+                  <h3>Card Reveals</h3>
+                  <span>
+                    {revealPhase === "revealed"
+                      ? `${displayRevealCards.filter((card) => card.isRevealed).length} revealed`
+                      : `${revealCount} revealed`}
+                  </span>
+                </div>
+
+                <div className="container-opener-reveal-grid">
+                  {displayRevealCards.map((card, index) => (
+                    <div
+                      key={card.revealKey || `${card.card_name}-${index}`}
+                      className={`container-opener-reveal-card ${
+                        card.isPlaceholder ? "is-placeholder" : ""
+                      } ${card.isRevealed ? "is-revealed" : "is-hidden"} ${getRarityClass(
+                        card.rarity_code
+                      )} ${getTierClass(card.tier_code)}`}
+                      style={{ "--reveal-index": index }}
+                    >
+                      <div className="container-opener-reveal-image-shell">
+                        {card.isRevealed && card.image_url ? (
+                          <img
+                            src={card.image_url}
+                            alt={card.card_name}
+                            className="container-opener-reveal-image"
+                          />
+                        ) : (
+                          <div className="container-opener-reveal-card-back">
+                            <span>{card.isRevealed ? "No Art" : "Hidden"}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="container-opener-reveal-meta">
+                        <strong>{card.isRevealed ? card.card_name : "Hidden Card"}</strong>
+                        <span>
+                          {card.isRevealed
+                            ? `${card.tier_name} | ${card.rarity_name}`
+                            : "Awaiting reveal"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="container-opener-choice-actions">
+                <button
+                  type="button"
+                  className="container-opener-primary-btn"
+                  onClick={handleAdvanceSession}
+                  disabled={revealPhase !== "revealed"}
+                >
+                  {(sessionState.activeIndex || 0) < sessionState.openings.length - 1
+                    ? `Next ${sessionState.bucket === "packs" ? "Pack" : "Box"}`
+                    : "Back to Selection"}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

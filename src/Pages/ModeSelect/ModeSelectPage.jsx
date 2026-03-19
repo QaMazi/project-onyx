@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import CommunityShowcaseCard from "../../components/premium/CommunityShowcaseCard";
 import { usePremium } from "../../context/PremiumContext";
+import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
 import "./ModeSelectPage.css";
@@ -11,13 +12,63 @@ function isBlockedUser(user) {
   return user?.isBlocked || user?.role === "Blocked" || user?.globalRole === "Blocked";
 }
 
+function ModePanel({
+  title,
+  description,
+  ctaText,
+  onClick,
+  disabled = false,
+  imageSrc = "",
+  surface = false,
+  backgroundStyle = null,
+}) {
+  const isInteractive = typeof onClick === "function";
+  const panelClassName = [
+    "mode-panel",
+    surface ? "mode-panel-surface" : "mode-panel-image",
+    disabled ? "mode-panel-disabled" : "mode-panel-clickable",
+  ].join(" ");
+
+  return (
+    <div
+      className={panelClassName}
+      onClick={isInteractive ? onClick : undefined}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onKeyDown={
+        !isInteractive
+          ? undefined
+          : (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick?.();
+              }
+            }
+      }
+      style={backgroundStyle || undefined}
+    >
+      {imageSrc ? <img src={imageSrc} className="mode-panel-bg" alt={title} /> : null}
+      <div className="mode-panel-overlay"></div>
+
+      <div className="mode-panel-content">
+        <div className="mode-panel-bottom">
+          <h2 className="mode-panel-title">{title}</h2>
+          <p className="mode-panel-description">{description}</p>
+          {ctaText ? <div className="mode-panel-cta">{ctaText}</div> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ModeSelectPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
+  const { currentTheme } = useTheme();
   const { fetchRandomPublicShowcase } = usePremium();
 
   const [activeSeries, setActiveSeries] = useState(null);
-  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModal, setInfoModal] = useState(null);
   const [publicShowcase, setPublicShowcase] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showcaseLoading, setShowcaseLoading] = useState(true);
@@ -82,25 +133,11 @@ function ModeSelectPage() {
   }
 
   const canEnterProgression = Boolean(user?.canAccessProgression);
+  const canEnterDeckGame = Boolean(user?.canAccessDeckGame);
   const currentSeriesName = activeSeries?.name || null;
 
-  let ctaText = "";
-  let description = "";
-  let modalTitle = "";
-  let modalMessage = "";
-
-  if (canEnterProgression) {
-    ctaText = "Enter Progression";
-    description = currentSeriesName
-      ? `Your current role grants Progression access. Active series: ${currentSeriesName}.`
-      : "Your current role grants Progression access. No globally active series is currently set.";
-  } else {
-    ctaText = "Progression Locked";
-    description =
-      "This account is currently set to Player. Admin+ can promote it to Duelist or Admin from the Profiles panel.";
-    modalTitle = "Progression Locked";
-    modalMessage =
-      "This account is set to Player. Only Duelist, Admin, or Admin+ can access Progression Mode.";
+  function openInfoModal(title, message) {
+    setInfoModal({ title, message });
   }
 
   function handleRankedClick() {
@@ -109,8 +146,37 @@ function ModeSelectPage() {
       return;
     }
 
-    setInfoModalOpen(true);
+    openInfoModal(
+      "Ranked Locked",
+      "This account is set to Player. Only Duelist, Admin, or Admin+ can access Ranked / Progression Mode."
+    );
   }
+
+  function handleCasualClick() {
+    if (canEnterDeckGame) {
+      navigate("/mode/deckgame");
+      return;
+    }
+
+    openInfoModal(
+      "Casual Locked",
+      "This role does not currently have Casual / Deck Game access."
+    );
+  }
+
+  const rankedDescription = canEnterProgression
+    ? currentSeriesName
+      ? `Your role grants progression access. Active series: ${currentSeriesName}.`
+      : "Your role grants progression access. No globally active series is set right now."
+    : "This account must be Duelist, Admin, or Admin+ to enter progression.";
+
+  const casualDescription = canEnterDeckGame
+    ? "Deck Game systems, casual play, and future side systems live here."
+    : "This role does not currently have Casual Mode access.";
+
+  const themedSurfaceStyle = currentTheme?.background
+    ? { backgroundImage: `url(${currentTheme.background})` }
+    : undefined;
 
   return (
     <LauncherLayout>
@@ -123,118 +189,6 @@ function ModeSelectPage() {
             className="launcher-logo mode-logo"
             alt="Project Onyx"
           />
-        </div>
-
-        <div className="mode-select-card">
-          <div className="mode-select-header">
-            <h1 className="mode-select-title">Mode Select</h1>
-            <p className="mode-select-subtitle">Choose your Project Onyx experience</p>
-          </div>
-
-          <div className="mode-grid">
-            <div
-              className={`mode-panel mode-panel-image ${
-                canEnterProgression ? "mode-panel-clickable" : "mode-panel-disabled"
-              }`}
-              onClick={handleRankedClick}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  handleRankedClick();
-                }
-              }}
-            >
-              <img
-                src="/ui/progression_mode.png"
-                className="mode-panel-bg"
-                alt="Progression Mode"
-              />
-
-              <div className="mode-panel-overlay"></div>
-
-              <div className="mode-panel-content">
-                <div className="mode-panel-bottom">
-                  <h2 className="mode-panel-title">RANKED MODE</h2>
-                  <p className="mode-panel-description">{description}</p>
-                  <div className="mode-panel-cta">{ctaText}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mode-panel mode-panel-image mode-panel-locked-card">
-              <img
-                src="/ui/deckgame_mode.png"
-                className="mode-panel-bg"
-                alt="Casual Mode"
-              />
-
-              <div className="mode-panel-overlay"></div>
-
-              <div className="mode-panel-content">
-                <div className="mode-panel-bottom">
-                  <h2 className="mode-panel-title">CASUAL MODE</h2>
-                  <p className="mode-panel-description">
-                    Coming Soon. Available in a future update.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mode-grid mode-grid--secondary">
-            <div className="mode-panel mode-panel-image mode-panel-locked-card">
-              <img
-                src="/ui/mini_games_mode.png"
-                className="mode-panel-bg"
-                alt="Mini-Games"
-              />
-
-              <div className="mode-panel-overlay"></div>
-
-              <div className="mode-panel-content">
-                <div className="mode-panel-bottom">
-                  <h2 className="mode-panel-title">MINI-GAMES</h2>
-                  <p className="mode-panel-description">
-                    Future systems live here. This card stays locked for now.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="mode-panel mode-panel-image mode-panel-clickable"
-              onClick={() => navigate("/mode/premium-store")}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  navigate("/mode/premium-store");
-                }
-              }}
-            >
-              <img
-                src="/ui/premium_store_mode.png"
-                className="mode-panel-bg"
-                alt="Premium Store"
-              />
-
-              <div className="mode-panel-overlay"></div>
-
-              <div className="mode-panel-content">
-                <div className="mode-panel-bottom">
-                  <h2 className="mode-panel-title">PREMIUM STORE</h2>
-                  <p className="mode-panel-description">
-                    Permanent account unlocks, cosmetics, showcase objects, and
-                    Onyx Token spending.
-                  </p>
-                  <div className="mode-panel-cta">Enter Premium Store</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <section className="mode-showcase-section">
@@ -273,20 +227,81 @@ function ModeSelectPage() {
           />
         </section>
 
-        {infoModalOpen && (
-          <div className="progression-modal" onClick={() => setInfoModalOpen(false)}>
+        <div className="mode-select-card">
+          <div className="mode-select-header">
+            <h1 className="mode-select-title">Mode Select</h1>
+            <p className="mode-select-subtitle">Choose your Project Onyx experience</p>
+          </div>
+
+          <div className="mode-grid mode-grid--triple">
+            <ModePanel
+              title="CASUAL MODE"
+              description={casualDescription}
+              ctaText={canEnterDeckGame ? "Enter Casual Mode" : "Locked"}
+              onClick={handleCasualClick}
+              disabled={!canEnterDeckGame}
+              imageSrc="/ui/deckgame_mode.png"
+            />
+
+            <ModePanel
+              title="RANKED MODE"
+              description={rankedDescription}
+              ctaText={canEnterProgression ? "Enter Progression" : "Locked"}
+              onClick={handleRankedClick}
+              disabled={!canEnterProgression}
+              imageSrc="/ui/progression_mode.png"
+            />
+
+            <ModePanel
+              title="MINI-GAMES"
+              description="Mini-games will land here as they come online."
+              ctaText="Coming Soon"
+              disabled
+              imageSrc="/ui/mini_games_mode.png"
+            />
+
+            <ModePanel
+              title="YOUR STATISTICS"
+              description="See your progression totals, premium collection progress, and future stat lanes."
+              ctaText="Open Statistics"
+              onClick={() => navigate("/mode/statistics")}
+              surface
+              backgroundStyle={themedSurfaceStyle}
+            />
+
+            <ModePanel
+              title="SUGGESTIONS"
+              description="Send ideas, requests, and polish notes straight into the Admin+ review inbox."
+              ctaText="Open Suggestions"
+              onClick={() => navigate("/mode/suggestions")}
+              surface
+              backgroundStyle={themedSurfaceStyle}
+            />
+
+            <ModePanel
+              title="PREMIUM STORE"
+              description="Permanent account unlocks, cosmetics, showcase objects, and Onyx Token spending."
+              ctaText="Enter Premium Store"
+              onClick={() => navigate("/mode/premium-store")}
+              imageSrc="/ui/premium_store_mode.png"
+            />
+          </div>
+        </div>
+
+        {infoModal ? (
+          <div className="progression-modal" onClick={() => setInfoModal(null)}>
             <div
               className="progression-modal-content"
               onClick={(event) => event.stopPropagation()}
             >
-              <h2>{modalTitle}</h2>
-              <p>{modalMessage}</p>
+              <h2>{infoModal.title}</h2>
+              <p>{infoModal.message}</p>
               <div className="progression-modal-actions">
-                <button onClick={() => setInfoModalOpen(false)}>Close</button>
+                <button onClick={() => setInfoModal(null)}>Close</button>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </LauncherLayout>
   );

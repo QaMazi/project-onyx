@@ -10,11 +10,16 @@ const CONTENT_MODE_OPTIONS = [
   { value: "official", label: "Official" },
   { value: "curated", label: "Curated" },
 ];
+const PACK_CATEGORY_OPTIONS = [
+  { value: "normal", label: "Normal Pack" },
+  { value: "reward", label: "Reward Pack" },
+];
 const CONTAINER_IMAGE_BUCKET = "container-images";
 const PACK_SLOT_COUNT = 9;
 const SLOT_TOTAL_TARGET = 100;
 const SLOT_TOTAL_TOLERANCE = 0.01;
-const INTERNAL_PACK_SET_FALLBACK = "Unsorted";
+const RANDOM_PACK_RARITY_LABEL = "Random (Weighted Table)";
+const PACK_NUMBER_RE = /^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/;
 const LAST_SLOT_DEFAULT_WEIGHTS = {
   rare: 77.42,
   super_rare: 12.9,
@@ -119,9 +124,28 @@ function normalizeContentMode(mode) {
   return String(mode || "").trim().toLowerCase() === "official" ? "official" : "curated";
 }
 
-function normalizePackSetLabel(value) {
-  const label = String(value || "").trim();
-  return label || INTERNAL_PACK_SET_FALLBACK;
+function normalizePackNumberCode(value) {
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 3);
+}
+
+function isValidPackNumberCode(value) {
+  return PACK_NUMBER_RE.test(String(value || "").trim());
+}
+
+function getPackNumberSortValue(value) {
+  const normalized = String(value || "").trim();
+  if (/^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/.test(normalized)) return Number(normalized);
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function getPackLibraryGroupLabel(isRewardPack) {
+  return isRewardPack ? "Reward Packs" : "Normal Packs";
+}
+
+function getPackLibraryGroupSortValue(groupLabel) {
+  return groupLabel === "Reward Packs" ? 1 : 0;
 }
 
 function buildCardImageUrl(card) {
@@ -136,6 +160,41 @@ function buildCardImageUrl(card) {
 
 function buildPackCardPreviewKey(row) {
   return `${row?.id || "pack-card"}:${row?.card_id || ""}:${row?.pack_pool_tier_id || ""}:${row?.rarity_id || ""}`;
+}
+
+function resolvePackRaritySelection(rarityId, rarityMap) {
+  if (rarityId) {
+    const rarity = rarityMap.get(rarityId);
+    return {
+      rarityId,
+      rarityCode: rarity?.code || "",
+      rarityName: rarity?.name || "Unknown Rarity",
+    };
+  }
+
+  return {
+    rarityId: null,
+    rarityCode: "random_weighted",
+    rarityName: RANDOM_PACK_RARITY_LABEL,
+  };
+}
+
+function resolvePackCardRarityName(row, rarityMap) {
+  if (!row) return "";
+
+  if (
+    !row.rarity_id &&
+    !row.rarity_name &&
+    !row.rarity_code &&
+    !Object.prototype.hasOwnProperty.call(row, "pack_pool_tier_id")
+  ) {
+    return "";
+  }
+
+  return resolvePackRaritySelection(
+    typeof row.rarity_id === "string" && row.rarity_id.trim() ? row.rarity_id : null,
+    rarityMap
+  ).rarityName;
 }
 
 function PackMakerPage() {
@@ -154,7 +213,8 @@ function PackMakerPage() {
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [packSetName, setPackSetName] = useState("");
+  const [packNumberCode, setPackNumberCode] = useState("");
+  const [isRewardPack, setIsRewardPack] = useState(false);
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [contentMode, setContentMode] = useState("official");
@@ -172,6 +232,7 @@ function PackMakerPage() {
   const [packPickerOpen, setPackPickerOpen] = useState(false);
   const [packPickerSearch, setPackPickerSearch] = useState("");
   const [previewState, setPreviewState] = useState(null);
+  const [collapsedTierSections, setCollapsedTierSections] = useState({});
 
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -215,26 +276,35 @@ function PackMakerPage() {
     const groupMap = new Map();
 
     (packProducts || []).forEach((product) => {
-      const setLabel = normalizePackSetLabel(product?.pack_set_name);
+      const groupLabel = getPackLibraryGroupLabel(Boolean(product?.is_reward_pack));
       const matchesQuery =
         !query ||
-        [product?.name, product?.code, product?.description, setLabel]
+        [product?.name, product?.code, product?.description, groupLabel, product?.pack_number_code]
           .some((value) => String(value || "").toLowerCase().includes(query));
 
       if (!matchesQuery) return;
 
-      if (!groupMap.has(setLabel)) {
-        groupMap.set(setLabel, []);
+      if (!groupMap.has(groupLabel)) {
+        groupMap.set(groupLabel, []);
       }
 
-      groupMap.get(setLabel).push(product);
+      groupMap.get(groupLabel).push(product);
     });
 
     return Array.from(groupMap.entries())
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([setLabel, products]) => ({
-        setLabel,
+      .sort(([left], [right]) => {
+        const sortDiff = getPackLibraryGroupSortValue(left) - getPackLibraryGroupSortValue(right);
+        if (sortDiff !== 0) return sortDiff;
+        return left.localeCompare(right);
+      })
+      .map(([groupLabel, products]) => ({
+        groupLabel,
         products: [...products].sort((left, right) => {
+          const packNumberDiff =
+            getPackNumberSortValue(left?.pack_number_code) -
+            getPackNumberSortValue(right?.pack_number_code);
+          if (packNumberDiff !== 0) return packNumberDiff;
+
           const nameDiff = String(left?.name || "").localeCompare(String(right?.name || ""));
           if (nameDiff !== 0) return nameDiff;
           return String(left?.code || "").localeCompare(String(right?.code || ""));
@@ -262,6 +332,11 @@ function PackMakerPage() {
     return previewState.card || null;
   }, [cardSearchResults, packCards, previewState]);
 
+  const previewCardRarityName = useMemo(
+    () => resolvePackCardRarityName(previewCard, rarityMap),
+    [previewCard, rarityMap]
+  );
+
   const slotTotals = useMemo(() => {
     const map = new Map();
     for (let slotIndex = 1; slotIndex <= PACK_SLOT_COUNT; slotIndex += 1) {
@@ -278,10 +353,16 @@ function PackMakerPage() {
     [slotTotals]
   );
 
+  const packNumberIsValid = useMemo(
+    () => isValidPackNumberCode(packNumberCode),
+    [packNumberCode]
+  );
+
   const canSavePack =
     !saving &&
     Boolean(name) &&
     Boolean(code) &&
+    packNumberIsValid &&
     invalidSlotIndexes.length === 0;
 
   useEffect(() => {
@@ -289,6 +370,16 @@ function PackMakerPage() {
       loadPage();
     }
   }, [authLoading, user]);
+
+  useEffect(() => {
+    setCollapsedTierSections((prev) => {
+      const next = {};
+      (packPoolTiers || []).forEach((tier) => {
+        next[tier.id] = prev[tier.id] ?? false;
+      });
+      return next;
+    });
+  }, [packPoolTiers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -458,7 +549,8 @@ function PackMakerPage() {
     setSelectedPackGroupCode("");
     setName("");
     setCode("");
-    setPackSetName("");
+    setPackNumberCode("");
+    setIsRewardPack(false);
     setDescription("");
     setImageUrl("");
     setContentMode("official");
@@ -488,7 +580,8 @@ function PackMakerPage() {
 
     setName(data?.name || "");
     setCode(data?.code || "");
-    setPackSetName(data?.pack_set_name || "");
+    setPackNumberCode(data?.pack_number_code || "");
+    setIsRewardPack(Boolean(data?.is_reward_pack));
     setDescription(data?.description || "");
     setImageUrl(data?.image_url || "");
     setContentMode(normalizeContentMode(data?.content_mode || "official"));
@@ -500,6 +593,7 @@ function PackMakerPage() {
       card_id: Number(row.card_id),
       image_url: row.card_image_url || row.image_url || "",
       weight: Number(row.weight ?? 1),
+      rarity_id: row.rarity_id || null,
     }));
     setPackCards(nextPackCards);
     setSlotTierRows(buildMergedSlotTierRows(tiers, data?.slot_tiers || []));
@@ -519,7 +613,7 @@ function PackMakerPage() {
     if (!selectedPoolTierId) return;
 
     const tier = packTierMap.get(selectedPoolTierId);
-    const rarity = rarityMap.get(selectedRarityId);
+    const raritySelection = resolvePackRaritySelection(selectedRarityId || null, rarityMap);
     const nextCard = {
       id: `temp-${card.id}-${selectedPoolTierId}-${Date.now()}-${Math.random()}`,
       card_id: Number(card.id),
@@ -528,9 +622,9 @@ function PackMakerPage() {
       pack_pool_tier_id: selectedPoolTierId,
       pack_pool_tier_code: tier?.code || "",
       pack_pool_tier_name: tier?.name || "Tier",
-      rarity_id: selectedRarityId || null,
-      rarity_code: rarity?.code || "",
-      rarity_name: rarity?.name || "Base",
+      rarity_id: raritySelection.rarityId,
+      rarity_code: raritySelection.rarityCode,
+      rarity_name: raritySelection.rarityName,
       is_enabled: true,
       weight: 1,
     };
@@ -575,7 +669,7 @@ function PackMakerPage() {
       const foundNameSet = new Set(foundCards.map((card) => card.name));
       const missingNames = uniqueNames.filter((entry) => !foundNameSet.has(entry));
       const tier = packTierMap.get(selectedPoolTierId);
-      const rarity = rarityMap.get(selectedRarityId);
+      const raritySelection = resolvePackRaritySelection(selectedRarityId || null, rarityMap);
 
       if (!foundCards.length) {
         throw new Error("No pasted card names matched exact card names in the database.");
@@ -589,9 +683,9 @@ function PackMakerPage() {
           pack_pool_tier_id: selectedPoolTierId,
           pack_pool_tier_code: tier?.code || "",
           pack_pool_tier_name: tier?.name || "Tier",
-          rarity_id: selectedRarityId || null,
-          rarity_code: rarity?.code || "",
-          rarity_name: rarity?.name || "Base",
+          rarity_id: raritySelection.rarityId,
+          rarity_code: raritySelection.rarityCode,
+          rarity_name: raritySelection.rarityName,
           is_enabled: true,
           weight: 1,
         }));
@@ -639,15 +733,15 @@ function PackMakerPage() {
   }
 
   function handleChangeCardRarity(index, rarityId) {
-    const rarity = rarityMap.get(rarityId);
+    const raritySelection = resolvePackRaritySelection(rarityId || null, rarityMap);
 
     setPackCards((prev) => {
       const next = [...prev];
       next[index] = {
         ...next[index],
-        rarity_id: rarityId,
-        rarity_code: rarity?.code || "",
-        rarity_name: rarity?.name || "Base",
+        rarity_id: raritySelection.rarityId,
+        rarity_code: raritySelection.rarityCode,
+        rarity_name: raritySelection.rarityName,
       };
       return next;
     });
@@ -756,8 +850,9 @@ function PackMakerPage() {
     setSelectedPackGroupCode("");
     setName(buildDuplicateName(name));
     setCode(buildDuplicateCode(code));
+    setPackNumberCode("");
     setIsLocked(false);
-    setStatusMessage("Pack duplicated into a new unsaved copy.");
+    setStatusMessage("Pack duplicated into a new unsaved copy. Set a new pack number before saving.");
     setErrorMessage("");
   }
 
@@ -772,6 +867,16 @@ function PackMakerPage() {
     setPackPickerOpen(false);
     setPackPickerSearch("");
     await loadPackProduct(packGroupCode);
+  }
+
+  function handlePackNumberInputChange(nextValue) {
+    setPackNumberCode(normalizePackNumberCode(nextValue));
+    setErrorMessage("");
+  }
+
+  function handlePackCategoryChange(nextValue) {
+    setIsRewardPack(nextValue === "reward");
+    setErrorMessage("");
   }
 
   function handleClearPackImage() {
@@ -795,6 +900,13 @@ function PackMakerPage() {
     });
   }
 
+  function handleToggleTierSection(tierId) {
+    setCollapsedTierSections((prev) => ({
+      ...prev,
+      [tierId]: !prev[tierId],
+    }));
+  }
+
   async function handleSavePack() {
     setSaving(true);
     setStatusMessage("");
@@ -805,7 +917,8 @@ function PackMakerPage() {
         p_pack_group_code: selectedPackGroupCode || null,
         p_name: name,
         p_code: code || buildContainerCode(name),
-        p_pack_set_name: packSetName || null,
+        p_pack_number_code: packNumberCode,
+        p_is_reward_pack: isRewardPack,
         p_description: description,
         p_image_url: imageUrl || null,
         p_content_mode: contentMode || "official",
@@ -892,7 +1005,7 @@ function PackMakerPage() {
             <p className="container-maker-subtitle">
               Build one pack product at a time. Saving automatically maintains both
               the full pack and draft pack variants behind the scenes, while each
-              pack entry keeps its own manually assigned rarity.
+              pack entry can keep either a curated rarity or a random weighted rarity.
             </p>
           </div>
 
@@ -961,6 +1074,59 @@ function PackMakerPage() {
                     Delete
                   </button>
                 </div>
+
+                <div className="pack-maker-preview-card pack-maker-preview-card--sidebar">
+                  <div className="pack-maker-preview-header">
+                    <h3>Card Preview</h3>
+                    {previewCardRarityName ? (
+                      <span>{previewCardRarityName}</span>
+                    ) : previewCard?.pack_pool_tier_name ? (
+                      <span>{previewCard.pack_pool_tier_name}</span>
+                    ) : null}
+                  </div>
+
+                  {previewCard ? (
+                    <>
+                      <div className="pack-maker-preview-image-shell">
+                        {buildCardImageUrl(previewCard) ? (
+                          <img
+                            src={buildCardImageUrl(previewCard)}
+                            alt={
+                              previewCard.card_name ||
+                              previewCard.name ||
+                              "Selected card preview"
+                            }
+                            className="pack-maker-preview-image"
+                          />
+                        ) : (
+                          <div className="pack-maker-preview-empty">
+                            No card art found for this card yet.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pack-maker-preview-meta">
+                        <strong>
+                          {previewCard.card_name ||
+                            previewCard.name ||
+                            `Card ${previewCard.card_id || previewCard.id}`}
+                        </strong>
+                        <span>Card ID: {previewCard.card_id || previewCard.id}</span>
+                        {previewCard.pack_pool_tier_name ? (
+                          <span>Pack Tier: {previewCard.pack_pool_tier_name}</span>
+                        ) : null}
+                        {previewCardRarityName ? (
+                          <span>Pack Rarity: {previewCardRarityName}</span>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pack-maker-preview-empty">
+                      Select a searched card or an assigned pack card to preview it
+                      here.
+                    </div>
+                  )}
+                </div>
               </aside>
 
               <div className="pack-maker-editor-stack">
@@ -1017,9 +1183,9 @@ function PackMakerPage() {
                     <div>
                       <h2>Pack Editor</h2>
                       <p className="pack-maker-editor-copy">
-                        Keep the internal set organizer, art, search tools, and
-                        curated card pools together here. Pack slot tier rules stay
-                        below this section.
+                        Keep the pack numbering, reward-pack toggle, art, search
+                        tools, and curated card pools together here. Pack slot tier
+                        rules stay below this section.
                       </p>
                     </div>
                   </div>
@@ -1028,14 +1194,31 @@ function PackMakerPage() {
                     <div className="pack-maker-editor-main">
                       <div className="pack-maker-meta-grid">
                         <div className="container-maker-field">
-                          <label>Set</label>
+                          <label>Pack Number</label>
                           <input
                             className="container-maker-input"
-                            value={packSetName}
-                            onChange={(event) => setPackSetName(event.target.value)}
-                            placeholder="Internal organizer only"
+                            value={packNumberCode}
+                            onChange={(event) => handlePackNumberInputChange(event.target.value)}
+                            placeholder="001"
+                            maxLength={3}
                             disabled={saving}
                           />
+                        </div>
+
+                        <div className="container-maker-field">
+                          <label>Pack Category</label>
+                          <select
+                            className="container-maker-select"
+                            value={isRewardPack ? "reward" : "normal"}
+                            onChange={(event) => handlePackCategoryChange(event.target.value)}
+                            disabled={saving}
+                          >
+                            {PACK_CATEGORY_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="container-maker-field">
@@ -1134,9 +1317,15 @@ function PackMakerPage() {
                       <div className="pack-maker-autonote">
                         Save once and the admin system keeps both variants in sync: a
                         full pack for normal opening and a draft pack version for
-                        draft use. The Set field is internal and only groups packs
-                        inside the picker modal.
+                        draft use. Packs are internally organized as Normal Packs
+                        and Reward Packs, each with their own 001-999 numbering.
                       </div>
+
+                      {!packNumberIsValid ? (
+                        <div className="container-maker-error">
+                          Pack Number must be exactly 3 digits from 001 to 999.
+                        </div>
+                      ) : null}
 
                       <div className="container-maker-actions">
                         <button
@@ -1224,6 +1413,7 @@ function PackMakerPage() {
                           onChange={(event) => setSelectedRarityId(event.target.value)}
                           disabled={saving}
                         >
+                          <option value="">{RANDOM_PACK_RARITY_LABEL}</option>
                           {cardRarities.map((rarity) => (
                             <option key={rarity.id} value={rarity.id}>
                               {rarity.name}
@@ -1291,179 +1481,174 @@ function PackMakerPage() {
                           </div>
                         ) : (
                           groupedPackCards.map((group) => (
-                            <div key={group.tier.id} className="container-maker-slot-group">
-                              <div className="container-maker-slot-header">
+                            <section
+                              key={group.tier.id}
+                              className={`container-maker-slot-group pack-maker-tier-section ${
+                                collapsedTierSections[group.tier.id] ? "is-collapsed" : ""
+                              }`}
+                            >
+                              <div className="container-maker-slot-header pack-maker-tier-section-header">
                                 <h3>{group.tier.name}</h3>
-                                <span>{group.rows.length} cards</span>
+                                <div className="pack-maker-tier-section-header-actions">
+                                  <span>{group.rows.length} cards</span>
+                                  <button
+                                    type="button"
+                                    className="pack-maker-tier-toggle"
+                                    onClick={() => handleToggleTierSection(group.tier.id)}
+                                    aria-label={
+                                      collapsedTierSections[group.tier.id]
+                                        ? `Expand ${group.tier.name} tier`
+                                        : `Collapse ${group.tier.name} tier`
+                                    }
+                                    aria-expanded={!collapsedTierSections[group.tier.id]}
+                                  >
+                                    {collapsedTierSections[group.tier.id] ? "+" : "-"}
+                                  </button>
+                                </div>
                               </div>
 
-                              {group.rows.length === 0 ? (
+                              {collapsedTierSections[group.tier.id] ? null : group.rows.length === 0 ? (
                                 <div className="container-maker-empty small">
                                   No cards assigned to this pack tier yet.
                                 </div>
                               ) : (
-                                group.rows.map((row) => {
-                                  const rowIndex = packCards.indexOf(row);
-                                  return (
-                                    <div
-                                      key={`${row.id || row.card_id}-${rowIndex}`}
-                                      className={`container-maker-card-row pack-maker-interactive-row ${
-                                        previewState?.source === "pack" &&
-                                        previewState?.key === buildPackCardPreviewKey(row)
-                                          ? "is-preview-selected"
-                                          : ""
-                                      }`}
-                                      onClick={() => handlePreviewPackCard(row)}
-                                      onKeyDown={(event) => {
-                                        if (event.key === "Enter" || event.key === " ") {
-                                          event.preventDefault();
-                                          handlePreviewPackCard(row);
-                                        }
-                                      }}
-                                      role="button"
-                                      tabIndex={0}
-                                    >
-                                      <div>
-                                        <div className="container-maker-row-name">
-                                          {row.card_name || `Card ${row.card_id}`}
+                                <div className="pack-maker-tier-card-grid">
+                                  {group.rows.map((row) => {
+                                    const rowIndex = packCards.indexOf(row);
+
+                                    return (
+                                      <div
+                                        key={`${row.id || row.card_id}-${rowIndex}`}
+                                        className={`pack-maker-assigned-card pack-maker-interactive-row ${
+                                          previewState?.source === "pack" &&
+                                          previewState?.key === buildPackCardPreviewKey(row)
+                                            ? "is-preview-selected"
+                                            : ""
+                                        }`}
+                                        onClick={() => handlePreviewPackCard(row)}
+                                        onKeyDown={(event) => {
+                                          if (event.key === "Enter" || event.key === " ") {
+                                            event.preventDefault();
+                                            handlePreviewPackCard(row);
+                                          }
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
+                                      >
+                                        <div className="pack-maker-assigned-card-art">
+                                          {buildCardImageUrl(row) ? (
+                                            <img
+                                              src={buildCardImageUrl(row)}
+                                              alt={row.card_name || `Card ${row.card_id}`}
+                                              className="pack-maker-assigned-card-image"
+                                            />
+                                          ) : (
+                                            <div className="pack-maker-assigned-card-empty">
+                                              No Art
+                                            </div>
+                                          )}
+
+                                          <div className="pack-maker-assigned-card-overlay">
+                                            <span className="pack-maker-assigned-card-name">
+                                              {row.card_name || `Card ${row.card_id}`}
+                                            </span>
+                                          </div>
                                         </div>
-                                        <div className="container-maker-row-meta">
-                                          Card ID: {row.card_id} | Rarity: {row.rarity_name || "Base"}
+
+                                        <div className="pack-maker-assigned-card-body">
+                                          <div className="pack-maker-assigned-card-meta">
+                                            <span>Card ID: {row.card_id}</span>
+                                            <span>
+                                              Rarity: {resolvePackCardRarityName(row, rarityMap)}
+                                            </span>
+                                          </div>
+
+                                          <div className="pack-maker-assigned-card-controls">
+                                            <select
+                                              className="container-maker-select small"
+                                              value={row.pack_pool_tier_id}
+                                              onChange={(event) =>
+                                                handleChangeCardTier(rowIndex, event.target.value)
+                                              }
+                                              onClick={(event) => event.stopPropagation()}
+                                              disabled={saving}
+                                            >
+                                              {packPoolTiers.map((tier) => (
+                                                <option key={tier.id} value={tier.id}>
+                                                  {tier.name}
+                                                </option>
+                                              ))}
+                                            </select>
+
+                                            <select
+                                              className="container-maker-select small"
+                                              value={row.rarity_id || ""}
+                                              onChange={(event) =>
+                                                handleChangeCardRarity(rowIndex, event.target.value)
+                                              }
+                                              onClick={(event) => event.stopPropagation()}
+                                              disabled={saving}
+                                            >
+                                              <option value="">
+                                                {RANDOM_PACK_RARITY_LABEL}
+                                              </option>
+                                              {cardRarities.map((rarity) => (
+                                                <option key={rarity.id} value={rarity.id}>
+                                                  {rarity.name}
+                                                </option>
+                                              ))}
+                                            </select>
+
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              className="container-maker-input container-maker-weight-input"
+                                              value={row.weight || 1}
+                                              title="Weight"
+                                              placeholder="Weight"
+                                              onChange={(event) =>
+                                                handleChangeCardWeight(rowIndex, event.target.value)
+                                              }
+                                              onClick={(event) => event.stopPropagation()}
+                                              disabled={saving}
+                                            />
+
+                                            <label
+                                              className="container-maker-inline-checkbox pack-maker-assigned-card-toggle"
+                                              onClick={(event) => event.stopPropagation()}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={Boolean(row.is_enabled)}
+                                                onChange={() => handleToggleCardEnabled(rowIndex)}
+                                                disabled={saving}
+                                              />
+                                              <span>Enabled</span>
+                                            </label>
+
+                                            <button
+                                              type="button"
+                                              className="container-maker-danger-btn small"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleRemoveCard(rowIndex);
+                                              }}
+                                              disabled={saving}
+                                            >
+                                              Remove
+                                            </button>
+                                          </div>
                                         </div>
                                       </div>
-
-                                      <div className="container-maker-card-row-actions">
-                                        <select
-                                          className="container-maker-select small"
-                                          value={row.pack_pool_tier_id}
-                                          onChange={(event) =>
-                                            handleChangeCardTier(rowIndex, event.target.value)
-                                          }
-                                          disabled={saving}
-                                        >
-                                          {packPoolTiers.map((tier) => (
-                                            <option key={tier.id} value={tier.id}>
-                                              {tier.name}
-                                            </option>
-                                          ))}
-                                        </select>
-
-                                        <select
-                                          className="container-maker-select small"
-                                          value={row.rarity_id || ""}
-                                          onChange={(event) =>
-                                            handleChangeCardRarity(rowIndex, event.target.value)
-                                          }
-                                          disabled={saving}
-                                        >
-                                          {cardRarities.map((rarity) => (
-                                            <option key={rarity.id} value={rarity.id}>
-                                              {rarity.name}
-                                            </option>
-                                          ))}
-                                        </select>
-
-                                        <input
-                                          type="number"
-                                          min="1"
-                                          className="container-maker-input container-maker-weight-input"
-                                          value={row.weight || 1}
-                                          title="Weight"
-                                          placeholder="Weight"
-                                          onChange={(event) =>
-                                            handleChangeCardWeight(rowIndex, event.target.value)
-                                          }
-                                          disabled={saving}
-                                        />
-
-                                        <label className="container-maker-inline-checkbox">
-                                          <input
-                                            type="checkbox"
-                                            checked={Boolean(row.is_enabled)}
-                                            onChange={() => handleToggleCardEnabled(rowIndex)}
-                                            disabled={saving}
-                                          />
-                                          <span>Enabled</span>
-                                        </label>
-
-                                        <button
-                                          type="button"
-                                          className="container-maker-danger-btn small"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            handleRemoveCard(rowIndex);
-                                          }}
-                                          disabled={saving}
-                                        >
-                                          Remove
-                                        </button>
-                                      </div>
-                                    </div>
-                                  );
-                                })
+                                    );
+                                  })}
+                                </div>
                               )}
-                            </div>
+                            </section>
                           ))
                         )}
                       </div>
                     </div>
-
-                    <aside className="pack-maker-preview-column">
-                      <div className="pack-maker-preview-card">
-                        <div className="pack-maker-preview-header">
-                          <h3>Card Preview</h3>
-                          {previewCard?.rarity_name ? (
-                            <span>{previewCard.rarity_name}</span>
-                          ) : previewCard?.pack_pool_tier_name ? (
-                            <span>{previewCard.pack_pool_tier_name}</span>
-                          ) : null}
-                        </div>
-
-                        {previewCard ? (
-                          <>
-                            <div className="pack-maker-preview-image-shell">
-                              {buildCardImageUrl(previewCard) ? (
-                                <img
-                                  src={buildCardImageUrl(previewCard)}
-                                  alt={
-                                    previewCard.card_name ||
-                                    previewCard.name ||
-                                    "Selected card preview"
-                                  }
-                                  className="pack-maker-preview-image"
-                                />
-                              ) : (
-                                <div className="pack-maker-preview-empty">
-                                  No card art found for this card yet.
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="pack-maker-preview-meta">
-                              <strong>
-                                {previewCard.card_name ||
-                                  previewCard.name ||
-                                  `Card ${previewCard.card_id || previewCard.id}`}
-                              </strong>
-                              <span>
-                                Card ID: {previewCard.card_id || previewCard.id}
-                              </span>
-                              {previewCard.pack_pool_tier_name ? (
-                                <span>Pack Tier: {previewCard.pack_pool_tier_name}</span>
-                              ) : null}
-                              {previewCard.rarity_name ? (
-                                <span>Curated Rarity: {previewCard.rarity_name}</span>
-                              ) : null}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="pack-maker-preview-empty">
-                            Select a searched card or an assigned pack card to preview
-                            it here.
-                          </div>
-                        )}
-                      </div>
-                    </aside>
                   </div>
                 </section>
               </div>
@@ -1490,15 +1675,15 @@ function PackMakerPage() {
                   </div>
 
                   <p className="pack-maker-picker-copy">
-                    Load an existing pack into the editor. Internal Set values only
-                    exist here to group large libraries for faster admin navigation.
+                    Load an existing pack into the editor. Packs are grouped here as
+                    Normal Packs and Reward Packs, then sorted by Pack Number.
                   </p>
 
                   <input
                     className="container-maker-input"
                     value={packPickerSearch}
                     onChange={(event) => setPackPickerSearch(event.target.value)}
-                    placeholder="Search packs, codes, or internal sets..."
+                    placeholder="Search packs, codes, or numbers..."
                     autoFocus
                   />
 
@@ -1509,9 +1694,9 @@ function PackMakerPage() {
                       </div>
                     ) : (
                       groupedPackProducts.map((group) => (
-                        <div key={group.setLabel} className="pack-maker-picker-group">
+                        <div key={group.groupLabel} className="pack-maker-picker-group">
                           <div className="pack-maker-picker-group-header">
-                            <h3>{group.setLabel}</h3>
+                            <h3>{group.groupLabel}</h3>
                             <span>{group.products.length} packs</span>
                           </div>
 
@@ -1534,6 +1719,10 @@ function PackMakerPage() {
                                     {product.name}
                                   </div>
                                   <div className="container-maker-container-row-meta">
+                                    {product.pack_number_code
+                                      ? `${product.pack_number_code} • `
+                                      : ""}
+                                    {product.is_reward_pack ? "Reward Pack • " : "Normal Pack • "}
                                     {product.code}
                                     {product.is_locked ? " • Locked" : ""}
                                     {!product.is_enabled ? " • Disabled" : ""}
@@ -1557,7 +1746,7 @@ function PackMakerPage() {
               <p className="pack-maker-slot-copy">
                 These 9 slots are the first RNG. Pick which tier pools each slot can
                 pull from and set the percent chances so every slot totals exactly
-                100%. Pack rarity is curated per card entry below instead of using
+                100%. Each saved pack card can either keep a curated rarity or use
                 the weighted global rarity roller.
               </p>
 
@@ -1656,211 +1845,6 @@ function PackMakerPage() {
               </div>
             </div>
 
-            <div className="container-maker-card container-maker-cards-card">
-              <div className="container-maker-section-header">
-                <h2>Pack Tier Card Pools</h2>
-              </div>
-
-              <div className="container-maker-mass-import-block">
-                <label className="container-maker-mass-import-label">
-                  Mass Add by Card Names
-                </label>
-
-                <textarea
-                  className="container-maker-textarea container-maker-mass-import-textarea"
-                  value={massCardNames}
-                  onChange={(event) => setMassCardNames(event.target.value)}
-                  placeholder={
-                    "Paste one card name per line, or use commas/semicolons.\nExample:\nBlue-Eyes White Dragon\nDark Magician\nExodia the Forbidden One"
-                  }
-                  disabled={saving || massImportBusy}
-                />
-
-                <div className="container-maker-mass-import-actions">
-                  <button
-                    type="button"
-                    className="container-maker-primary-btn"
-                    onClick={handleMassAddCards}
-                    disabled={saving || massImportBusy || !selectedPoolTierId}
-                  >
-                    {massImportBusy ? "Adding Cards..." : "Mass Add Cards"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="container-maker-card-search-controls pack-maker-search-controls">
-                <input
-                  className="container-maker-input"
-                  value={cardSearch}
-                  onChange={(event) => setCardSearch(event.target.value)}
-                  placeholder="Search cards..."
-                  disabled={saving}
-                />
-
-                <select
-                  className="container-maker-select"
-                  value={selectedPoolTierId}
-                  onChange={(event) => setSelectedPoolTierId(event.target.value)}
-                  disabled={saving}
-                >
-                  {packPoolTiers.map((tier) => (
-                    <option key={tier.id} value={tier.id}>
-                      {tier.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="container-maker-select"
-                  value={selectedRarityId}
-                  onChange={(event) => setSelectedRarityId(event.target.value)}
-                  disabled={saving}
-                >
-                  {cardRarities.map((rarity) => (
-                    <option key={rarity.id} value={rarity.id}>
-                      {rarity.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="container-maker-search-results">
-                {cardSearch.trim().length < 2 ? (
-                  <div className="container-maker-empty small">
-                    Type at least 2 characters to search cards.
-                  </div>
-                ) : cardSearchResults.length === 0 ? (
-                  <div className="container-maker-empty small">
-                    No matching cards found.
-                  </div>
-                ) : (
-                  cardSearchResults.map((card) => (
-                    <div className="container-maker-search-row" key={card.id}>
-                      <div>
-                        <div className="container-maker-row-name">{card.name}</div>
-                        <div className="container-maker-row-meta">Card ID: {card.id}</div>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="container-maker-primary-btn small"
-                        onClick={() => handleAddCard(card)}
-                        disabled={saving || !selectedPoolTierId}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="pack-maker-tier-groups">
-                {groupedPackCards.every((group) => group.rows.length === 0) ? (
-                  <div className="container-maker-empty">
-                    No cards have been assigned to any pack tier yet.
-                  </div>
-                ) : (
-                  groupedPackCards.map((group) => (
-                    <div key={group.tier.id} className="container-maker-slot-group">
-                      <div className="container-maker-slot-header">
-                        <h3>{group.tier.name}</h3>
-                        <span>{group.rows.length} cards</span>
-                      </div>
-
-                      {group.rows.length === 0 ? (
-                        <div className="container-maker-empty small">
-                          No cards assigned to this pack tier yet.
-                        </div>
-                      ) : (
-                        group.rows.map((row) => {
-                          const rowIndex = packCards.indexOf(row);
-                          return (
-                            <div
-                              key={`${row.id || row.card_id}-${rowIndex}`}
-                              className="container-maker-card-row"
-                            >
-                              <div>
-                                <div className="container-maker-row-name">
-                                  {row.card_name || `Card ${row.card_id}`}
-                                </div>
-                                <div className="container-maker-row-meta">
-                                  Card ID: {row.card_id} | Rarity: {row.rarity_name || "Base"}
-                                </div>
-                              </div>
-
-                              <div className="container-maker-card-row-actions">
-                                <select
-                                  className="container-maker-select small"
-                                  value={row.pack_pool_tier_id}
-                                  onChange={(event) =>
-                                    handleChangeCardTier(rowIndex, event.target.value)
-                                  }
-                                  disabled={saving}
-                                >
-                                  {packPoolTiers.map((tier) => (
-                                    <option key={tier.id} value={tier.id}>
-                                      {tier.name}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <select
-                                  className="container-maker-select small"
-                                  value={row.rarity_id || ""}
-                                  onChange={(event) =>
-                                    handleChangeCardRarity(rowIndex, event.target.value)
-                                  }
-                                  disabled={saving}
-                                >
-                                  {cardRarities.map((rarity) => (
-                                    <option key={rarity.id} value={rarity.id}>
-                                      {rarity.name}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <input
-                                  type="number"
-                                  min="1"
-                                  className="container-maker-input container-maker-weight-input"
-                                  value={row.weight || 1}
-                                  title="Weight"
-                                  placeholder="Weight"
-                                  onChange={(event) =>
-                                    handleChangeCardWeight(rowIndex, event.target.value)
-                                  }
-                                  disabled={saving}
-                                />
-
-                                <label className="container-maker-inline-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(row.is_enabled)}
-                                    onChange={() => handleToggleCardEnabled(rowIndex)}
-                                    disabled={saving}
-                                  />
-                                  <span>Enabled</span>
-                                </label>
-
-                                <button
-                                  type="button"
-                                  className="container-maker-danger-btn small"
-                                  onClick={() => handleRemoveCard(rowIndex)}
-                                  disabled={saving}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
             {selectedProduct ? (
               <div className="container-maker-card pack-maker-variant-card">
                 <div className="container-maker-section-header">
@@ -1868,6 +1852,16 @@ function PackMakerPage() {
                 </div>
 
                 <div className="pack-maker-variant-grid">
+                  <div className="pack-maker-variant-row">
+                    <span>Pack Category</span>
+                    <strong>
+                      {selectedProduct.is_reward_pack ? "Reward Pack" : "Normal Pack"}
+                    </strong>
+                  </div>
+                  <div className="pack-maker-variant-row">
+                    <span>Pack Number</span>
+                    <strong>{selectedProduct.pack_number_code || "Pending"}</strong>
+                  </div>
                   <div className="pack-maker-variant-row">
                     <span>Full Pack Container</span>
                     <strong>{selectedProduct.full_container_id || "Pending"}</strong>

@@ -35,41 +35,17 @@ function SettingsModal({ open, onClose }) {
   const trackGroups = useMemo(() => {
     const groups = [
       {
-        label: "Defaults / Egyptian",
+        label: "Project Onyx / Onyx",
         items: tracks.filter(
           (track) =>
-            track.name.startsWith("Egyptian") ||
-            track.name === "Desert Of Set" ||
-            track.name === "Obelisk of Thunder"
+            track.id === "egyptian-1" ||
+            track.name.startsWith("Onyx")
         ),
       },
       {
-        label: "Battle / Main Themes",
+        label: "Anime Tracks",
         items: tracks.filter((track) =>
-          [
-            "Millennium Battle 1",
-            "Millennium Battle 2",
-            "Millennium Battle 3",
-            "Overlap",
-            "Shuffle",
-            "Wild Drive",
-            "Warriors",
-            "Voice",
-            "EYES",
-          ].includes(track.name)
-        ),
-      },
-      {
-        label: "Character / Lighter Tracks",
-        items: tracks.filter((track) =>
-          [
-            "Ano hi no Gogo",
-            "Afureru Kanjou ga Tomaranai",
-            "Genki no Shower",
-            "Going My Way",
-            "Rakuen",
-            "Rising Weather Hallelujah",
-          ].includes(track.name)
+          track.id !== "egyptian-1" && !track.name.startsWith("Onyx")
         ),
       },
     ];

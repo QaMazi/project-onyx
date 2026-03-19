@@ -1,0 +1,24 @@
+Box odds update:
+
+- Boxes now roll in 3 stages:
+  1. box tier from `card_tiers.weight_percent`
+  2. one enabled card inside that selected tier on an even roll
+  3. final card rarity from the shared weighted `card_rarities` table
+
+- This keeps low tiers individually more common than chase tiers, even if the low tier contains many cards.
+
+- Approved box tier ladder:
+  - Bulk: 35%
+  - Standard: 25%
+  - Solid: 16%
+  - Advanced: 11%
+  - Elite: 7%
+  - Premium: 4%
+  - HighChase: 1.4%
+  - UltraChase: 0.49%
+  - Legendary: 0.1%
+  - Mythic: 0.01%
+
+- Example outcome:
+  - 1000 Bulk cards = each card is still much more common than a single Mythic card
+  - because tier odds are decided before the card is chosen

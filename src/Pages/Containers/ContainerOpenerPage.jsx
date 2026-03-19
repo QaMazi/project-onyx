@@ -10,6 +10,34 @@ const PACK_MODE_OPTIONS = [
   { value: "normal", label: "Normal Mode" },
   { value: "draft", label: "Draft Mode" },
 ];
+const BOX_REEL_CARD_WIDTH = 190;
+const BOX_REEL_CARD_GAP = 18;
+const BOX_REEL_CARD_PITCH = BOX_REEL_CARD_WIDTH + BOX_REEL_CARD_GAP;
+const BOX_REEL_VIEWPORT_HALF = 360;
+const BOX_REEL_TOTAL_CARDS = 56;
+const BOX_REEL_WINNER_INDEX = 40;
+const BOX_REEL_VISUAL_POOL = [
+  { tier_code: "tier1", tier_name: "Bulk" },
+  { tier_code: "tier1", tier_name: "Bulk" },
+  { tier_code: "tier2", tier_name: "Standard" },
+  { tier_code: "tier1", tier_name: "Bulk" },
+  { tier_code: "tier3", tier_name: "Solid" },
+  { tier_code: "tier2", tier_name: "Standard" },
+  { tier_code: "tier4", tier_name: "Advanced" },
+  { tier_code: "tier2", tier_name: "Standard" },
+  { tier_code: "tier5", tier_name: "Elite" },
+  { tier_code: "tier3", tier_name: "Solid" },
+  { tier_code: "tier6", tier_name: "Premium" },
+  { tier_code: "tier4", tier_name: "Advanced" },
+  { tier_code: "tier7", tier_name: "HighChase" },
+  { tier_code: "tier5", tier_name: "Elite" },
+  { tier_code: "tier8", tier_name: "UltraChase" },
+  { tier_code: "tier6", tier_name: "Premium" },
+  { tier_code: "tier9", tier_name: "Legendary" },
+  { tier_code: "tier7", tier_name: "HighChase" },
+  { tier_code: "tier10", tier_name: "Mythic" },
+  { tier_code: "tier8", tier_name: "UltraChase" },
+];
 
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
@@ -102,6 +130,73 @@ function sumOpeningPulls(openings) {
   );
 }
 
+function buildBoxReelData(winningCard) {
+  if (!winningCard) {
+    return {
+      cards: [],
+      targetX: 0,
+    };
+  }
+
+  const cards = Array.from({ length: BOX_REEL_TOTAL_CARDS }).map((_, index) => {
+    if (index === BOX_REEL_WINNER_INDEX) {
+      return {
+        ...winningCard,
+        reelKey: `winner-${winningCard.card_id || winningCard.id || "card"}-${index}`,
+        isWinner: true,
+      };
+    }
+
+    const visualTier = BOX_REEL_VISUAL_POOL[index % BOX_REEL_VISUAL_POOL.length];
+    const useWinnerArt = Boolean(winningCard.image_url) && index % 4 === 0;
+
+    return {
+      reelKey: `visual-${index}`,
+      card_name: useWinnerArt ? winningCard.card_name : `${visualTier.tier_name} Pull`,
+      tier_name: visualTier.tier_name,
+      tier_code: visualTier.tier_code,
+      image_url: useWinnerArt ? winningCard.image_url : "",
+      isWinner: false,
+    };
+  });
+
+  return {
+    cards,
+    targetX:
+      -((BOX_REEL_WINNER_INDEX * BOX_REEL_CARD_PITCH) + BOX_REEL_CARD_WIDTH / 2 - BOX_REEL_VIEWPORT_HALF),
+  };
+}
+
+function getBoxReelTransform(phase, targetX) {
+  switch (phase) {
+    case "charging":
+      return 0;
+    case "sealed":
+      return -BOX_REEL_CARD_PITCH * 2.5;
+    case "burst":
+      return targetX * 0.48;
+    case "revealing":
+      return targetX * 0.9;
+    case "revealed":
+      return targetX;
+    default:
+      return 0;
+  }
+}
+
+function getBoxReelMotionClass(phase) {
+  if (phase === "burst") return "is-fast-blur";
+  if (phase === "revealing") return "is-mid-blur";
+  return "";
+}
+
+function getBoxHitSoundKey(tierCode) {
+  const normalized = normalizeText(tierCode);
+  if (normalized === "tier9" || normalized === "tier10") return "jackpot";
+  if (normalized === "tier7" || normalized === "tier8") return "red";
+  return "common";
+}
+
 function sortLibraryItems(left, right, numberField = "packNumberCode") {
   const numberDiff =
     getNumberSortValue(left?.[numberField]) - getNumberSortValue(right?.[numberField]);
@@ -137,10 +232,44 @@ function ContainerOpenerPage() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const revealTimersRef = useRef([]);
+  const boxSfxRef = useRef({
+    reel: null,
+    common: null,
+    red: null,
+    jackpot: null,
+  });
+  const lastBoxSfxEventRef = useRef("");
 
   function clearRevealTimers() {
     revealTimersRef.current.forEach((timerId) => clearTimeout(timerId));
     revealTimersRef.current = [];
+  }
+
+  function stopBoxSfx(resetEvent = false) {
+    Object.values(boxSfxRef.current).forEach((audio) => {
+      if (!audio) return;
+      audio.pause();
+      audio.currentTime = 0;
+    });
+
+    if (resetEvent) {
+      lastBoxSfxEventRef.current = "";
+    }
+  }
+
+  function playBoxSfx(key, { loop = false, volume = 1 } = {}) {
+    const audio = boxSfxRef.current[key];
+    if (!audio) return;
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.loop = loop;
+      audio.volume = volume;
+      audio.play().catch(() => {});
+    } catch (error) {
+      console.warn("Box opener sound failed:", error);
+    }
   }
 
   const inventoryByItemDefinitionId = useMemo(
@@ -343,6 +472,58 @@ function ContainerOpenerPage() {
     [currentOpening, revealCount]
   );
 
+  const isBoxSession = sessionState?.bucket === "boxes";
+
+  const boxWinningCard = useMemo(
+    () => (isBoxSession ? currentOpening?.pulls?.[0] || null : null),
+    [currentOpening, isBoxSession]
+  );
+
+  const boxReelData = useMemo(() => buildBoxReelData(boxWinningCard), [boxWinningCard]);
+
+  const boxReelTransform = useMemo(
+    () => getBoxReelTransform(revealPhase, boxReelData.targetX),
+    [boxReelData.targetX, revealPhase]
+  );
+
+  useEffect(() => {
+    if (!isBoxSession || !sessionState || !boxWinningCard) {
+      stopBoxSfx(true);
+      return;
+    }
+
+    const sessionKey = `${sessionState.activeIndex}:${boxWinningCard.card_id || boxWinningCard.id || "card"}`;
+
+    if (revealPhase === "charging" || revealPhase === "sealed") {
+      stopBoxSfx(true);
+      return;
+    }
+
+    if (revealPhase === "burst") {
+      const nextKey = `spin:${sessionKey}`;
+      if (lastBoxSfxEventRef.current !== nextKey) {
+        stopBoxSfx();
+        playBoxSfx("reel", { loop: true, volume: 0.85 });
+        lastBoxSfxEventRef.current = nextKey;
+      }
+      return;
+    }
+
+    if (revealPhase === "revealed") {
+      const nextKey = `hit:${sessionKey}`;
+      if (lastBoxSfxEventRef.current !== nextKey) {
+        stopBoxSfx();
+        playBoxSfx(getBoxHitSoundKey(boxWinningCard.tier_code), { volume: 0.95 });
+        lastBoxSfxEventRef.current = nextKey;
+      }
+      return;
+    }
+
+    if (revealPhase === "idle") {
+      stopBoxSfx(true);
+    }
+  }, [boxWinningCard, isBoxSession, revealPhase, sessionState]);
+
   useEffect(() => {
     if (!authLoading && user) {
       loadPage();
@@ -352,6 +533,38 @@ function ContainerOpenerPage() {
       clearRevealTimers();
     };
   }, [authLoading, user]);
+
+  useEffect(() => {
+    if (typeof Audio === "undefined") {
+      return undefined;
+    }
+
+    const nextAudio = {
+      reel: new Audio("/audio/sfx/case-reel-sound.mp3"),
+      common: new Audio("/audio/sfx/common-hit.mp3"),
+      red: new Audio("/audio/sfx/red-hit.mp3"),
+      jackpot: new Audio("/audio/sfx/jackpot-hit.mp3"),
+    };
+
+    Object.values(nextAudio).forEach((audio) => {
+      audio.preload = "auto";
+    });
+
+    boxSfxRef.current = nextAudio;
+
+    return () => {
+      Object.values(nextAudio).forEach((audio) => {
+        audio.pause();
+        audio.src = "";
+      });
+      boxSfxRef.current = {
+        reel: null,
+        common: null,
+        red: null,
+        jackpot: null,
+      };
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectionModalOpen) return;
@@ -872,31 +1085,92 @@ function ContainerOpenerPage() {
               </div>
               <h2 className="container-opener-modal-title">{currentOpening.container_name}</h2>
 
-              <div className={`container-opener-pack-cinematic phase-${revealPhase}`}>
-                <div className="container-opener-pack-energy" />
-                <div className="container-opener-pack-burst-ring" />
-                <div className="container-opener-pack-sparks" />
-                <div className="container-opener-cinematic-art-shell">
-                  {currentOpening.container_image_url ? (
-                    <img
-                      src={currentOpening.container_image_url}
-                      alt={currentOpening.container_name}
-                      className="container-opener-cinematic-art"
-                    />
-                  ) : (
-                    <div className="container-opener-cinematic-art-placeholder">
-                      No art uploaded for this container yet.
+              {isBoxSession ? (
+                <div className={`container-opener-box-reel-shell phase-${revealPhase}`}>
+                  <div className="container-opener-box-reel-header">
+                    <span>Key Reel</span>
+                    <strong>{boxWinningCard?.tier_name || "Box Pull"}</strong>
+                  </div>
+
+                  <div className="container-opener-box-reel-window">
+                    <div className="container-opener-box-reel-center-line" />
+                    <div
+                      className={`container-opener-box-spinner ${getBoxReelMotionClass(
+                        revealPhase
+                      )}`}
+                      style={{ transform: `translateX(${boxReelTransform}px)` }}
+                    >
+                      {boxReelData.cards.map((card, index) => (
+                        <div
+                          key={card.reelKey || `${card.card_name}-${index}`}
+                          className={`container-opener-box-reel-card ${getTierClass(
+                            card.tier_code
+                          )} ${card.isWinner ? "is-winner" : ""}`}
+                        >
+                          {card.image_url ? (
+                            <img
+                              src={card.image_url}
+                              alt={card.card_name}
+                              className="container-opener-box-reel-image"
+                            />
+                          ) : (
+                            <div className="container-opener-box-reel-card-back">
+                              <span>{card.tier_name}</span>
+                            </div>
+                          )}
+
+                          <div className="container-opener-box-reel-overlay">
+                            <strong>{card.card_name}</strong>
+                            <span>{card.tier_name}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  <div className="container-opener-cinematic-tear-line" />
-                  <div className="container-opener-cinematic-label">
-                    <span>{sessionState.bucket === "packs" ? "Seal Breaker" : "Key Open"}</span>
-                    <strong>{currentOpening.container_name}</strong>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className={`container-opener-pack-cinematic phase-${revealPhase}`}>
+                  <div className="container-opener-pack-energy" />
+                  <div className="container-opener-pack-burst-ring" />
+                  <div className="container-opener-pack-sparks" />
+                  <div className="container-opener-cinematic-art-shell">
+                    {currentOpening.container_image_url ? (
+                      <img
+                        src={currentOpening.container_image_url}
+                        alt={currentOpening.container_name}
+                        className="container-opener-cinematic-art"
+                      />
+                    ) : (
+                      <div className="container-opener-cinematic-art-placeholder">
+                        No art uploaded for this container yet.
+                      </div>
+                    )}
+                    <div className="container-opener-cinematic-tear-line" />
+                    <div className="container-opener-cinematic-label">
+                      <span>{sessionState.bucket === "packs" ? "Seal Breaker" : "Key Open"}</span>
+                      <strong>{currentOpening.container_name}</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="container-opener-session-results">
+                {isBoxSession && boxWinningCard && revealPhase === "revealed" ? (
+                  <div
+                    className={`container-opener-box-result-banner ${getTierClass(
+                      boxWinningCard.tier_code
+                    )} ${getRarityClass(boxWinningCard.rarity_code)}`}
+                  >
+                    <div className="container-opener-box-result-flash" />
+                    <span className="container-opener-box-result-kicker">Box Hit</span>
+                    <strong>{boxWinningCard.card_name}</strong>
+                    <div className="container-opener-box-result-rarity">
+                      {boxWinningCard.rarity_name}
+                    </div>
+                    <em>{boxWinningCard.tier_name}</em>
+                  </div>
+                ) : null}
+
                 <div className="container-opener-session-results-header">
                   <h3>Card Reveals</h3>
                   <span>

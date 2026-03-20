@@ -1,0 +1,14 @@
+2026-03-20 Draft Pack Pick Flow
+
+- Applied live to Supabase.
+- Added persistent draft pack session tables:
+  - public.player_draft_pack_sessions
+  - public.player_draft_pack_openings
+  - public.player_draft_pack_opening_cards
+- Added draft opener RPCs:
+  - public.get_my_active_draft_pack_session(uuid)
+  - public.open_draft_inventory_container_batch(uuid, integer)
+  - public.claim_draft_pack_pick(uuid, bigint)
+- Draft packs now reveal 9 cards but do not grant them immediately.
+- The player must choose 1 revealed card per draft pack opening, and only that chosen card is added to binder.
+- Unfinished draft sessions can now be resumed after refresh.

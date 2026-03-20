@@ -1,0 +1,9 @@
+Round rewards editor upgrade
+
+- Round 0 is no longer hardcoded in reward processing. It now reads from series_round_reward_configs just like every other round.
+- Added public.series_round_reward_config_random_items so each placement can keep its own curated random item pool.
+- Placement random rewards now resolve in this order:
+  1. exact selected item
+  2. curated random pool
+  3. legacy fallback to all reward-eligible items
+- Frontend editor now uses compact round chooser fields, side-by-side Min-Max inputs, and a store-style reward picker modal.

@@ -14,6 +14,7 @@ import "./StorePage.css";
 const HIDDEN_STORE_CATEGORY_CODES = new Set([
   "feature_tokens",
   "collection_notices",
+  "container_openers",
 ]);
 
 function StorePage() {

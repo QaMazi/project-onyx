@@ -539,6 +539,10 @@ function InventoryPage() {
       )} round(s).`;
     }
 
+    if (preview.effect_key === "random_container_key") {
+      return "Consume this item to receive one random unlocked key of the matching type directly into your inventory.";
+    }
+
     if (preview.effect_key === "chaos_verdict") {
       return "Chaos Verdict will hit every eligible opponent, roll one random round-snapshot deck card from each, and assign a fresh banlist state to each result.";
     }

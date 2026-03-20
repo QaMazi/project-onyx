@@ -183,8 +183,8 @@ function StatisticsPage() {
                 value={progression.reward_grants_received ?? 0}
               />
               <StatisticCard
-                label="Starter Deck Claims"
-                value={progression.starter_decks_claimed ?? 0}
+                label="Matches Won"
+                value={progression.matches_won ?? 0}
               />
               <StatisticCard
                 label="Decks Created"

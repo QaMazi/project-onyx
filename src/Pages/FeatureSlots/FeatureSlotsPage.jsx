@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
+import BinderHoverTooltip from "../Binder/Components/BinderHoverTooltip";
 
 import "./FeatureSlotsPage.css";
 
@@ -116,6 +117,17 @@ function getRaisedRarity(cardRarities, baseRarityId, boostCount) {
   return sorted[targetIndex] || null;
 }
 
+function getHoverPreviewPosition(target) {
+  const rect = target.getBoundingClientRect();
+  const tooltipWidth = 340;
+  const tooltipHeight = 260;
+  const showRight = rect.right + tooltipWidth + 24 < window.innerWidth;
+  return {
+    x: showRight ? rect.right + 14 : Math.max(12, rect.left - tooltipWidth - 14),
+    y: Math.min(window.innerHeight - tooltipHeight - 12, Math.max(12, rect.top - 8)),
+  };
+}
+
 function FeatureSlotsPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
@@ -145,6 +157,8 @@ function FeatureSlotsPage() {
   const [rarityBoosts, setRarityBoosts] = useState(0);
   const [regenRevealCount, setRegenRevealCount] = useState(1);
   const [selectedRegenIndexes, setSelectedRegenIndexes] = useState([]);
+  const [hoverPreview, setHoverPreview] = useState(null);
+  const [hoverCardDetailsById, setHoverCardDetailsById] = useState({});
 
   const canViewPage =
     user?.role === "Admin+" || user?.role === "Admin" || user?.role === "Duelist";
@@ -158,6 +172,60 @@ function FeatureSlotsPage() {
   const modalOffers = modalSession?.offers || [];
   const modalMode = machineState?.slot_mode || modalSession?.slot_mode || "drafted";
   const modalModeCopy = useMemo(() => getSlotModeCopy(modalMode), [modalMode]);
+
+  async function getHoverCardDetails(cardId, fallbackCard = null) {
+    if (!cardId) return fallbackCard;
+
+    if (hoverCardDetailsById[cardId]) {
+      return hoverCardDetailsById[cardId];
+    }
+
+    const { data, error } = await supabase
+      .from("cards")
+      .select("id, name, desc, image_url")
+      .eq("id", cardId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const nextCard = data || fallbackCard;
+    if (nextCard) {
+      setHoverCardDetailsById((current) => ({
+        ...current,
+        [cardId]: nextCard,
+      }));
+    }
+
+    return nextCard;
+  }
+
+  async function handleShowRewardHover(card, target) {
+    if (!card || !target) return;
+
+    try {
+      const cardDetails = await getHoverCardDetails(card.card_id || card.id, {
+        id: card.card_id || card.id || null,
+        name: card.card_name || card.name || "Unknown Card",
+        desc: card.desc || "",
+        image_url: card.image_url || "",
+      });
+      const position = getHoverPreviewPosition(target);
+      setHoverPreview({
+        card: cardDetails,
+        lines: [
+          `Rarity: ${card.rarity_name || "Base"}`,
+          `Mode: ${formatModeLabel(modalMode)}`,
+        ],
+        ...position,
+      });
+    } catch (error) {
+      console.warn("Failed to load slot reward hover details:", error);
+    }
+  }
+
+  function handleHideRewardHover() {
+    setHoverPreview(null);
+  }
   const reelStrips = useMemo(
     () => modalOffers.map((offer, index) => buildReelSymbols(modalOffers, offer, index)),
     [modalOffers]
@@ -805,6 +873,12 @@ function FeatureSlotsPage() {
                               className={`feature-slots-reel ${
                                 isReelSpinning ? "is-spinning" : ""
                               } ${isReelRevealed ? "is-revealed" : ""}`}
+                              onMouseEnter={
+                                isReelRevealed
+                                  ? (event) => handleShowRewardHover(offer, event.currentTarget)
+                                  : undefined
+                              }
+                              onMouseLeave={isReelRevealed ? handleHideRewardHover : undefined}
                             >
                               <div className="feature-slots-reel-window">
                                 {isReelSpinning ? (
@@ -1104,6 +1178,12 @@ function FeatureSlotsPage() {
             </div>
           </div>
         ) : null}
+
+        <BinderHoverTooltip
+          preview={hoverPreview}
+          buildCardImageUrl={buildCardImageUrl}
+          CARD_IMAGE_FALLBACK={CARD_IMAGE_FALLBACK}
+        />
       </div>
     </LauncherLayout>
   );

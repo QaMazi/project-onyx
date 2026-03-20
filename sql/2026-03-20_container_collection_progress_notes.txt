@@ -1,0 +1,5 @@
+2026-03-20
+
+- Added `public.get_container_collection_progress(uuid)` for opener collection counters.
+- Returns distinct card totals per container and distinct owned binder cards for the current user in the current series.
+- This avoids frontend guessing and keeps pack/box collection progress based on unique card ids, not duplicates.

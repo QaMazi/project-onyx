@@ -1,6 +1,19 @@
 .round-rewards-page {
   display: grid;
-  gap: 22px;
+  gap: 18px;
+}
+
+.round-rewards-topbar,
+.round-rewards-card,
+.round-rewards-modal {
+  border-radius: 24px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
+  background: rgba(10, 12, 18, 0.88);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.34),
+    0 0 26px rgba(var(--theme-accent-rgb), 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
 }
 
 .round-rewards-topbar {
@@ -8,23 +21,70 @@
   justify-content: space-between;
   gap: 18px;
   align-items: flex-start;
+  padding: 22px 24px;
 }
 
-.round-rewards-kicker {
-  font-size: 0.78rem;
-  letter-spacing: 0.22em;
-  color: rgba(184, 156, 95, 0.82);
+.round-rewards-kicker,
+.round-rewards-modal-kicker,
+.round-rewards-placement-kicker,
+.round-rewards-picker-btn-label,
+.round-rewards-compact-field span,
+.round-rewards-range-field span,
+.round-rewards-item-card-code {
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: rgba(247, 219, 160, 0.78);
+  font-weight: 800;
 }
 
 .round-rewards-title {
   margin: 8px 0 0;
-  font-size: clamp(2rem, 2.8vw, 2.8rem);
+  font-size: clamp(2rem, 2.7vw, 2.65rem);
 }
 
 .round-rewards-subtitle {
   margin: 10px 0 0;
   color: rgba(243, 239, 227, 0.72);
+  max-width: 720px;
+}
+
+.round-rewards-primary-btn,
+.round-rewards-secondary-btn,
+.round-rewards-config-row,
+.round-rewards-mode-pill,
+.round-rewards-picker-btn,
+.round-rewards-item-card,
+.round-rewards-modal-close {
+  border-radius: 16px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3efe3;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.round-rewards-primary-btn:hover,
+.round-rewards-secondary-btn:hover,
+.round-rewards-config-row:hover,
+.round-rewards-mode-pill:hover,
+.round-rewards-picker-btn:hover,
+.round-rewards-item-card:hover,
+.round-rewards-modal-close:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--theme-accent-2-rgb), 0.28);
+  box-shadow: 0 0 18px rgba(var(--theme-accent-rgb), 0.12);
+}
+
+.round-rewards-primary-btn,
+.round-rewards-secondary-btn,
+.round-rewards-modal-close {
+  padding: 12px 16px;
 }
 
 .round-rewards-layout {
@@ -34,110 +94,196 @@
 }
 
 .round-rewards-card {
-  border: 1px solid rgba(184, 156, 95, 0.22);
-  border-radius: 24px;
-  background: rgba(10, 12, 18, 0.88);
-  padding: 20px;
+  padding: 18px;
 }
 
-.round-rewards-section-header h2 {
-  margin: 0 0 12px;
+.round-rewards-sidebar,
+.round-rewards-main {
+  min-width: 0;
 }
 
-.round-rewards-primary-btn,
-.round-rewards-secondary-btn,
-.round-rewards-config-row,
-.round-rewards-field input,
-.round-rewards-field select {
-  border-radius: 14px;
+.round-rewards-main {
+  display: grid;
+  gap: 16px;
 }
 
-.round-rewards-primary-btn,
-.round-rewards-secondary-btn {
-  padding: 12px 16px;
-  border: 1px solid rgba(184, 156, 95, 0.28);
-  background: rgba(255, 255, 255, 0.05);
-  color: #f3efe3;
-  cursor: pointer;
+.round-rewards-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.round-rewards-section-header h2,
+.round-rewards-modal-group-header h3,
+.round-rewards-placement-header h3 {
+  margin: 0;
+}
+
+.round-rewards-section-header p,
+.round-rewards-modal-header p {
+  margin: 6px 0 0;
+  color: rgba(243, 239, 227, 0.66);
+  font-size: 0.92rem;
 }
 
 .round-rewards-config-list {
   display: grid;
   gap: 10px;
-  margin-top: 16px;
 }
 
 .round-rewards-config-row {
-  padding: 12px 14px;
-  border: 1px solid rgba(184, 156, 95, 0.18);
-  background: rgba(255, 255, 255, 0.03);
-  color: #f3efe3;
   text-align: left;
-  cursor: pointer;
+  padding: 14px 16px;
 }
 
-.round-rewards-config-row.is-selected {
-  border-color: rgba(184, 156, 95, 0.5);
-  background: rgba(184, 156, 95, 0.14);
+.round-rewards-config-row.is-selected,
+.round-rewards-mode-pill.is-active,
+.round-rewards-item-card.is-selected {
+  border-color: rgba(var(--theme-accent-2-rgb), 0.42);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--theme-accent-rgb), 0.14),
+    rgba(var(--theme-accent-2-rgb), 0.08)
+  );
+  box-shadow: 0 0 22px rgba(var(--theme-accent-2-rgb), 0.12);
 }
 
-.round-rewards-main {
+.round-rewards-config-row-title {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.round-rewards-config-row-meta,
+.round-rewards-picker-btn-subvalue,
+.round-rewards-item-card-meta,
+.round-rewards-selection-summary,
+.round-rewards-round-preview,
+.round-rewards-placement-footer-pill {
+  color: rgba(243, 239, 227, 0.68);
+  font-size: 0.9rem;
+}
+
+.round-rewards-empty {
+  color: rgba(243, 239, 227, 0.62);
+  padding: 16px 0;
+}
+
+.round-rewards-chooser-row,
+.round-rewards-shared-grid,
+.round-rewards-placement-ranges,
+.round-rewards-modal-toolbar,
+.round-rewards-modal-mode-row,
+.round-rewards-modal-actions {
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
-.round-rewards-form-grid,
+.round-rewards-chooser-row {
+  grid-template-columns: 110px 110px minmax(0, 1fr);
+  align-items: end;
+}
+
+.round-rewards-round-preview {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  font-weight: 800;
+}
+
+.round-rewards-shared-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .round-rewards-placement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.round-rewards-placement-card {
   display: grid;
   gap: 14px;
 }
 
-.round-rewards-form-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.round-rewards-placement-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
 }
 
-.round-rewards-placement-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.round-rewards-placement-card {
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(184, 156, 95, 0.14);
+.round-rewards-compact-field,
+.round-rewards-range-field {
   display: grid;
+  gap: 7px;
+}
+
+.round-rewards-compact-field input,
+.round-rewards-compact-field select,
+.round-rewards-range-inputs input,
+.round-rewards-modal-search,
+.round-rewards-modal-category {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3efe3;
+  padding: 0 14px;
+  outline: none;
+}
+
+.round-rewards-range-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  align-items: center;
   gap: 10px;
 }
 
-.round-rewards-placement-card h3 {
-  margin: 0;
+.round-rewards-range-divider {
+  text-align: center;
+  color: rgba(243, 239, 227, 0.58);
+  font-weight: 900;
 }
 
-.round-rewards-field {
+.round-rewards-compact-field--qty {
+  width: 108px;
+}
+
+.round-rewards-picker-btn {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+  text-align: left;
+  padding: 14px 16px;
 }
 
-.round-rewards-field span {
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(243, 239, 227, 0.64);
+.round-rewards-picker-btn-value {
+  font-weight: 800;
+  font-size: 1rem;
 }
 
-.round-rewards-field input,
-.round-rewards-field select {
-  width: 100%;
-  padding: 11px 12px;
-  border: 1px solid rgba(184, 156, 95, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f3efe3;
+.round-rewards-placement-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.round-rewards-placement-footer-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .round-rewards-success,
 .round-rewards-error {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 16px;
 }
 
 .round-rewards-success {
@@ -155,10 +301,127 @@
   justify-content: flex-end;
 }
 
-@media (max-width: 1100px) {
+.round-rewards-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.76);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  z-index: 50;
+}
+
+.round-rewards-modal {
+  width: min(1240px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  padding: 20px;
+}
+
+.round-rewards-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.round-rewards-modal-mode-row {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+}
+
+.round-rewards-modal-toolbar {
+  grid-template-columns: minmax(0, 1fr) 220px;
+}
+
+.round-rewards-modal-selection-bar {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.round-rewards-modal-groups {
+  overflow: auto;
+  padding-right: 6px;
+  display: grid;
+  gap: 16px;
+}
+
+.round-rewards-modal-group {
+  display: grid;
+  gap: 12px;
+}
+
+.round-rewards-modal-group-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.round-rewards-modal-group-header span {
+  color: rgba(243, 239, 227, 0.58);
+  font-size: 0.86rem;
+}
+
+.round-rewards-item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.round-rewards-item-card {
+  padding: 14px;
+  text-align: left;
+  display: grid;
+  gap: 6px;
+}
+
+.round-rewards-item-card--special {
+  margin-bottom: 4px;
+}
+
+.round-rewards-item-card-title {
+  font-weight: 800;
+  font-size: 0.98rem;
+}
+
+.round-rewards-item-card-desc {
+  color: rgba(243, 239, 227, 0.64);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.round-rewards-modal-empty {
+  color: rgba(243, 239, 227, 0.62);
+  padding: 16px 4px;
+}
+
+@media (max-width: 1180px) {
   .round-rewards-layout,
-  .round-rewards-form-grid,
-  .round-rewards-placement-grid {
+  .round-rewards-placement-grid,
+  .round-rewards-shared-grid,
+  .round-rewards-chooser-row,
+  .round-rewards-modal-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .round-rewards-compact-field--qty {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .round-rewards-topbar,
+  .round-rewards-modal-header {
+    flex-direction: column;
+  }
+
+  .round-rewards-item-grid {
     grid-template-columns: 1fr;
   }
 }

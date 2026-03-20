@@ -1,0 +1,6 @@
+2026-03-20
+
+- Container opener catalog now keeps locked containers visible on the frontend instead of filtering them out.
+- Locked packs and boxes use a dimmed locked treatment in the opener UI, but remain non-openable and non-purchasable while locked.
+- Pack openings now prevent duplicate card ids inside a single pack open.
+- This applies to both curated slot-tier packs and older fallback pack card selection paths.

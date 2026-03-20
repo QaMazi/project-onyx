@@ -1,0 +1,5 @@
+2026-03-20
+
+- Replaced the account statistics progression card `starter_decks_claimed` with `matches_won`.
+- `matches_won` now sums the winning player's reported game score from `public.series_bracket_matches`.
+- Example: a completed 2-0 result counts as 2 matches won for the winner.

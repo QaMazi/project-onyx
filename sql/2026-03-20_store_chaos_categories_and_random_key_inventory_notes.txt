@@ -1,0 +1,28 @@
+2026-03-20 store/item backend cleanup
+
+Applied live:
+- sql/2026-03-20_store_chaos_categories_and_random_key_inventory.sql
+
+What changed:
+- Added store item categories:
+  - Thief's Cards
+  - Hex Idols
+  - Card Extractors
+  - Forced Exchanges
+- Reassigned the former shared chaos-family items into those categories by behavior code.
+- Updated get_inventory_item_use_preview(...) so random key items now preview as a real self-confirm item flow.
+- Updated use_inventory_item_self(...) so random key items now grant a random unlocked matching key and consume correctly from inventory.
+
+Live verification:
+- PostgREST schema cache reloaded.
+- Active item categories now show separate hostile-item groups instead of one Chaos group.
+- Active grant_random_container_key items remain in Container Openers and now appear in the use-flow definitions.
+- Active behavior-code audit confirmed every active behavior_code is present in the preview/use function set.
+
+Frontend updates tied to this pass:
+- src/lib/storeCatalog.js
+- src/Pages/Inventory/InventoryPage.jsx
+
+Build:
+- npm run build
+  - passed

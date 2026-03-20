@@ -1,0 +1,16 @@
+2026-03-20 opener purchase simplification
+
+- Hid `container_openers` from the player-facing progression store page
+- Added direct opener purchasing on the Container Opener page through `purchase_container_opener_now(...)`
+- Added 4 random opener store products:
+  - Random Deck Box Key
+  - Random Promo Box Key
+  - Random Draft Pack Key
+  - Random Pack Key
+- Renamed active pack opener items from `... Seal Breaker` to `... Key`
+- Synced active opener item codes to:
+  - `..._pack_key`
+  - `..._draft_pack_key`
+  - existing deck/promo box key naming stays intact
+- Cleared any lingering opener rows from player carts so the old store flow does not hang around
+- Kept opener products in `item_definitions` / Store Editor so prices and locks remain admin-editable

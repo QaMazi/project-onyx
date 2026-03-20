@@ -150,12 +150,19 @@ begin
             ),
             0
           ),
-        'starter_decks_claimed',
+        'matches_won',
           coalesce(
             (
-              select count(*)::integer
-              from public.player_starter_deck_claims psdc
-              where psdc.user_id = v_user_id
+              select sum(
+                case
+                  when sbm.player1_user_id = v_user_id then coalesce(sbm.player1_score, 0)
+                  when sbm.player2_user_id = v_user_id then coalesce(sbm.player2_score, 0)
+                  else 0
+                end
+              )::integer
+              from public.series_bracket_matches sbm
+              where sbm.winner_user_id = v_user_id
+                and sbm.status = 'completed'
             ),
             0
           ),

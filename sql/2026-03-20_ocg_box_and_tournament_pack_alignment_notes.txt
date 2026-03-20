@@ -1,0 +1,18 @@
+2026-03-20 OCG Box and Tournament Pack Alignment
+
+- Removed `OCG` as a pack type and replaced the pack lineup with:
+  - `TCG` = 9 cards
+  - `Reward` = 5 cards
+  - `Tournament` = 3 cards
+- Added `OCG Box` as a third real box category alongside `Deck Box` and `Promo Box`.
+- Added backend support for:
+  - `ocg_box` container type
+  - `ocg_box_key` exact opener items
+  - `random_ocg_box_key` random opener item
+  - box admin RPC support for OCG boxes
+  - opener reel preview support for OCG boxes
+- Resynced container opener item names/codes so box keys and pack keys follow the new numbering/category identities.
+- Updated random key product seed data so the opener modal and store editor can manage OCG box random keys too.
+- Assumption used here:
+  - legacy 5-card pack behavior maps to `Reward`
+  - legacy 3-card pack behavior maps to `Tournament`

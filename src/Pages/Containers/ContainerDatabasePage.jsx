@@ -24,6 +24,11 @@ function getTypeConfig(typeSlug) {
         title: "Promo Box Database",
         matcher: ["promo", "promobox", "promo_box", "promo box"],
       };
+    case "ocg-boxes":
+      return {
+        title: "OCG Box Database",
+        matcher: ["ocg", "ocgbox", "ocg_box", "ocg box"],
+      };
     default:
       return {
         title: "Container Database",

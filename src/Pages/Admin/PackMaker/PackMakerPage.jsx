@@ -10,16 +10,51 @@ const CONTENT_MODE_OPTIONS = [
   { value: "official", label: "Official" },
   { value: "curated", label: "Curated" },
 ];
-const PACK_CATEGORY_OPTIONS = [
-  { value: "normal", label: "Normal Pack" },
-  { value: "reward", label: "Reward Pack" },
+const PACK_TYPE_OPTIONS = [
+  {
+    value: "tcg",
+    label: "TCG Pack",
+    groupLabel: "TCG Packs",
+    keyPrefix: "TCG",
+    cardsPerPack: 9,
+    commonSlotCount: 7,
+    mixedSlotIndex: 8,
+    finalSlotIndex: 9,
+  },
+  {
+    value: "reward",
+    label: "Reward Pack",
+    groupLabel: "Reward Packs",
+    keyPrefix: "RWD",
+    cardsPerPack: 5,
+    commonSlotCount: 3,
+    mixedSlotIndex: 4,
+    finalSlotIndex: 5,
+  },
+  {
+    value: "tournament",
+    label: "Tournament Pack",
+    groupLabel: "Tournament Packs",
+    keyPrefix: "TOR",
+    cardsPerPack: 3,
+    commonSlotCount: 1,
+    mixedSlotIndex: 2,
+    finalSlotIndex: 3,
+  },
 ];
+const PACK_TYPE_CONFIGS = Object.fromEntries(
+  PACK_TYPE_OPTIONS.map((option) => [option.value, option])
+);
 const CONTAINER_IMAGE_BUCKET = "container-images";
-const PACK_SLOT_COUNT = 9;
+const MAX_PACK_SLOT_COUNT = 9;
 const SLOT_TOTAL_TARGET = 100;
 const SLOT_TOTAL_TOLERANCE = 0.01;
 const RANDOM_PACK_RARITY_LABEL = "Random (Weighted Table)";
 const PACK_NUMBER_RE = /^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/;
+const MIXED_SLOT_DEFAULT_WEIGHTS = {
+  common: 80,
+  rare: 20,
+};
 const LAST_SLOT_DEFAULT_WEIGHTS = {
   rare: 77.42,
   super_rare: 12.9,
@@ -73,14 +108,83 @@ function parseMassCardNames(rawText) {
     .filter(Boolean);
 }
 
-function createDefaultSlotTierRows(tiers) {
-  return Array.from({ length: PACK_SLOT_COUNT }, (_, index) => index + 1).flatMap(
+function normalizePackTypeCode(value, fallbackCardsPerOpen = null, fallbackIsRewardPack = false) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (Object.prototype.hasOwnProperty.call(PACK_TYPE_CONFIGS, normalized)) {
+    return normalized;
+  }
+
+  if (Boolean(fallbackIsRewardPack)) {
+    return "reward";
+  }
+
+  const cardsPerPack = Number(fallbackCardsPerOpen || 0);
+  if (cardsPerPack === 5) return "reward";
+  if (cardsPerPack === 3) return "tournament";
+  return "tcg";
+}
+
+function getPackTypeConfig(packTypeCode) {
+  return PACK_TYPE_CONFIGS[normalizePackTypeCode(packTypeCode)] || PACK_TYPE_CONFIGS.tcg;
+}
+
+function getPackCardsPerOpen(packTypeCode) {
+  return getPackTypeConfig(packTypeCode).cardsPerPack;
+}
+
+function getPackLibraryGroupLabel(packTypeCode) {
+  return getPackTypeConfig(packTypeCode).groupLabel;
+}
+
+function getPackLibraryGroupSortValue(groupLabel) {
+  const index = PACK_TYPE_OPTIONS.findIndex((option) => option.groupLabel === groupLabel);
+  return index >= 0 ? index : PACK_TYPE_OPTIONS.length + 10;
+}
+
+function buildPackKeyLabel(packTypeCode, packNumberCode) {
+  const packType = getPackTypeConfig(packTypeCode);
+  const number = String(packNumberCode || "").trim();
+  return number ? `${packType.keyPrefix}-${number}` : `${packType.keyPrefix}-???`;
+}
+
+function getPackSlotDefaultLabel(slotIndex, packTypeCode) {
+  const packType = getPackTypeConfig(packTypeCode);
+
+  if (slotIndex <= packType.commonSlotCount) {
+    return "Common lane by default";
+  }
+
+  if (slotIndex === packType.mixedSlotIndex) {
+    return "80% Common / 20% Rare";
+  }
+
+  if (slotIndex === packType.finalSlotIndex) {
+    return "Rare upgrade lane";
+  }
+
+  return "Inactive for this pack type";
+}
+
+function createDefaultSlotTierRows(tiers, packTypeCode = "tcg") {
+  const packType = getPackTypeConfig(packTypeCode);
+
+  return Array.from({ length: MAX_PACK_SLOT_COUNT }, (_, index) => index + 1).flatMap(
     (slotIndex) =>
       (tiers || []).map((tier) => {
         const tierCode = String(tier?.code || "").trim().toLowerCase();
-        const isCommonSlot = slotIndex <= 8 && tierCode === "common";
+        const isActiveSlot = slotIndex <= packType.cardsPerPack;
+        const isCommonSlot =
+          isActiveSlot && slotIndex <= packType.commonSlotCount && tierCode === "common";
+        const isMixedSlot =
+          isActiveSlot &&
+          slotIndex === packType.mixedSlotIndex &&
+          Object.prototype.hasOwnProperty.call(MIXED_SLOT_DEFAULT_WEIGHTS, tierCode);
         const isLastSlotUpgrade =
-          slotIndex === 9 &&
+          isActiveSlot &&
+          slotIndex === packType.finalSlotIndex &&
           Object.prototype.hasOwnProperty.call(LAST_SLOT_DEFAULT_WEIGHTS, tierCode);
 
         return {
@@ -88,19 +192,24 @@ function createDefaultSlotTierRows(tiers) {
           pack_pool_tier_id: tier.id,
           pack_pool_tier_code: tierCode,
           pack_pool_tier_name: tier.name || tierCode || "Tier",
-          weight: isCommonSlot
-            ? 100
-            : isLastSlotUpgrade
-              ? LAST_SLOT_DEFAULT_WEIGHTS[tierCode]
-              : 0,
-          is_enabled: isCommonSlot || isLastSlotUpgrade,
+          weight: !isActiveSlot
+            ? 0
+            : isCommonSlot
+              ? 100
+              : isMixedSlot
+                ? MIXED_SLOT_DEFAULT_WEIGHTS[tierCode]
+                : isLastSlotUpgrade
+                  ? LAST_SLOT_DEFAULT_WEIGHTS[tierCode]
+                  : 0,
+          is_enabled: isActiveSlot && (isCommonSlot || isMixedSlot || isLastSlotUpgrade),
         };
       })
   );
 }
 
-function buildMergedSlotTierRows(tiers, incomingRows) {
-  const baseRows = createDefaultSlotTierRows(tiers);
+function buildMergedSlotTierRows(tiers, incomingRows, packTypeCode = "tcg") {
+  const baseRows = createDefaultSlotTierRows(tiers, packTypeCode);
+  const cardsPerPack = getPackCardsPerOpen(packTypeCode);
   const incomingMap = new Map(
     (incomingRows || []).map((row) => [
       `${Number(row.slot_index || 0)}:${row.pack_pool_tier_id}`,
@@ -109,6 +218,10 @@ function buildMergedSlotTierRows(tiers, incomingRows) {
   );
 
   return baseRows.map((row) => {
+    if (row.slot_index > cardsPerPack) {
+      return row;
+    }
+
     const incoming = incomingMap.get(`${row.slot_index}:${row.pack_pool_tier_id}`);
     if (!incoming) return row;
 
@@ -138,14 +251,6 @@ function getPackNumberSortValue(value) {
   const normalized = String(value || "").trim();
   if (/^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/.test(normalized)) return Number(normalized);
   return Number.MAX_SAFE_INTEGER;
-}
-
-function getPackLibraryGroupLabel(isRewardPack) {
-  return isRewardPack ? "Reward Packs" : "Normal Packs";
-}
-
-function getPackLibraryGroupSortValue(groupLabel) {
-  return groupLabel === "Reward Packs" ? 1 : 0;
 }
 
 function buildCardImageUrl(card) {
@@ -214,7 +319,7 @@ function PackMakerPage() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [packNumberCode, setPackNumberCode] = useState("");
-  const [isRewardPack, setIsRewardPack] = useState(false);
+  const [packTypeCode, setPackTypeCode] = useState("tcg");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [contentMode, setContentMode] = useState("official");
@@ -262,6 +367,20 @@ function PackMakerPage() {
     [packProducts, selectedPackGroupCode]
   );
 
+  const selectedPackType = useMemo(() => getPackTypeConfig(packTypeCode), [packTypeCode]);
+
+  const cardsPerPack = selectedPackType.cardsPerPack;
+
+  const activePackSlotIndexes = useMemo(
+    () => Array.from({ length: cardsPerPack }, (_, index) => index + 1),
+    [cardsPerPack]
+  );
+
+  const generatedPackKeyLabel = useMemo(
+    () => buildPackKeyLabel(packTypeCode, packNumberCode),
+    [packNumberCode, packTypeCode]
+  );
+
   const groupedPackCards = useMemo(() => {
     return (packPoolTiers || []).map((tier) => ({
       tier,
@@ -276,10 +395,22 @@ function PackMakerPage() {
     const groupMap = new Map();
 
     (packProducts || []).forEach((product) => {
-      const groupLabel = getPackLibraryGroupLabel(Boolean(product?.is_reward_pack));
+      const productPackTypeCode = normalizePackTypeCode(
+        product?.pack_type_code,
+        product?.cards_per_open,
+        product?.is_reward_pack
+      );
+      const groupLabel = getPackLibraryGroupLabel(productPackTypeCode);
       const matchesQuery =
         !query ||
-        [product?.name, product?.code, product?.description, groupLabel, product?.pack_number_code]
+        [
+          product?.name,
+          product?.code,
+          product?.description,
+          groupLabel,
+          product?.pack_number_code,
+          buildPackKeyLabel(productPackTypeCode, product?.pack_number_code),
+        ]
           .some((value) => String(value || "").toLowerCase().includes(query));
 
       if (!matchesQuery) return;
@@ -339,18 +470,15 @@ function PackMakerPage() {
 
   const slotTotals = useMemo(() => {
     const map = new Map();
-    for (let slotIndex = 1; slotIndex <= PACK_SLOT_COUNT; slotIndex += 1) {
+    for (let slotIndex = 1; slotIndex <= MAX_PACK_SLOT_COUNT; slotIndex += 1) {
       map.set(slotIndex, calculateSlotTierTotal(slotTierRows, slotIndex));
     }
     return map;
   }, [slotTierRows]);
 
   const invalidSlotIndexes = useMemo(
-    () =>
-      Array.from({ length: PACK_SLOT_COUNT }, (_, index) => index + 1).filter(
-        (slotIndex) => !isSlotTierTotalValid(slotTotals.get(slotIndex))
-      ),
-    [slotTotals]
+    () => activePackSlotIndexes.filter((slotIndex) => !isSlotTierTotalValid(slotTotals.get(slotIndex))),
+    [activePackSlotIndexes, slotTotals]
   );
 
   const packNumberIsValid = useMemo(
@@ -550,14 +678,14 @@ function PackMakerPage() {
     setName("");
     setCode("");
     setPackNumberCode("");
-    setIsRewardPack(false);
+    setPackTypeCode("tcg");
     setDescription("");
     setImageUrl("");
     setContentMode("official");
     setIsEnabled(true);
     setIsLocked(false);
     setPackCards([]);
-    setSlotTierRows(buildMergedSlotTierRows(tiers, []));
+    setSlotTierRows(buildMergedSlotTierRows(tiers, [], "tcg"));
     setCardSearch("");
     setCardSearchResults([]);
     setMassCardNames("");
@@ -581,7 +709,12 @@ function PackMakerPage() {
     setName(data?.name || "");
     setCode(data?.code || "");
     setPackNumberCode(data?.pack_number_code || "");
-    setIsRewardPack(Boolean(data?.is_reward_pack));
+    const nextPackTypeCode = normalizePackTypeCode(
+      data?.pack_type_code,
+      data?.cards_per_open,
+      data?.is_reward_pack
+    );
+    setPackTypeCode(nextPackTypeCode);
     setDescription(data?.description || "");
     setImageUrl(data?.image_url || "");
     setContentMode(normalizeContentMode(data?.content_mode || "official"));
@@ -596,7 +729,7 @@ function PackMakerPage() {
       rarity_id: row.rarity_id || null,
     }));
     setPackCards(nextPackCards);
-    setSlotTierRows(buildMergedSlotTierRows(tiers, data?.slot_tiers || []));
+    setSlotTierRows(buildMergedSlotTierRows(tiers, data?.slot_tiers || [], nextPackTypeCode));
     setSelectedPoolTierId(tiers?.[0]?.id || "");
     setMassCardNames("");
     setPreviewState(
@@ -874,8 +1007,10 @@ function PackMakerPage() {
     setErrorMessage("");
   }
 
-  function handlePackCategoryChange(nextValue) {
-    setIsRewardPack(nextValue === "reward");
+  function handlePackTypeChange(nextValue) {
+    const nextPackTypeCode = normalizePackTypeCode(nextValue);
+    setPackTypeCode(nextPackTypeCode);
+    setSlotTierRows(buildMergedSlotTierRows(packPoolTiers, [], nextPackTypeCode));
     setErrorMessage("");
   }
 
@@ -918,7 +1053,7 @@ function PackMakerPage() {
         p_name: name,
         p_code: code || buildContainerCode(name),
         p_pack_number_code: packNumberCode,
-        p_is_reward_pack: isRewardPack,
+        p_pack_type_code: packTypeCode,
         p_description: description,
         p_image_url: imageUrl || null,
         p_content_mode: contentMode || "official",
@@ -932,7 +1067,12 @@ function PackMakerPage() {
           weight: Math.max(1, Number(row.weight || 1)),
         })),
         p_slot_tiers: slotTierRows
-          .filter((row) => Boolean(row.is_enabled) && Number(row.weight) > 0)
+          .filter(
+            (row) =>
+              row.slot_index <= cardsPerPack &&
+              Boolean(row.is_enabled) &&
+              Number(row.weight) > 0
+          )
           .map((row) => ({
             slot_index: Number(row.slot_index),
             pack_pool_tier_id: row.pack_pool_tier_id,
@@ -1183,9 +1323,9 @@ function PackMakerPage() {
                     <div>
                       <h2>Pack Editor</h2>
                       <p className="pack-maker-editor-copy">
-                        Keep the pack numbering, reward-pack toggle, art, search
-                        tools, and curated card pools together here. Pack slot tier
-                        rules stay below this section.
+                        Keep the pack numbering, pack type, art, search tools, and
+                        curated card pools together here. Pack slot tier rules stay
+                        below this section.
                       </p>
                     </div>
                   </div>
@@ -1206,14 +1346,14 @@ function PackMakerPage() {
                         </div>
 
                         <div className="container-maker-field">
-                          <label>Pack Category</label>
+                          <label>Pack Type</label>
                           <select
                             className="container-maker-select"
-                            value={isRewardPack ? "reward" : "normal"}
-                            onChange={(event) => handlePackCategoryChange(event.target.value)}
+                            value={packTypeCode}
+                            onChange={(event) => handlePackTypeChange(event.target.value)}
                             disabled={saving}
                           >
-                            {PACK_CATEGORY_OPTIONS.map((option) => (
+                            {PACK_TYPE_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
@@ -1239,7 +1379,16 @@ function PackMakerPage() {
 
                         <div className="container-maker-field">
                           <label>Cards Per Pack</label>
-                          <input className="container-maker-input" value="9" disabled />
+                          <input className="container-maker-input" value={cardsPerPack} disabled />
+                        </div>
+
+                        <div className="container-maker-field">
+                          <label>Generated Key Label</label>
+                          <input
+                            className="container-maker-input"
+                            value={packNumberCode ? generatedPackKeyLabel : "Pack number pending"}
+                            disabled
+                          />
                         </div>
 
                         <div className="container-maker-field">
@@ -1317,8 +1466,9 @@ function PackMakerPage() {
                       <div className="pack-maker-autonote">
                         Save once and the admin system keeps both variants in sync: a
                         full pack for normal opening and a draft pack version for
-                        draft use. Packs are internally organized as Normal Packs
-                        and Reward Packs, each with their own 001-999 numbering.
+                        draft use. TCG packs use 9 cards, Reward packs use 5, and
+                        Tournament packs use 3. Generated key naming follows the
+                        pack type plus number, like {generatedPackKeyLabel}.
                       </div>
 
                       {!packNumberIsValid ? (
@@ -1676,7 +1826,8 @@ function PackMakerPage() {
 
                   <p className="pack-maker-picker-copy">
                     Load an existing pack into the editor. Packs are grouped here as
-                    Normal Packs and Reward Packs, then sorted by Pack Number.
+                    TCG Packs, Reward Packs, and Tournament Packs, then sorted by
+                    Pack Number.
                   </p>
 
                   <input
@@ -1720,9 +1871,22 @@ function PackMakerPage() {
                                   </div>
                                   <div className="container-maker-container-row-meta">
                                     {product.pack_number_code
-                                      ? `${product.pack_number_code} • `
+                                      ? `${buildPackKeyLabel(
+                                          normalizePackTypeCode(
+                                            product?.pack_type_code,
+                                            product?.cards_per_open,
+                                            product?.is_reward_pack
+                                          ),
+                                          product.pack_number_code
+                                        )} • `
                                       : ""}
-                                    {product.is_reward_pack ? "Reward Pack • " : "Normal Pack • "}
+                                    {getPackTypeConfig(
+                                      normalizePackTypeCode(
+                                        product?.pack_type_code,
+                                        product?.cards_per_open,
+                                        product?.is_reward_pack
+                                      )
+                                    ).label} • {" "}
                                     {product.code}
                                     {product.is_locked ? " • Locked" : ""}
                                     {!product.is_enabled ? " • Disabled" : ""}
@@ -1744,10 +1908,11 @@ function PackMakerPage() {
               </div>
 
               <p className="pack-maker-slot-copy">
-                These 9 slots are the first RNG. Pick which tier pools each slot can
-                pull from and set the percent chances so every slot totals exactly
-                100%. Each saved pack card can either keep a curated rarity or use
-                the weighted global rarity roller.
+                Pack slot odds follow the selected pack type. TCG uses 9 active
+                slots, Reward uses 5, and Tournament uses 3. Pick which tier pools
+                each active slot can pull from and set the percent chances so every
+                slot totals exactly 100%. Each saved pack card can either keep a
+                curated rarity or use the weighted global rarity roller.
               </p>
 
               {invalidSlotIndexes.length > 0 ? (
@@ -1758,22 +1923,19 @@ function PackMakerPage() {
                 </div>
               ) : (
                 <div className="container-maker-success">
-                  All 9 slots total 100% and are ready to save.
+                  All {cardsPerPack} active slot{cardsPerPack === 1 ? "" : "s"} total
+                  {" "}100% and are ready to save.
                 </div>
               )}
 
               <div className="pack-maker-slot-grid">
-                {Array.from({ length: PACK_SLOT_COUNT }, (_, index) => index + 1).map(
+                {activePackSlotIndexes.map(
                   (slotIndex) => (
                     <div key={slotIndex} className="pack-maker-slot-panel">
                       <div className="pack-maker-slot-panel-header">
                         <div>
                           <h3>Slot {slotIndex}</h3>
-                          <span>
-                            {slotIndex <= 8
-                              ? "Common lane by default"
-                              : "Rare lane by default"}
-                          </span>
+                          <span>{getPackSlotDefaultLabel(slotIndex, packTypeCode)}</span>
                         </div>
 
                         <div className="pack-maker-slot-panel-tools">
@@ -1853,14 +2015,37 @@ function PackMakerPage() {
 
                 <div className="pack-maker-variant-grid">
                   <div className="pack-maker-variant-row">
-                    <span>Pack Category</span>
+                    <span>Pack Type</span>
                     <strong>
-                      {selectedProduct.is_reward_pack ? "Reward Pack" : "Normal Pack"}
+                      {
+                        getPackTypeConfig(
+                          normalizePackTypeCode(
+                            selectedProduct?.pack_type_code,
+                            selectedProduct?.cards_per_open,
+                            selectedProduct?.is_reward_pack
+                          )
+                        ).label
+                      }
                     </strong>
                   </div>
                   <div className="pack-maker-variant-row">
                     <span>Pack Number</span>
                     <strong>{selectedProduct.pack_number_code || "Pending"}</strong>
+                  </div>
+                  <div className="pack-maker-variant-row">
+                    <span>Generated Key Label</span>
+                    <strong>
+                      {selectedProduct.pack_number_code
+                        ? buildPackKeyLabel(
+                            normalizePackTypeCode(
+                              selectedProduct?.pack_type_code,
+                              selectedProduct?.cards_per_open,
+                              selectedProduct?.is_reward_pack
+                            ),
+                            selectedProduct.pack_number_code
+                          )
+                        : "Pending"}
+                    </strong>
                   </div>
                   <div className="pack-maker-variant-row">
                     <span>Full Pack Container</span>

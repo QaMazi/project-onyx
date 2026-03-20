@@ -10,16 +10,64 @@ const CARD_IMAGE_FALLBACK =
   "https://dgbgfhzcinlomghohxdq.supabase.co/storage/v1/object/public/card-images-upload/fallback_image.jpg";
 const TAB_ORDER = ["packs", "boxes"];
 const PACK_SECTION_OPTIONS = [
-  { value: "normal", label: "Normal Packs", sectionLabel: "Normal Packs" },
-  { value: "reward", label: "Reward Packs", sectionLabel: "Reward Packs" },
+  {
+    value: "tcg",
+    label: "TCG Packs",
+    sectionLabel: "TCG Packs",
+    shortLabel: "TCG Pack",
+    keyPrefix: "TCG",
+  },
+  {
+    value: "reward",
+    label: "Reward Packs",
+    sectionLabel: "Reward Packs",
+    shortLabel: "Reward Pack",
+    keyPrefix: "RWD",
+  },
+  {
+    value: "tournament",
+    label: "Tournament Packs",
+    sectionLabel: "Tournament Packs",
+    shortLabel: "Tournament Pack",
+    keyPrefix: "TOR",
+  },
 ];
+const PACK_TYPE_CONFIGS = Object.fromEntries(
+  PACK_SECTION_OPTIONS.map((option) => [option.value, option])
+);
 const BOX_SECTION_OPTIONS = [
-  { value: "deck", label: "Deck Boxes", sectionLabel: "Deck Boxes" },
-  { value: "promo", label: "Promo Boxes", sectionLabel: "Promo Boxes" },
+  {
+    value: "deck",
+    label: "Deck Boxes",
+    sectionLabel: "Deck Boxes",
+    categoryCode: "deck_box",
+    shortLabel: "Deck Box",
+    keyPrefix: "DCK",
+  },
+  {
+    value: "promo",
+    label: "Promo Boxes",
+    sectionLabel: "Promo Boxes",
+    categoryCode: "promo_box",
+    shortLabel: "Promo Box",
+    keyPrefix: "PRO",
+  },
+  {
+    value: "ocg",
+    label: "OCG Boxes",
+    sectionLabel: "OCG Boxes",
+    categoryCode: "ocg_box",
+    shortLabel: "OCG Box",
+    keyPrefix: "OCG",
+  },
 ];
+const BOX_TYPE_CONFIGS = Object.fromEntries(
+  BOX_SECTION_OPTIONS.map((option) => [option.categoryCode, option])
+);
 const RANDOM_KEY_FAMILY_ORDER = [
   "random_deck_box_key",
   "random_promo_box_key",
+  "random_ocg_box_key",
   "random_full_pack_key",
   "random_draft_pack_key",
 ];
@@ -37,16 +85,73 @@ function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function normalizePackTypeCode(value, fallbackCardsPerOpen = null, fallbackIsRewardPack = false) {
+  const normalized = normalizeText(value);
+
+  if (Object.prototype.hasOwnProperty.call(PACK_TYPE_CONFIGS, normalized)) {
+    return normalized;
+  }
+
+  if (Boolean(fallbackIsRewardPack)) return "reward";
+
+  const cardsPerOpen = Number(fallbackCardsPerOpen || 0);
+  if (cardsPerOpen === 5) return "reward";
+  if (cardsPerOpen === 3) return "tournament";
+  return "tcg";
+}
+
+function getPackTypeConfig(packTypeCode) {
+  return PACK_TYPE_CONFIGS[normalizePackTypeCode(packTypeCode)] || PACK_TYPE_CONFIGS.tcg;
+}
+
+function buildPackKeyLabel(packTypeCode, packNumberCode) {
+  const packType = getPackTypeConfig(packTypeCode);
+  const number = String(packNumberCode || "").trim();
+  return number ? `${packType.keyPrefix}-${number}` : `${packType.keyPrefix}-???`;
+}
+
+function getPackTypeSectionSortValue(packTypeOrLabel) {
+  const sectionLabel = PACK_SECTION_OPTIONS.some(
+    (option) => option.sectionLabel === packTypeOrLabel
+  )
+    ? packTypeOrLabel
+    : getPackTypeConfig(packTypeOrLabel).sectionLabel;
+  const index = PACK_SECTION_OPTIONS.findIndex((option) => option.sectionLabel === sectionLabel);
+  return index >= 0 ? index : PACK_SECTION_OPTIONS.length + 10;
+}
+
+function normalizeBoxCategoryCode(value) {
+  const normalized = normalizeText(value);
+  if (Object.prototype.hasOwnProperty.call(BOX_TYPE_CONFIGS, normalized)) {
+    return normalized;
+  }
+  return "deck_box";
+}
+
+function getBoxTypeConfig(boxCategoryCode) {
+  return BOX_TYPE_CONFIGS[normalizeBoxCategoryCode(boxCategoryCode)] || BOX_TYPE_CONFIGS.deck_box;
+}
+
+function buildBoxKeyLabel(boxCategoryCode, boxNumberCode) {
+  const boxType = getBoxTypeConfig(boxCategoryCode);
+  const number = String(boxNumberCode || "").trim();
+  return number ? `${boxType.keyPrefix}-${number}` : `${boxType.keyPrefix}-???`;
+}
+
 function getContainerBucket(typeCode) {
   const code = normalizeText(typeCode);
-  if (code === "promo_box" || code === "deck_box") return "boxes";
+  if (code === "promo_box" || code === "deck_box" || code === "ocg_box") return "boxes";
   if (code === "full_pack" || code === "draft_pack") return "packs";
   return "boxes";
 }
 
 function getRandomKeyBucket(exactItemFamily) {
   const family = normalizeText(exactItemFamily);
-  if (family === "random_deck_box_key" || family === "random_promo_box_key") {
+  if (
+    family === "random_deck_box_key" ||
+    family === "random_promo_box_key" ||
+    family === "random_ocg_box_key"
+  ) {
     return "boxes";
   }
   if (family === "random_draft_pack_key" || family === "random_full_pack_key") {
@@ -146,11 +251,13 @@ function getNumberSortValue(value) {
 }
 
 function getPackSectionLabel(filter) {
-  return filter === "reward" ? "Reward Packs" : "Normal Packs";
+  return getPackTypeConfig(filter).sectionLabel;
 }
 
 function getBoxSectionLabel(filter) {
-  return filter === "deck" ? "Deck Boxes" : "Promo Boxes";
+  if (filter === "deck") return "Deck Boxes";
+  if (filter === "promo") return "Promo Boxes";
+  return "OCG Boxes";
 }
 
 function buildSelectionAction({ mode, container, openerDefinition, inventoryRow, shards }) {
@@ -383,7 +490,7 @@ function ContainerOpenerPage() {
   const [opening, setOpening] = useState(false);
   const [purchaseBusyId, setPurchaseBusyId] = useState("");
   const [activeTab, setActiveTab] = useState("packs");
-  const [packSectionFilter, setPackSectionFilter] = useState("normal");
+  const [packSectionFilter, setPackSectionFilter] = useState("tcg");
   const [boxSectionFilter, setBoxSectionFilter] = useState("promo");
   const [activeSeriesId, setActiveSeriesId] = useState(null);
   const [shards, setShards] = useState(0);
@@ -528,6 +635,7 @@ function ContainerOpenerPage() {
     const eligibleCounts = {
       deck_box: 0,
       promo_box: 0,
+      ocg_box: 0,
       draft_pack: 0,
       full_pack: 0,
     };
@@ -551,6 +659,7 @@ function ContainerOpenerPage() {
 
         if (family === "random_deck_box_key") eligibleCount = eligibleCounts.deck_box;
         if (family === "random_promo_box_key") eligibleCount = eligibleCounts.promo_box;
+        if (family === "random_ocg_box_key") eligibleCount = eligibleCounts.ocg_box;
         if (family === "random_draft_pack_key") eligibleCount = eligibleCounts.draft_pack;
         if (family === "random_full_pack_key") eligibleCount = eligibleCounts.full_pack;
 
@@ -616,6 +725,11 @@ function ContainerOpenerPage() {
     Array.from(groupMap.values()).forEach((entry) => {
       const displayContainer = entry.normalContainer || entry.draftContainer;
       if (!displayContainer) return;
+      const packTypeCode = normalizePackTypeCode(
+        displayContainer?.pack_type_code,
+        displayContainer?.cards_per_open,
+        displayContainer?.is_reward_pack
+      );
       const collectionProgress = summarizePackGroupCollectionProgress(
         [entry.normalContainer?.id, entry.draftContainer?.id],
         containerCollectionById
@@ -632,8 +746,10 @@ function ContainerOpenerPage() {
           entry.normalContainer?.pack_number_code ||
           entry.draftContainer?.pack_number_code ||
           "",
-        isRewardPack: Boolean(
-          entry.normalContainer?.is_reward_pack ?? entry.draftContainer?.is_reward_pack
+        packTypeCode,
+        packKeyLabel: buildPackKeyLabel(
+          packTypeCode,
+          entry.normalContainer?.pack_number_code || entry.draftContainer?.pack_number_code || ""
         ),
         cardsPerOpen:
           entry.normalContainer?.cards_per_open ||
@@ -659,7 +775,7 @@ function ContainerOpenerPage() {
         collectionTotalCount: collectionProgress.totalCount,
       };
 
-      const sectionLabel = product.isRewardPack ? "Reward Packs" : "Normal Packs";
+      const sectionLabel = getPackSectionLabel(packTypeCode);
       if (!sectionMap.has(sectionLabel)) {
         sectionMap.set(sectionLabel, []);
       }
@@ -668,8 +784,8 @@ function ContainerOpenerPage() {
 
     return Array.from(sectionMap.entries())
       .sort(([left], [right]) => {
-        const leftRank = left === "Normal Packs" ? 0 : 1;
-        const rightRank = right === "Normal Packs" ? 0 : 1;
+        const leftRank = getPackTypeSectionSortValue(left);
+        const rightRank = getPackTypeSectionSortValue(right);
         if (leftRank !== rightRank) return leftRank - rightRank;
         return left.localeCompare(right);
       })
@@ -698,10 +814,7 @@ function ContainerOpenerPage() {
           [container.id],
           containerCollectionById
         );
-        const sectionLabel =
-          normalizeText(container.container_type?.code) === "deck_box"
-            ? "Deck Boxes"
-            : "Promo Boxes";
+        const sectionLabel = getBoxTypeConfig(container.container_type?.code).sectionLabel;
 
         if (!sectionMap.has(sectionLabel)) {
           sectionMap.set(sectionLabel, []);
@@ -716,7 +829,12 @@ function ContainerOpenerPage() {
           code: container.code,
           imageUrl: getContainerImageUrl(container),
           description: container.description || openerDefinition?.description || "",
+          boxCategoryCode: normalizeBoxCategoryCode(container.container_type?.code),
           boxNumberCode: container.box_number_code || "",
+          boxKeyLabel: buildBoxKeyLabel(
+            container.container_type?.code,
+            container.box_number_code || ""
+          ),
           cardsPerOpen: container.cards_per_open || 1,
           inventoryRow,
           openerDefinition,
@@ -731,8 +849,8 @@ function ContainerOpenerPage() {
 
     return Array.from(sectionMap.entries())
       .sort(([left], [right]) => {
-        const leftRank = left === "Deck Boxes" ? 0 : 1;
-        const rightRank = right === "Deck Boxes" ? 0 : 1;
+        const leftRank = BOX_SECTION_OPTIONS.findIndex((option) => option.sectionLabel === left);
+        const rightRank = BOX_SECTION_OPTIONS.findIndex((option) => option.sectionLabel === right);
         if (leftRank !== rightRank) return leftRank - rightRank;
         return left.localeCompare(right);
       })
@@ -833,19 +951,27 @@ function ContainerOpenerPage() {
 
   const selectedPurchaseLabel = selectedItem?.type === "pack" ? "pack" : "box";
 
+  const selectedPackType = useMemo(
+    () =>
+      selectedItem?.type === "pack"
+        ? getPackTypeConfig(selectedItem?.packTypeCode)
+        : null,
+    [selectedItem]
+  );
+
   const selectedPrimaryCategoryLabel =
     selectedItem?.type === "pack"
-      ? selectedItem?.isRewardPack
-        ? "Reward Pack"
-        : "Normal Pack"
-      : selectedItem?.categoryLabel || "Box";
+      ? selectedPackType?.shortLabel || "Pack"
+      : selectedItem?.type === "box"
+        ? getBoxTypeConfig(selectedItem?.boxCategoryCode).shortLabel
+        : selectedItem?.categoryLabel || "Box";
 
   const selectedModalKicker =
     selectedItem?.type === "pack"
-      ? selectedItem?.isRewardPack
-        ? "REWARD PACK"
-        : "NORMAL PACK"
-      : selectedItem?.categoryLabel?.toUpperCase() || "BOX";
+      ? (selectedPackType?.shortLabel || "Pack").toUpperCase()
+      : selectedItem?.type === "box"
+        ? getBoxTypeConfig(selectedItem?.boxCategoryCode).shortLabel.toUpperCase()
+        : selectedItem?.categoryLabel?.toUpperCase() || "BOX";
 
   const selectedActionCopy =
     selectedItem?.type === "pack"
@@ -1658,12 +1784,19 @@ function ContainerOpenerPage() {
           <div className="container-opener-library-head">
             <strong>{item.name}</strong>
             <span>
-              {item.type === "pack" ? item.packNumberCode || "---" : item.boxNumberCode || "---"}
+              {item.type === "pack"
+                ? item.packKeyLabel || "---"
+                : item.boxKeyLabel || "---"}
             </span>
           </div>
 
           <div className="container-opener-library-meta">
             <span>Code: {item.code}</span>
+            {item.type === "pack" ? (
+              <span>Type: {getPackTypeConfig(item.packTypeCode).shortLabel}</span>
+            ) : item.type === "box" ? (
+              <span>Type: {getBoxTypeConfig(item.boxCategoryCode).shortLabel}</span>
+            ) : null}
             <span>
               Collection: {item.collectionOwnedCount || 0}/{item.collectionTotalCount || 0}
             </span>
@@ -1687,8 +1820,9 @@ function ContainerOpenerPage() {
             <div className="container-opener-kicker">PROGRESSION</div>
             <h1 className="container-opener-title">Container Opener</h1>
             <p className="container-opener-subtitle">
-              Every enabled pack and box stays visible here. Dimmed entries mean you either do
-              not own the right key yet or that container is currently locked by admin.
+              Every enabled pack and box stays visible here. Packs are grouped into
+              TCG, Reward, and Tournament sections while keeping their full and
+              draft open options intact.
             </p>
           </div>
 
@@ -1727,8 +1861,9 @@ function ContainerOpenerPage() {
               <div>
                 <h2>Choose Box or Pack</h2>
                 <p>
-                  Openers are grouped by type and sorted by their numbers where available.
-                  Locked and unavailable options stay visible so you can always browse the full catalog.
+                  Openers are grouped by type and sorted by their numbers where
+                  available. Locked and unavailable options stay visible so you
+                  can always browse the full catalog.
                 </p>
               </div>
 
@@ -1786,9 +1921,7 @@ function ContainerOpenerPage() {
               <div className="container-opener-empty">
                 No{" "}
                 {activeTab === "packs"
-                  ? packSectionFilter === "reward"
-                    ? "reward packs"
-                    : "normal packs"
+                  ? getPackSectionLabel(packSectionFilter).toLowerCase()
                   : boxSectionFilter === "deck"
                   ? "deck boxes"
                   : "promo boxes"}{" "}
@@ -1844,11 +1977,11 @@ function ContainerOpenerPage() {
                       <strong>{selectedPrimaryCategoryLabel}</strong>
                     </div>
                     <div className="container-opener-info-row">
-                      <span>Number</span>
+                      <span>Key Label</span>
                       <strong>
                         {selectedItem.type === "pack"
-                          ? selectedItem.packNumberCode || "---"
-                          : selectedItem.boxNumberCode || "---"}
+                          ? selectedItem.packKeyLabel || "---"
+                          : selectedItem.boxKeyLabel || "---"}
                       </strong>
                     </div>
                     <div className="container-opener-info-row">
@@ -2019,7 +2152,7 @@ function ContainerOpenerPage() {
                                   ? "Full Pack Key"
                                   : option.mode === "draft"
                                   ? "Draft Pack Key"
-                                  : "Box Key"}
+                                  : `${getBoxTypeConfig(selectedItem?.boxCategoryCode).shortLabel} Key`}
                               </strong>
                               <span>{option.storePrice} Shards each</span>
                             </div>

@@ -13,9 +13,13 @@ const CONTENT_MODE_OPTIONS = [
 ];
 
 const BOX_CATEGORY_OPTIONS = [
-  { value: "promo_box", label: "Promo Box" },
-  { value: "deck_box", label: "Deck Box" },
+  { value: "deck_box", label: "Deck Box", groupLabel: "Deck Boxes", keyPrefix: "DCK" },
+  { value: "promo_box", label: "Promo Box", groupLabel: "Promo Boxes", keyPrefix: "PRO" },
+  { value: "ocg_box", label: "OCG Box", groupLabel: "OCG Boxes", keyPrefix: "OCG" },
 ];
+const BOX_CATEGORY_CONFIGS = Object.fromEntries(
+  BOX_CATEGORY_OPTIONS.map((option) => [option.value, option])
+);
 
 const CONTAINER_IMAGE_BUCKET = "container-images";
 const BOX_NUMBER_RE = /^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/;
@@ -64,6 +68,24 @@ function isValidBoxNumberCode(value) {
   return BOX_NUMBER_RE.test(String(value || "").trim());
 }
 
+function normalizeBoxCategoryCode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(BOX_CATEGORY_CONFIGS, normalized)) {
+    return normalized;
+  }
+  return "deck_box";
+}
+
+function getBoxCategoryConfig(boxCategoryCode) {
+  return BOX_CATEGORY_CONFIGS[normalizeBoxCategoryCode(boxCategoryCode)] || BOX_CATEGORY_CONFIGS.deck_box;
+}
+
+function buildBoxKeyLabel(boxCategoryCode, boxNumberCode) {
+  const category = getBoxCategoryConfig(boxCategoryCode);
+  const number = String(boxNumberCode || "").trim();
+  return number ? `${category.keyPrefix}-${number}` : `${category.keyPrefix}-???`;
+}
+
 function getBoxNumberSortValue(value) {
   const normalized = String(value || "").trim();
   if (BOX_NUMBER_RE.test(normalized)) return Number(normalized);
@@ -71,13 +93,12 @@ function getBoxNumberSortValue(value) {
 }
 
 function getBoxLibraryGroupLabel(boxCategoryCode) {
-  return String(boxCategoryCode || "").trim().toLowerCase() === "deck_box"
-    ? "Deck Boxes"
-    : "Promo Boxes";
+  return getBoxCategoryConfig(boxCategoryCode).groupLabel;
 }
 
 function getBoxLibraryGroupSortValue(groupLabel) {
-  return groupLabel === "Deck Boxes" ? 1 : 0;
+  const index = BOX_CATEGORY_OPTIONS.findIndex((option) => option.groupLabel === groupLabel);
+  return index >= 0 ? index : BOX_CATEGORY_OPTIONS.length + 10;
 }
 
 function buildCardImageUrl(card) {
@@ -114,7 +135,7 @@ function BoxMakerPage() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [boxNumberCode, setBoxNumberCode] = useState("");
-  const [boxCategoryCode, setBoxCategoryCode] = useState("promo_box");
+  const [boxCategoryCode, setBoxCategoryCode] = useState("deck_box");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [contentMode, setContentMode] = useState("curated");
@@ -146,9 +167,18 @@ function BoxMakerPage() {
   }, [cardTiers]);
 
   const selectedCategoryLabel = useMemo(
-    () =>
-      BOX_CATEGORY_OPTIONS.find((option) => option.value === boxCategoryCode)?.label || "Promo Box",
+    () => getBoxCategoryConfig(boxCategoryCode).label,
     [boxCategoryCode]
+  );
+
+  const generatedBoxDisplayLabel = useMemo(
+    () => (boxNumberCode ? `${selectedCategoryLabel} ${boxNumberCode}` : `${selectedCategoryLabel} pending`),
+    [boxNumberCode, selectedCategoryLabel]
+  );
+
+  const generatedBoxKeyLabel = useMemo(
+    () => buildBoxKeyLabel(boxCategoryCode, boxNumberCode),
+    [boxCategoryCode, boxNumberCode]
   );
 
   const groupedBoxCards = useMemo(
@@ -186,6 +216,7 @@ function BoxMakerPage() {
           product?.code,
           product?.description,
           product?.box_number_code,
+          buildBoxKeyLabel(product?.box_category_code, product?.box_number_code),
           groupLabel,
         ].some((value) => String(value || "").toLowerCase().includes(query));
 
@@ -427,7 +458,7 @@ function BoxMakerPage() {
     setName("");
     setCode("");
     setBoxNumberCode("");
-    setBoxCategoryCode("promo_box");
+    setBoxCategoryCode("deck_box");
     setDescription("");
     setImageUrl("");
     setContentMode("curated");
@@ -457,7 +488,7 @@ function BoxMakerPage() {
     setName(data?.name || "");
     setCode(data?.code || "");
     setBoxNumberCode(data?.box_number_code || "");
-    setBoxCategoryCode(data?.box_category_code || "promo_box");
+    setBoxCategoryCode(data?.box_category_code || "deck_box");
     setDescription(data?.description || "");
     setImageUrl(data?.image_url || "");
     setContentMode(normalizeContentMode(data?.content_mode || "curated"));
@@ -743,8 +774,9 @@ function BoxMakerPage() {
             <div className="container-maker-kicker">ADMIN</div>
             <h1 className="container-maker-title">Box Maker</h1>
             <p className="container-maker-subtitle">
-              Build Deck Boxes and Promo Boxes with the same cleaner layout as Pack Maker,
-              while keeping the normal box tier system and weighted rarity flow intact.
+              Build Deck Boxes, Promo Boxes, and OCG Boxes with the same cleaner
+              layout as Pack Maker, while keeping the normal box tier system and
+              weighted rarity flow intact.
             </p>
           </div>
 
@@ -969,11 +1001,16 @@ function BoxMakerPage() {
                           <label>Display Label</label>
                           <input
                             className="container-maker-input"
-                            value={
-                              boxNumberCode
-                                ? `${selectedCategoryLabel} ${boxNumberCode}`
-                                : `${selectedCategoryLabel} pending`
-                            }
+                            value={generatedBoxDisplayLabel}
+                            disabled
+                          />
+                        </div>
+
+                        <div className="container-maker-field">
+                          <label>Generated Key Label</label>
+                          <input
+                            className="container-maker-input"
+                            value={boxNumberCode ? generatedBoxKeyLabel : "Box number pending"}
                             disabled
                           />
                         </div>
@@ -1033,8 +1070,10 @@ function BoxMakerPage() {
                       </div>
 
                       <div className="pack-maker-autonote">
-                        Deck Boxes and Promo Boxes each keep their own 001-999 numbering.
-                        Box tiers still control the first pull roll here, and the shared rarity
+                        Deck Boxes, Promo Boxes, and OCG Boxes each keep their own
+                        001-999 numbering. Their generated key labels now follow that
+                        identity too, like {generatedBoxKeyLabel}. Box tiers still
+                        control the first pull roll here, and the shared rarity
                         roller still happens afterward when the box is opened.
                       </div>
 
@@ -1398,7 +1437,12 @@ function BoxMakerPage() {
                                     {product.name}
                                   </div>
                                   <div className="container-maker-container-row-meta">
-                                    {product.box_number_code ? `${product.box_number_code} | ` : ""}
+                                    {product.box_number_code
+                                      ? `${buildBoxKeyLabel(
+                                          product?.box_category_code,
+                                          product?.box_number_code
+                                        )} | `
+                                      : ""}
                                     {product.box_category_label} | {product.code}
                                     {product.is_locked ? " | Locked" : ""}
                                     {!product.is_enabled ? " | Disabled" : ""}

@@ -19,6 +19,10 @@ const SORT_OPTIONS = [
   { label: "Level", value: "level" },
 ];
 const TYPE_FLAGS = {
+  MONSTER: 0x1,
+  SPELL: 0x2,
+  TRAP: 0x4,
+  EFFECT: 0x20,
   FUSION: 0x40,
   SYNCHRO: 0x2000,
   XYZ: 0x800000,
@@ -104,6 +108,81 @@ function cloneTemplateRows(rows) {
     quantity: Math.max(1, Number(row.quantity || 1)),
     card: row.card || null,
   }));
+}
+
+function getStarterDeckSortGroup(card) {
+  const type = Number(card?.type || 0);
+
+  if ((type & TYPE_FLAGS.SPELL) === TYPE_FLAGS.SPELL) return 2;
+  if ((type & TYPE_FLAGS.TRAP) === TYPE_FLAGS.TRAP) return 3;
+  if ((type & TYPE_FLAGS.MONSTER) === TYPE_FLAGS.MONSTER) {
+    return (type & TYPE_FLAGS.EFFECT) === TYPE_FLAGS.EFFECT ? 0 : 1;
+  }
+
+  return 4;
+}
+
+function getStarterDeckCardName(card, fallbackCardId) {
+  const name = String(card?.name || "").trim();
+  if (name) return name;
+  return `Card ${fallbackCardId}`;
+}
+
+function compareStarterDeckRows(left, right) {
+  const leftCard = left?.card || null;
+  const rightCard = right?.card || null;
+  const leftGroup = getStarterDeckSortGroup(leftCard);
+  const rightGroup = getStarterDeckSortGroup(rightCard);
+
+  if (leftGroup !== rightGroup) {
+    return leftGroup - rightGroup;
+  }
+
+  if (leftGroup === 0 || leftGroup === 1) {
+    const leftLevel = Number(leftCard?.level || 0);
+    const rightLevel = Number(rightCard?.level || 0);
+    if (leftLevel !== rightLevel) {
+      return rightLevel - leftLevel;
+    }
+  }
+
+  const nameDiff = getStarterDeckCardName(leftCard, left?.card_id).localeCompare(
+    getStarterDeckCardName(rightCard, right?.card_id)
+  );
+  if (nameDiff !== 0) {
+    return nameDiff;
+  }
+
+  return Number(left?.card_id || 0) - Number(right?.card_id || 0);
+}
+
+function sortStarterDeckTemplateRows(rows) {
+  const sectionOrder = ["main", "extra", "side"];
+  const rowsBySection = new Map();
+
+  (rows || []).forEach((row) => {
+    const section = row?.section || "main";
+    if (!rowsBySection.has(section)) {
+      rowsBySection.set(section, []);
+    }
+    rowsBySection.get(section).push(row);
+  });
+
+  const sortedRows = [];
+
+  sectionOrder.forEach((section) => {
+    const sectionRows = rowsBySection.get(section) || [];
+    sortedRows.push(...sectionRows.sort(compareStarterDeckRows));
+    rowsBySection.delete(section);
+  });
+
+  Array.from(rowsBySection.keys())
+    .sort((left, right) => String(left).localeCompare(String(right)))
+    .forEach((section) => {
+      sortedRows.push(...(rowsBySection.get(section) || []).sort(compareStarterDeckRows));
+    });
+
+  return sortedRows;
 }
 
 function expandSectionSlots(rows, section) {
@@ -518,6 +597,13 @@ function StarterDeckEditorPage() {
     }
   }
 
+  function handleSortTemplateDeck() {
+    setTemplateCards((prev) => sortStarterDeckTemplateRows(prev));
+    setStatusMessage("Starter deck sorted.");
+    setErrorMessage("");
+    setHoverPreview(null);
+  }
+
   async function handleSaveTemplate() {
     setSaving(true);
     setErrorMessage("");
@@ -774,6 +860,14 @@ function StarterDeckEditorPage() {
                     disabled={saving}
                   >
                     Import .ydk
+                  </button>
+                  <button
+                    type="button"
+                    className="deck-builder-action-btn"
+                    onClick={handleSortTemplateDeck}
+                    disabled={saving || templateCards.length === 0}
+                  >
+                    Sort Deck
                   </button>
                   <button
                     type="button"

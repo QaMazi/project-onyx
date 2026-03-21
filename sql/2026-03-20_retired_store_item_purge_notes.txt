@@ -1,0 +1,24 @@
+2026-03-20 - Retired Store Item Purge
+
+Purpose
+- Permanently delete inactive legacy item definitions after confirming they no longer have live references.
+
+What was checked before deletion
+- player_inventory
+- player_card_curses
+- store_cart_items
+- store_purchase_items
+- player_trade_items
+- player_gift_items
+- player_reward_grants
+- player_inventory_item_use_sessions
+- series_round_reward_configs.shared_item_definition_id
+- series_round_reward_config_placements.specific_item_definition_id
+- series_round_reward_config_random_items
+
+Result
+- No live references remained for any inactive item definitions.
+- Safe to hard-delete the retired rows instead of just hiding them in Store Editor.
+
+Expected UI outcome
+- The `Retired & Legacy` bucket disappears from Store Editor once no inactive items remain.

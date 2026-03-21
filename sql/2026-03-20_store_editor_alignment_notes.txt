@@ -1,0 +1,12 @@
+2026-03-20 Store Editor Alignment
+
+- Refit the admin store editor around the live progression store structure instead of raw mixed item lists.
+- Active categories now focus on:
+  - real active store categories
+  - container opener keys
+  - currency exchange settings
+- Retired and legacy items are moved into a separate `Retired & Legacy` editor bucket so they stop cluttering normal pricing work.
+- Added `is_active` support to `public.set_store_item_admin_state(...)` so the editor can retire or restore items directly.
+- Currency exchange editing remains series-based and uses the existing:
+  - `get_series_currency_exchange_config(...)`
+  - `upsert_series_currency_exchange_config(...)`

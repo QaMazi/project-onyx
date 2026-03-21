@@ -6,6 +6,15 @@ import { supabase } from "../../lib/supabase";
 import "./ContainerDatabasePage.css";
 
 const RANDOM_PACK_RARITY_LABEL = "Random (Weighted Table)";
+const DECK_BOX_ALLOWED_TIER_SORT_ORDERS = [1, 3, 5, 7, 9];
+const DECK_BOX_ALLOWED_TIER_SORT_ORDER_SET = new Set(DECK_BOX_ALLOWED_TIER_SORT_ORDERS);
+const DECK_BOX_TIER_BASE_WEIGHTS = new Map([
+  [1, 30],
+  [3, 25],
+  [5, 20],
+  [7, 15],
+  [9, 10],
+]);
 
 function getTypeConfig(typeSlug) {
   switch (typeSlug) {
@@ -24,10 +33,20 @@ function getTypeConfig(typeSlug) {
         title: "Promo Box Database",
         matcher: ["promo", "promobox", "promo_box", "promo box"],
       };
+    case "collectors-boxes":
     case "ocg-boxes":
       return {
-        title: "OCG Box Database",
-        matcher: ["ocg", "ocgbox", "ocg_box", "ocg box"],
+        title: "Collectors Box Database",
+        matcher: [
+          "collectors",
+          "collectorsbox",
+          "collectors_box",
+          "collectors box",
+          "ocg",
+          "ocgbox",
+          "ocg_box",
+          "ocg box",
+        ],
       };
     default:
       return {
@@ -106,6 +125,44 @@ function formatOneInX(value) {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return "—";
   return `1 in ${(100 / num).toFixed(num >= 10 ? 1 : 2)}`;
+}
+
+function applyEffectiveBoxTierPercentages(cards, typeCode) {
+  const rows = Array.isArray(cards) ? cards : [];
+  if (!["deck_box", "promo_box", "collectors_box"].includes(normalizeText(typeCode))) {
+    return rows;
+  }
+
+  const tierWeights = new Map();
+  rows.forEach((row) => {
+    if (row?.is_pack_pool || !row?.tier_id) return;
+    const tierSortOrder = Number(row?.tier_sort_order ?? Number.MAX_SAFE_INTEGER);
+    let baseWeight = Math.max(0, Number(row?.weight_percent || 0));
+
+    if (["deck_box", "collectors_box"].includes(normalizeText(typeCode))) {
+      if (!DECK_BOX_ALLOWED_TIER_SORT_ORDER_SET.has(tierSortOrder)) {
+        return;
+      }
+      baseWeight = DECK_BOX_TIER_BASE_WEIGHTS.get(tierSortOrder) ?? 0;
+    }
+
+    if (!tierWeights.has(row.tier_id)) {
+      tierWeights.set(row.tier_id, baseWeight);
+    }
+  });
+
+  const totalWeight = Array.from(tierWeights.values()).reduce((sum, weight) => sum + weight, 0);
+  if (totalWeight <= 0) return rows;
+
+  return rows.map((row) => {
+    if (row?.is_pack_pool || !row?.tier_id) return row;
+    const tierWeight = tierWeights.get(row.tier_id);
+    if (!Number.isFinite(tierWeight)) return row;
+    return {
+      ...row,
+      effective_weight_percent: (tierWeight / totalWeight) * 100,
+    };
+  });
 }
 
 function ContainerDatabasePage() {
@@ -258,16 +315,23 @@ function ContainerDatabasePage() {
         });
       });
 
-      const hydratedContainers = matchingContainers.map((container) => ({
-        ...container,
-        cards: (cardsByContainerId.get(container.id) || []).sort((a, b) => {
-          const tierDiff =
-            Number(a.tier_sort_order ?? 9999) - Number(b.tier_sort_order ?? 9999);
-          if (tierDiff !== 0) return tierDiff;
-          return String(a.card_name).localeCompare(String(b.card_name));
-        }),
-        type_label: resolveTypeLabel(typeMap.get(container.container_type_id)),
-      }));
+      const hydratedContainers = matchingContainers.map((container) => {
+        const typeCode = resolveTypeCode(typeMap.get(container.container_type_id));
+        return {
+          ...container,
+          cards: applyEffectiveBoxTierPercentages(
+            (cardsByContainerId.get(container.id) || []).sort((a, b) => {
+              const tierDiff =
+                Number(a.tier_sort_order ?? 9999) - Number(b.tier_sort_order ?? 9999);
+              if (tierDiff !== 0) return tierDiff;
+              return String(a.card_name).localeCompare(String(b.card_name));
+            }),
+            typeCode
+          ),
+          type_label: resolveTypeLabel(typeMap.get(container.container_type_id)),
+          type_code: typeCode,
+        };
+      });
 
       setContainers(hydratedContainers);
 
@@ -454,10 +518,14 @@ function ContainerDatabasePage() {
                               ) : (
                                 <>
                                   <span className="container-database-odds-pill">
-                                    {formatPercent(row.weight_percent)}
+                                    {formatPercent(
+                                      row.effective_weight_percent ?? row.weight_percent
+                                    )}
                                   </span>
                                   <span className="container-database-odds-pill subtle">
-                                    {formatOneInX(row.weight_percent)}
+                                    {formatOneInX(
+                                      row.effective_weight_percent ?? row.weight_percent
+                                    )}
                                   </span>
                                 </>
                               )}

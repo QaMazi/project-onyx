@@ -166,7 +166,46 @@ function getPageAllowance(pageKey, state, user) {
   };
 }
 
-function RewardNotificationModal({ notification, onDismiss, dismissing }) {
+function formatRewardChoiceOptionLabel(option) {
+  const optionKind = String(option?.option_kind || "");
+
+  if (optionKind === "shards") {
+    return `${Number(option?.exact_quantity || 0)} Shards`;
+  }
+
+  if (optionKind === "feature_coins") {
+    return `${Number(option?.exact_quantity || 0)} Feature Coins`;
+  }
+
+  if (optionKind === "specific_item") {
+    return `${option?.item_name || "Unknown Item"} x${Number(option?.exact_quantity || 0)}`;
+  }
+
+  if (optionKind === "random_item") {
+    const poolCount = Array.isArray(option?.pool_item_ids) ? option.pool_item_ids.length : 0;
+    return poolCount
+      ? `Random Item from Pool (${poolCount}) x${Number(option?.exact_quantity || 0)}`
+      : `Random Eligible Item x${Number(option?.exact_quantity || 0)}`;
+  }
+
+  return "Unknown Choice";
+}
+
+function RewardNotificationModal({
+  notification,
+  pendingChoices,
+  onClaimChoice,
+  claimingChoiceId,
+  actionError,
+  onDismiss,
+  dismissing,
+}) {
+  const [selectedChoices, setSelectedChoices] = useState({});
+
+  useEffect(() => {
+    setSelectedChoices({});
+  }, [notification?.id, pendingChoices]);
+
   if (!notification) return null;
 
   const payload = notification.payload || {};
@@ -176,98 +215,198 @@ function RewardNotificationModal({ notification, onDismiss, dismissing }) {
     (row) => row.user_id === notification.user_id
   );
   const grantStatus = payload.grant_status || "complete";
+  const unresolvedChoices = Array.isArray(pendingChoices) ? pendingChoices : [];
+  const hasPendingChoices = unresolvedChoices.length > 0;
+
+  function toggleChoiceOption(choiceEntryId, optionId, maxSelections) {
+    setSelectedChoices((current) => {
+      const existing = current[choiceEntryId] || [];
+      if (existing.includes(optionId)) {
+        return {
+          ...current,
+          [choiceEntryId]: existing.filter((value) => value !== optionId),
+        };
+      }
+
+      if (existing.length >= maxSelections) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [choiceEntryId]: [...existing, optionId],
+      };
+    });
+  }
 
   return (
     <div className="progression-global-modal-backdrop">
-      <div className="progression-global-modal progression-reward-notice-modal">
-        <div className="progression-global-modal-kicker">ROUND REWARD</div>
-        <h2 className="progression-global-modal-title">
-          Round {payload.round_label || "Reward"}
-        </h2>
+      <div
+        className="progression-global-modal progression-reward-notice-modal"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="progression-reward-notice-shell">
+          <div className="progression-global-modal-kicker">ROUND REWARD</div>
+          <h2 className="progression-global-modal-title">
+            Round {payload.round_label || "Reward"}
+          </h2>
 
-        <div className="progression-reward-notice-grid">
-          <div className="progression-reward-notice-card">
-            <div className="progression-reward-notice-label">Placement</div>
-            <div className="progression-reward-notice-value">
-              {payload.placement ?? "-"}
-            </div>
-          </div>
-
-          <div className="progression-reward-notice-card">
-            <div className="progression-reward-notice-label">Points</div>
-            <div className="progression-reward-notice-value">
-              {payload.points_awarded ?? "-"}
-            </div>
-          </div>
-
-          <div className="progression-reward-notice-card">
-            <div className="progression-reward-notice-label">Current Points</div>
-            <div className="progression-reward-notice-value">
-              {currentStanding?.points ?? payload.current_points ?? "-"}
-            </div>
-          </div>
-        </div>
-
-        {grantStatus !== "complete" ? (
-          <div className="progression-global-error">
-            Rewards need an admin-side manual fix, but this is the reward package
-            you were supposed to receive.
-          </div>
-        ) : null}
-
-        <section className="progression-reward-notice-section">
-          <h3>Rewards</h3>
-          {grants.length === 0 ? (
-            <div className="progression-reward-notice-empty">
-              No direct rewards were attached to this round.
-            </div>
-          ) : (
-            <div className="progression-reward-notice-list">
-              {grants.map((grant, index) => (
-                <div
-                  key={`${notification.id}-grant-${index}`}
-                  className="progression-reward-notice-row"
-                >
-                  <span>{grant.label}</span>
-                  <strong>{grant.value}</strong>
+          <div className="progression-reward-notice-scroll">
+            <div className="progression-reward-notice-grid">
+              <div className="progression-reward-notice-card">
+                <div className="progression-reward-notice-label">Placement</div>
+                <div className="progression-reward-notice-value">
+                  {payload.placement ?? "-"}
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              </div>
 
-        <section className="progression-reward-notice-section">
-          <h3>Standings</h3>
-          {standings.length === 0 ? (
-            <div className="progression-reward-notice-empty">
-              Scoreboard data is not available yet.
-            </div>
-          ) : (
-            <div className="progression-reward-notice-list">
-              {standings.map((row, index) => (
-                <div
-                  key={`${notification.id}-standing-${row.user_id || index}`}
-                  className="progression-reward-notice-row"
-                >
-                  <span>
-                    #{row.position ?? index + 1} {row.username || "Player"}
-                  </span>
-                  <strong>{row.points ?? 0} pts</strong>
+              <div className="progression-reward-notice-card">
+                <div className="progression-reward-notice-label">Points</div>
+                <div className="progression-reward-notice-value">
+                  {payload.points_awarded ?? "-"}
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              </div>
 
-        <div className="progression-global-modal-actions">
-          <button
-            type="button"
-            className="progression-global-primary-btn"
-            disabled={dismissing}
-            onClick={onDismiss}
-          >
-            {dismissing ? "Saving..." : "OK"}
-          </button>
+              <div className="progression-reward-notice-card">
+                <div className="progression-reward-notice-label">Current Points</div>
+                <div className="progression-reward-notice-value">
+                  {currentStanding?.points ?? payload.current_points ?? "-"}
+                </div>
+              </div>
+            </div>
+
+            {grantStatus !== "complete" ? (
+              <div className="progression-global-error">
+                Rewards need an admin-side manual fix, but this is the reward package
+                you were supposed to receive.
+              </div>
+            ) : null}
+
+            {actionError ? (
+              <div className="progression-global-error">{actionError}</div>
+            ) : null}
+
+            {hasPendingChoices ? (
+              <section className="progression-reward-notice-section">
+                <h3>Choice Rewards</h3>
+                <div className="progression-reward-choice-stack">
+                  {unresolvedChoices.map((choiceEntry) => {
+                    const selectedOptionIds = selectedChoices[choiceEntry.id] || [];
+                    const requiredSelections = Number(choiceEntry.choices_remaining || choiceEntry.choices_required || 1);
+                    const optionSnapshots = Array.isArray(choiceEntry.option_snapshots)
+                      ? choiceEntry.option_snapshots
+                      : [];
+
+                    return (
+                      <article key={choiceEntry.id} className="progression-reward-choice-card">
+                        <div className="progression-reward-choice-header">
+                          <div>
+                            <div className="progression-reward-notice-label">Choice Reward</div>
+                            <strong>Pick {requiredSelections} option{requiredSelections === 1 ? "" : "s"}</strong>
+                          </div>
+                          <span>
+                            {selectedOptionIds.length}/{requiredSelections} selected
+                          </span>
+                        </div>
+
+                        <div className="progression-reward-choice-options">
+                          {optionSnapshots.map((option) => {
+                            const optionId = option?.id;
+                            const isSelected = selectedOptionIds.includes(optionId);
+                            return (
+                              <button
+                                key={optionId}
+                                type="button"
+                                className={`progression-reward-choice-option ${isSelected ? "is-selected" : ""}`}
+                                onClick={() =>
+                                  toggleChoiceOption(choiceEntry.id, optionId, requiredSelections)
+                                }
+                              >
+                                <strong>{formatRewardChoiceOptionLabel(option)}</strong>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="progression-global-primary-btn"
+                          disabled={
+                            claimingChoiceId === choiceEntry.id ||
+                            selectedOptionIds.length !== requiredSelections
+                          }
+                          onClick={() => onClaimChoice(choiceEntry.id, selectedOptionIds)}
+                        >
+                          {claimingChoiceId === choiceEntry.id
+                            ? "Claiming..."
+                            : `Confirm ${requiredSelections} Choice${requiredSelections === 1 ? "" : "s"}`}
+                        </button>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="progression-reward-notice-section">
+              <h3>Rewards</h3>
+              {grants.length === 0 ? (
+                <div className="progression-reward-notice-empty">
+                  No direct rewards were attached to this round.
+                </div>
+              ) : (
+                <div className="progression-reward-notice-list">
+                  {grants.map((grant, index) => (
+                    <div
+                      key={`${notification.id}-grant-${index}`}
+                      className="progression-reward-notice-row"
+                    >
+                      <span>{grant.label}</span>
+                      <strong>{grant.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="progression-reward-notice-section">
+              <h3>Standings</h3>
+              {standings.length === 0 ? (
+                <div className="progression-reward-notice-empty">
+                  Scoreboard data is not available yet.
+                </div>
+              ) : (
+                <div className="progression-reward-notice-list">
+                  {standings.map((row, index) => (
+                    <div
+                      key={`${notification.id}-standing-${row.user_id || index}`}
+                      className="progression-reward-notice-row"
+                    >
+                      <span>
+                        #{row.position ?? index + 1} {row.username || "Player"}
+                      </span>
+                      <strong>{row.points ?? 0} pts</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <div className="progression-global-modal-actions">
+            <button
+              type="button"
+              className="progression-global-primary-btn"
+              disabled={dismissing || hasPendingChoices}
+              onClick={onDismiss}
+            >
+              {dismissing
+                ? "Saving..."
+                : hasPendingChoices
+                ? "Resolve Choice Rewards First"
+                : "Close Reward Panel"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -355,10 +494,13 @@ export function ProgressionSystemProvider({ pageKey, children }) {
   const [state, setState] = useState(null);
   const [statusStrip, setStatusStrip] = useState([]);
   const [rewardNotification, setRewardNotification] = useState(null);
+  const [pendingRewardChoices, setPendingRewardChoices] = useState([]);
   const [rewardErrors, setRewardErrors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [dismissingReward, setDismissingReward] = useState(false);
+  const [claimingRewardChoiceId, setClaimingRewardChoiceId] = useState("");
+  const [rewardModalError, setRewardModalError] = useState("");
   const [beginSeriesError, setBeginSeriesError] = useState("");
 
   const activeSeriesId = state?.activeSeriesId || null;
@@ -368,7 +510,9 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       setState(null);
       setStatusStrip([]);
       setRewardNotification(null);
+      setPendingRewardChoices([]);
       setRewardErrors([]);
+      setRewardModalError("");
       setLoading(false);
       return;
     }
@@ -398,7 +542,9 @@ export function ProgressionSystemProvider({ pageKey, children }) {
         });
         setStatusStrip([]);
         setRewardNotification(null);
+        setPendingRewardChoices([]);
         setRewardErrors([]);
+        setRewardModalError("");
         return;
       }
 
@@ -478,6 +624,20 @@ export function ProgressionSystemProvider({ pageKey, children }) {
         )
       );
       setRewardNotification(rewardResponse.data || null);
+      if (rewardResponse.data?.id) {
+        const { data: pendingChoiceData, error: pendingChoiceError } = await supabase.rpc(
+          "get_my_pending_round_reward_choices",
+          {
+            p_notification_id: rewardResponse.data.id,
+          }
+        );
+
+        if (pendingChoiceError) throw pendingChoiceError;
+        setPendingRewardChoices(Array.isArray(pendingChoiceData) ? pendingChoiceData : []);
+      } else {
+        setPendingRewardChoices([]);
+      }
+      setRewardModalError("");
       setRewardErrors(errorResponse?.data || []);
     } catch (error) {
       console.error("Failed to load progression state:", error);
@@ -496,7 +656,9 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       });
       setStatusStrip([]);
       setRewardNotification(null);
+      setPendingRewardChoices([]);
       setRewardErrors([]);
+      setRewardModalError("");
     } finally {
       setLoading(false);
     }
@@ -582,19 +744,47 @@ export function ProgressionSystemProvider({ pageKey, children }) {
     if (!rewardNotification?.id || dismissingReward) return;
 
     setDismissingReward(true);
+    setRewardModalError("");
 
     try {
-      const { error } = await supabase
-        .from("player_round_reward_notifications")
-        .update({ dismissed_at: new Date().toISOString() })
-        .eq("id", rewardNotification.id);
+      const { error } = await supabase.rpc("dismiss_round_reward_notification", {
+        p_notification_id: rewardNotification.id,
+      });
 
       if (error) throw error;
       await loadState();
+    } catch (error) {
+      console.error("Failed to dismiss reward notification:", error);
+      setRewardModalError(error.message || "Failed to close reward panel.");
     } finally {
       setDismissingReward(false);
     }
   }, [dismissingReward, loadState, rewardNotification]);
+
+  const claimRewardChoice = useCallback(
+    async (choiceEntryId, optionIds) => {
+      if (!choiceEntryId || claimingRewardChoiceId) return;
+
+      setClaimingRewardChoiceId(choiceEntryId);
+      setRewardModalError("");
+
+      try {
+        const { error } = await supabase.rpc("claim_round_reward_choice", {
+          p_choice_entry_id: choiceEntryId,
+          p_option_ids: optionIds,
+        });
+
+        if (error) throw error;
+        await loadState();
+      } catch (error) {
+        console.error("Failed to claim reward choice:", error);
+        setRewardModalError(error.message || "Failed to claim reward choice.");
+      } finally {
+        setClaimingRewardChoiceId("");
+      }
+    },
+    [claimingRewardChoiceId, loadState]
+  );
 
   const clearRewardError = useCallback(
     async (errorId) => {
@@ -616,6 +806,7 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       busy,
       state,
       statusStrip,
+      pendingRewardChoices,
       rewardErrors,
       activeSeriesId,
       refresh: loadState,
@@ -623,6 +814,7 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       readyUp,
       recordDeckExport,
       dismissReward,
+      claimRewardChoice,
       clearRewardError,
       pageAllowance: allowance,
     }),
@@ -631,6 +823,7 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       busy,
       state,
       statusStrip,
+      pendingRewardChoices,
       rewardErrors,
       activeSeriesId,
       loadState,
@@ -638,6 +831,7 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       readyUp,
       recordDeckExport,
       dismissReward,
+      claimRewardChoice,
       clearRewardError,
       allowance,
     ]
@@ -666,7 +860,11 @@ export function ProgressionSystemProvider({ pageKey, children }) {
       {rewardNotification ? (
         <RewardNotificationModal
           notification={rewardNotification}
+          pendingChoices={pendingRewardChoices}
+          claimingChoiceId={claimingRewardChoiceId}
+          actionError={rewardModalError}
           dismissing={dismissingReward}
+          onClaimChoice={claimRewardChoice}
           onDismiss={dismissReward}
         />
       ) : null}
@@ -687,6 +885,7 @@ export function useProgression() {
       busy: false,
       state: null,
       statusStrip: [],
+      pendingRewardChoices: [],
       rewardErrors: [],
       activeSeriesId: null,
       refresh: async () => {},
@@ -694,6 +893,7 @@ export function useProgression() {
       readyUp: async () => {},
       recordDeckExport: async () => {},
       dismissReward: async () => {},
+      claimRewardChoice: async () => {},
       clearRewardError: async () => {},
       pageAllowance: {
         allowed: true,

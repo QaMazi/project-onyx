@@ -1,0 +1,26 @@
+2026-03-21 - Collectors Box Replacement
+
+Purpose
+- Replace OCG Boxes with Collectors Boxes everywhere.
+- Keep this as a replacement, not a fourth box type.
+- Make Collectors Boxes use only the first 5 box tiers while preserving the existing box tier table.
+
+Backend changes
+- Replaced `ocg_box` container type with `collectors_box`.
+- Renamed OCG random key product to `Random Collectors Box Key`.
+- Renamed OCG exact key family to `collectors_box_key`.
+- Updated the box admin/opener helper functions to use:
+  - `collectors_box`
+  - `collectors_box_key`
+  - `random_collectors_box_key`
+  - `COL-001` style labels
+- Added server validation so Collectors Boxes can only save cards into the first 5 tiers:
+  - Bulk
+  - Standard
+  - Solid
+  - Advanced
+  - Elite
+
+Behavior note
+- The live box tier roller already normalizes across only the tiers actually assigned in a box.
+- Because of that, Collectors Boxes automatically get a 100% effective split across their 5 visible tiers without needing a second tier table.

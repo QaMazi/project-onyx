@@ -1,0 +1,15 @@
+2026-03-21 Store Randomizer / Visibility Alignment
+
+- Reworked `public.store_catalog` so store visibility is driven only by `item_definitions.is_active`.
+- Reworked `public.randomize_store_item_availability(...)` so `is_randomly_available` now means `eligible for random store setup`.
+- The category randomizer now only touches random-enabled items and sets:
+  - `is_active`
+  - `is_store_purchase_locked`
+- Current randomizer behavior assumption:
+  - randomized `shown` items become buyable
+  - randomized `hidden` items become purchase locked
+- Updated cart checkout and opener purchase RPCs so they respect:
+  - hidden items via `is_active = false`
+  - buying disabled via `is_store_purchase_locked = true`
+  - but no longer treat `is_randomly_available` as player-facing availability
+- Updated round reward random item fallback so store visibility no longer affects reward eligibility.

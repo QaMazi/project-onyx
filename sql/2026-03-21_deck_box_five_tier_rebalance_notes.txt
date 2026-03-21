@@ -1,0 +1,22 @@
+2026-03-21 shared 5-tier box rebalance
+
+- Deck Boxes and Collectors Boxes now use the same 5-tier ladder:
+  - Bulk
+  - Solid
+  - Elite
+  - HighChase
+  - Legendary
+- Shared 5-tier box roll weights are now:
+  - Bulk 30%
+  - Solid 25%
+  - Elite 20%
+  - HighChase 15%
+  - Legendary 10%
+- Existing Deck Box and Collectors Box cards are remapped down from skipped tiers:
+  - Standard -> Bulk
+  - Advanced -> Solid
+  - Premium -> Elite
+  - UltraChase -> HighChase
+  - Mythic -> Legendary
+- Promo Boxes keep the full 10-tier spread.
+- Boxes still roll tier first, card second, and rarity third.

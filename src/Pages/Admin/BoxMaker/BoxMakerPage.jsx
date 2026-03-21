@@ -15,7 +15,12 @@ const CONTENT_MODE_OPTIONS = [
 const BOX_CATEGORY_OPTIONS = [
   { value: "deck_box", label: "Deck Box", groupLabel: "Deck Boxes", keyPrefix: "DCK" },
   { value: "promo_box", label: "Promo Box", groupLabel: "Promo Boxes", keyPrefix: "PRO" },
-  { value: "ocg_box", label: "OCG Box", groupLabel: "OCG Boxes", keyPrefix: "OCG" },
+  {
+    value: "collectors_box",
+    label: "Collectors Box",
+    groupLabel: "Collectors Boxes",
+    keyPrefix: "COL",
+  },
 ];
 const BOX_CATEGORY_CONFIGS = Object.fromEntries(
   BOX_CATEGORY_OPTIONS.map((option) => [option.value, option])
@@ -23,6 +28,15 @@ const BOX_CATEGORY_CONFIGS = Object.fromEntries(
 
 const CONTAINER_IMAGE_BUCKET = "container-images";
 const BOX_NUMBER_RE = /^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/;
+const DECK_BOX_ALLOWED_TIER_SORT_ORDERS = [1, 3, 5, 7, 9];
+const DECK_BOX_ALLOWED_TIER_SORT_ORDER_SET = new Set(DECK_BOX_ALLOWED_TIER_SORT_ORDERS);
+const DECK_BOX_TIER_BASE_WEIGHTS = {
+  1: 30,
+  3: 25,
+  5: 20,
+  7: 15,
+  9: 10,
+};
 
 function buildContainerCode(name) {
   return String(name || "")
@@ -99,6 +113,89 @@ function getBoxLibraryGroupLabel(boxCategoryCode) {
 function getBoxLibraryGroupSortValue(groupLabel) {
   const index = BOX_CATEGORY_OPTIONS.findIndex((option) => option.groupLabel === groupLabel);
   return index >= 0 ? index : BOX_CATEGORY_OPTIONS.length + 10;
+}
+
+function isDeckBoxCategory(boxCategoryCode) {
+  return normalizeBoxCategoryCode(boxCategoryCode) === "deck_box";
+}
+
+function isCollectorsBoxCategory(boxCategoryCode) {
+  return normalizeBoxCategoryCode(boxCategoryCode) === "collectors_box";
+}
+
+function usesSharedFiveTierBoxCategory(boxCategoryCode) {
+  return isDeckBoxCategory(boxCategoryCode) || isCollectorsBoxCategory(boxCategoryCode);
+}
+
+function getVisibleBoxTiers(cardTiers, boxCategoryCode) {
+  const tiers = Array.isArray(cardTiers) ? cardTiers : [];
+  if (usesSharedFiveTierBoxCategory(boxCategoryCode)) {
+    return tiers.filter((tier) =>
+      DECK_BOX_ALLOWED_TIER_SORT_ORDER_SET.has(Number(tier?.sort_order ?? Number.MAX_SAFE_INTEGER))
+    );
+  }
+  return tiers;
+}
+
+function formatTierWeightPercent(value) {
+  const numericValue = Number(value || 0);
+  if (!Number.isFinite(numericValue) || numericValue <= 0) return "0%";
+  const rounded = Number(numericValue.toFixed(2));
+  return `${rounded.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")}%`;
+}
+
+function getDeckBoxBaseTierWeight(tier) {
+  return DECK_BOX_TIER_BASE_WEIGHTS[Number(tier?.sort_order || 0)] || 0;
+}
+
+function getBaseTierWeightForBoxCategory(tier, boxCategoryCode) {
+  if (usesSharedFiveTierBoxCategory(boxCategoryCode)) {
+    return getDeckBoxBaseTierWeight(tier);
+  }
+  return Math.max(0, Number(tier?.weight_percent || 0));
+}
+
+function buildEffectiveTierWeightMap(visibleCardTiers, boxCards, boxCategoryCode) {
+  const activeTierIds = new Set(
+    (Array.isArray(boxCards) ? boxCards : [])
+      .filter((row) => row?.tier_id && row?.is_enabled !== false)
+      .map((row) => row.tier_id)
+  );
+
+  const weights = new Map();
+  let totalWeight = 0;
+
+  (Array.isArray(visibleCardTiers) ? visibleCardTiers : []).forEach((tier) => {
+    if (!activeTierIds.has(tier.id)) return;
+    const weight = getBaseTierWeightForBoxCategory(tier, boxCategoryCode);
+    if (!Number.isFinite(weight) || weight <= 0) return;
+    weights.set(tier.id, weight);
+    totalWeight += weight;
+  });
+
+  return new Map(
+    (Array.isArray(visibleCardTiers) ? visibleCardTiers : []).map((tier) => [
+      tier.id,
+      totalWeight > 0 && weights.has(tier.id) ? (weights.get(tier.id) / totalWeight) * 100 : 0,
+    ])
+  );
+}
+
+function getDeckBoxRemappedTierId(tierId, cardTiers) {
+  const tiers = Array.isArray(cardTiers) ? cardTiers : [];
+  const currentTier = tiers.find((tier) => tier.id === tierId);
+  const currentSortOrder = Number(currentTier?.sort_order ?? 0);
+
+  if (!currentTier || DECK_BOX_ALLOWED_TIER_SORT_ORDER_SET.has(currentSortOrder)) {
+    return tierId;
+  }
+
+  const targetSortOrder =
+    [...DECK_BOX_ALLOWED_TIER_SORT_ORDERS]
+      .reverse()
+      .find((sortOrder) => sortOrder <= currentSortOrder) ?? DECK_BOX_ALLOWED_TIER_SORT_ORDERS[0];
+
+  return tiers.find((tier) => Number(tier?.sort_order ?? 0) === targetSortOrder)?.id || tierId;
 }
 
 function buildCardImageUrl(card) {
@@ -181,26 +278,56 @@ function BoxMakerPage() {
     [boxCategoryCode, boxNumberCode]
   );
 
+  const visibleCardTiers = useMemo(
+    () => getVisibleBoxTiers(cardTiers, boxCategoryCode),
+    [boxCategoryCode, cardTiers]
+  );
+
+  const visibleTierIds = useMemo(
+    () => new Set(visibleCardTiers.map((tier) => tier.id)),
+    [visibleCardTiers]
+  );
+
+  const isFiveTierBox = useMemo(
+    () => usesSharedFiveTierBoxCategory(boxCategoryCode),
+    [boxCategoryCode]
+  );
+
+  const effectiveTierWeightMap = useMemo(
+    () => buildEffectiveTierWeightMap(visibleCardTiers, boxCards, boxCategoryCode),
+    [boxCards, boxCategoryCode, visibleCardTiers]
+  );
+
+  const invalidTierCards = useMemo(
+    () =>
+      isFiveTierBox
+        ? boxCards.filter((row) => row?.tier_id && !visibleTierIds.has(row.tier_id))
+        : [],
+    [boxCards, isFiveTierBox, visibleTierIds]
+  );
+
   const groupedBoxCards = useMemo(
     () =>
-      (cardTiers || []).map((tier) => ({
+      visibleCardTiers.map((tier) => ({
         tier,
+        effectiveWeightPercent: effectiveTierWeightMap.get(tier.id) || 0,
         rows: boxCards
           .filter((row) => row.tier_id === tier.id)
           .sort((left, right) =>
             String(left.card_name || "").localeCompare(String(right.card_name || ""))
           ),
       })),
-    [boxCards, cardTiers]
+    [boxCards, effectiveTierWeightMap, visibleCardTiers]
   );
 
   const boxTierSummaries = useMemo(
     () =>
-      (cardTiers || []).map((tier) => ({
+      visibleCardTiers.map((tier) => ({
         tier,
         count: boxCards.filter((row) => row.tier_id === tier.id).length,
+        effectiveWeightPercent: effectiveTierWeightMap.get(tier.id) || 0,
       })),
-    [boxCards, cardTiers]
+    [boxCards, effectiveTierWeightMap, visibleCardTiers]
   );
 
   const groupedBoxProducts = useMemo(() => {
@@ -283,7 +410,8 @@ function BoxMakerPage() {
     Boolean(code) &&
     boxNumberIsValid &&
     normalizedCardsPerOpen > 0 &&
-    Boolean(boxCategoryCode);
+    Boolean(boxCategoryCode) &&
+    invalidTierCards.length === 0;
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -300,6 +428,19 @@ function BoxMakerPage() {
       return next;
     });
   }, [cardTiers]);
+
+  useEffect(() => {
+    if (!visibleCardTiers.length) {
+      if (selectedTierId) {
+        setSelectedTierId("");
+      }
+      return;
+    }
+
+    if (!visibleCardTiers.some((tier) => tier.id === selectedTierId)) {
+      setSelectedTierId(visibleCardTiers[0].id);
+    }
+  }, [selectedTierId, visibleCardTiers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -666,7 +807,49 @@ function BoxMakerPage() {
   }
 
   function handleBoxCategoryChange(nextValue) {
-    setBoxCategoryCode(nextValue);
+    const nextCategoryCode = normalizeBoxCategoryCode(nextValue);
+    const nextVisibleTiers = getVisibleBoxTiers(cardTiers, nextCategoryCode);
+    const nextVisibleTierIds = new Set(nextVisibleTiers.map((tier) => tier.id));
+
+    if (usesSharedFiveTierBoxCategory(nextCategoryCode)) {
+      const invalidRows = boxCards.filter((row) => row?.tier_id && !nextVisibleTierIds.has(row.tier_id));
+      if (invalidRows.length > 0) {
+        const categoryLabel = getBoxCategoryConfig(nextCategoryCode).groupLabel;
+        const confirmed = window.confirm(
+          `${categoryLabel} only use Bulk, Solid, Elite, HighChase, and Legendary. Remap ${invalidRows.length} assigned card${
+            invalidRows.length === 1 ? "" : "s"
+          } down into those 5 shared box tiers before switching?`
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        setBoxCards((current) =>
+          current.map((row) => {
+            if (!row?.tier_id || nextVisibleTierIds.has(row.tier_id)) return row;
+            const remappedTierId = getDeckBoxRemappedTierId(row.tier_id, cardTiers);
+            const tier = tierMap.get(remappedTierId);
+            return {
+              ...row,
+              tier_id: remappedTierId,
+              tier_code: tier?.code || "",
+              tier_name: tier?.name || "Tier",
+            };
+          })
+        );
+        setStatusMessage(
+          `Remapped ${invalidRows.length} assigned card${
+            invalidRows.length === 1 ? "" : "s"
+          } into the ${categoryLabel} 5-tier setup.`
+        );
+      }
+    }
+
+    setBoxCategoryCode(nextCategoryCode);
+    if (!nextVisibleTierIds.has(selectedTierId)) {
+      setSelectedTierId(nextVisibleTiers[0]?.id || "");
+    }
     setErrorMessage("");
   }
 
@@ -774,7 +957,7 @@ function BoxMakerPage() {
             <div className="container-maker-kicker">ADMIN</div>
             <h1 className="container-maker-title">Box Maker</h1>
             <p className="container-maker-subtitle">
-              Build Deck Boxes, Promo Boxes, and OCG Boxes with the same cleaner
+              Build Deck Boxes, Promo Boxes, and Collectors Boxes with the same cleaner
               layout as Pack Maker, while keeping the normal box tier system and
               weighted rarity flow intact.
             </p>
@@ -1070,16 +1253,28 @@ function BoxMakerPage() {
                       </div>
 
                       <div className="pack-maker-autonote">
-                        Deck Boxes, Promo Boxes, and OCG Boxes each keep their own
+                        Deck Boxes, Promo Boxes, and Collectors Boxes each keep their own
                         001-999 numbering. Their generated key labels now follow that
-                        identity too, like {generatedBoxKeyLabel}. Box tiers still
-                        control the first pull roll here, and the shared rarity
-                        roller still happens afterward when the box is opened.
+                        identity too, like {generatedBoxKeyLabel}. Deck Boxes and
+                        Collectors Boxes both use Bulk, Solid, Elite, HighChase, and
+                        Legendary at 30 / 25 / 20 / 15 / 10, while Promo Boxes still
+                        use the full 10-tier spread. Boxes always roll tier first,
+                        card second, and rarity third when they are opened.
                       </div>
 
                       {!boxNumberIsValid ? (
                         <div className="container-maker-error">
                           Box Number must be exactly 3 digits from 001 to 999.
+                        </div>
+                      ) : null}
+
+                      {invalidTierCards.length > 0 ? (
+                        <div className="container-maker-error">
+                          {isFiveTierBox
+                            ? `${getBoxCategoryConfig(boxCategoryCode).groupLabel} only support Bulk, Solid, Elite, HighChase, and Legendary. Remap or remove the ${invalidTierCards.length} assigned card${
+                                invalidTierCards.length === 1 ? "" : "s"
+                              } outside that ladder before saving.`
+                            : `Promo Boxes keep the full 10-tier ladder and should not hit this validation.`}
                         </div>
                       ) : null}
 
@@ -1119,7 +1314,10 @@ function BoxMakerPage() {
                           <div key={entry.tier.id} className="box-maker-summary-card">
                             <span>{entry.tier.name}</span>
                             <strong>{entry.count} cards</strong>
-                            <em>{Number(entry.tier.weight_percent || 0)}% base weight</em>
+                            <em>
+                              {formatTierWeightPercent(entry.effectiveWeightPercent)}{" "}
+                              {isFiveTierBox ? "effective weight" : "base weight"}
+                            </em>
                           </div>
                         ))}
                       </div>
@@ -1166,7 +1364,7 @@ function BoxMakerPage() {
                           onChange={(event) => setSelectedTierId(event.target.value)}
                           disabled={saving}
                         >
-                          {cardTiers.map((tier) => (
+                          {visibleCardTiers.map((tier) => (
                             <option key={tier.id} value={tier.id}>
                               {tier.name}
                             </option>
@@ -1241,8 +1439,9 @@ function BoxMakerPage() {
                                 <h3>{group.tier.name}</h3>
                                 <div className="pack-maker-tier-section-header-actions">
                                   <span>
-                                    {group.rows.length} cards | {Number(group.tier.weight_percent || 0)}
-                                    % weight
+                                    {group.rows.length} cards |{" "}
+                                    {formatTierWeightPercent(group.effectiveWeightPercent)}{" "}
+                                    {isFiveTierBox ? "effective" : "base"} weight
                                   </span>
                                   <button
                                     type="button"
@@ -1320,7 +1519,7 @@ function BoxMakerPage() {
                                               onClick={(event) => event.stopPropagation()}
                                               disabled={saving}
                                             >
-                                              {cardTiers.map((tier) => (
+                                              {visibleCardTiers.map((tier) => (
                                                 <option key={tier.id} value={tier.id}>
                                                   {tier.name}
                                                 </option>

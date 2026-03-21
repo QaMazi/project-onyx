@@ -443,22 +443,18 @@ function StorePage() {
                   <div className="store-exchange-card">
                     <div className="store-item-name">Currency Exchange</div>
                     <div className="store-item-desc">
-                      Convert between Shards and Feature Coins with the live series
-                      exchange settings.
+                      Convert between Shards and Feature Coins with the live
+                      series buy and sell rates.
                     </div>
 
                     <div className="store-exchange-rates">
                       <div className="store-exchange-rate-row">
-                        <span>Shards per Feature Coin</span>
-                        <strong>{exchangeConfig?.shards_per_feature_coin ?? "-"}</strong>
+                        <span>Buy 1 Feature Coin</span>
+                        <strong>{exchangeConfig?.shards_per_feature_coin ?? "-"} Shards</strong>
                       </div>
                       <div className="store-exchange-rate-row">
-                        <span>Feature Coin to Shards Rate</span>
-                        <strong>{exchangeConfig?.feature_coin_to_shards_rate ?? "-"}</strong>
-                      </div>
-                      <div className="store-exchange-rate-row">
-                        <span>Fee</span>
-                        <strong>{exchangeConfig?.fee_percent ?? 0}%</strong>
+                        <span>Sell 1 Feature Coin</span>
+                        <strong>{exchangeConfig?.feature_coin_to_shards_rate ?? "-"} Shards</strong>
                       </div>
                     </div>
 

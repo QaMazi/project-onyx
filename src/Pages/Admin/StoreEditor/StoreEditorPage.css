@@ -166,6 +166,84 @@
   gap: 10px;
 }
 
+.store-editor-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.store-editor-action-card {
+  display: grid;
+  gap: 8px;
+  min-height: 88px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(var(--theme-accent-2-rgb), 0.12),
+      rgba(var(--theme-accent-3-rgb), 0.06)
+    ),
+    rgba(255, 255, 255, 0.03);
+}
+
+.store-editor-action-card span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 238, 196, 0.72);
+}
+
+.store-editor-toggle-btn {
+  min-height: 42px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff9ea;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(var(--theme-accent-rgb), 0.26),
+      rgba(var(--theme-accent-2-rgb), 0.14)
+    ),
+    rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    opacity 140ms ease;
+}
+
+.store-editor-toggle-btn.is-on {
+  box-shadow: 0 0 18px rgba(var(--theme-accent-rgb), 0.16);
+}
+
+.store-editor-toggle-btn.is-off {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(170, 92, 92, 0.24),
+      rgba(255, 174, 78, 0.08)
+    ),
+    rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 128, 128, 0.16);
+}
+
+.store-editor-toggle-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(var(--theme-accent-rgb), 0.32);
+}
+
+.store-editor-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .store-editor-field {
   display: flex;
   flex-direction: column;
@@ -215,7 +293,7 @@
 
 .store-editor-exchange-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -244,7 +322,8 @@
   .store-editor-exchange-grid,
   .store-editor-modal-toolbar,
   .store-editor-modal-item,
-  .store-editor-item-header {
+  .store-editor-item-header,
+  .store-editor-action-grid {
     grid-template-columns: 1fr;
   }
 }

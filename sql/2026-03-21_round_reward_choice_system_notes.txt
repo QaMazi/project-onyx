@@ -1,0 +1,25 @@
+Round reward system upgrade:
+
+- Added row-based reward config tables:
+  - public.series_round_reward_entries
+  - public.series_round_reward_entry_options
+  - public.series_round_reward_entry_option_pool_items
+- Added pending player choice state:
+  - public.player_round_reward_choice_entries
+- Migrated existing legacy round reward configs into the new row-based tables so old rounds still load.
+- Added admin RPCs:
+  - public.get_series_round_reward_editor_configs(uuid)
+  - public.save_series_round_reward_config(uuid, uuid, integer, integer, jsonb)
+  - public.delete_series_round_reward_config(uuid, uuid)
+- Added player RPCs:
+  - public.get_my_pending_round_reward_choices(uuid)
+  - public.claim_round_reward_choice(uuid, uuid[])
+  - public.dismiss_round_reward_notification(uuid)
+- Reward processing now supports:
+  - multiple shared rewards
+  - multiple placement rewards
+  - Random rewards
+  - Set rewards
+  - Choice rewards with distinct picks
+  - reroll-per-quantity random item rewards instead of cloning one random result
+- Random key purchases from the opener page now grant the random-key inventory item itself instead of resolving immediately into an exact key.

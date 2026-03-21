@@ -12,26 +12,29 @@ import "../../Store/StorePage.css";
 import "./StoreEditorPage.css";
 
 const EXCHANGE_CATEGORY_CODE = "currency_exchange";
-const RETIRED_CATEGORY_CODE = "retired_legacy";
 
 function buildCategorySummary(items) {
   return {
     total: items.length,
-    active: items.filter((item) => item.is_active !== false).length,
-    locked: items.filter((item) => item.is_store_purchase_locked).length,
-    rngLocked: items.filter((item) => item.is_reward_rng_locked).length,
+    shown: items.filter((item) => item.is_active !== false).length,
+    hidden: items.filter((item) => item.is_active === false).length,
+    buyingAllowed: items.filter(
+      (item) =>
+        item.is_active !== false && item.is_store_purchase_locked !== true
+    ).length,
+    randomEnabled: items.filter((item) => item.is_randomly_available !== false)
+      .length,
   };
 }
 
 function buildExchangeDraft(config) {
   return {
     shardsPerFeatureCoin: String(
-      Number(config?.shards_per_feature_coin || 10)
+      Number(config?.shards_per_feature_coin || 150)
     ),
     featureCoinToShardsRate: String(
-      Number(config?.feature_coin_to_shards_rate || 5)
+      Number(config?.feature_coin_to_shards_rate || 140)
     ),
-    feePercent: String(Number(config?.fee_percent || 0)),
   };
 }
 
@@ -114,7 +117,6 @@ function StoreEditorPage() {
           accumulator[item.id] = {
             storePrice: String(Number(item.store_price || 0)),
             isStorePurchaseLocked: Boolean(item.is_store_purchase_locked),
-            isRewardRngLocked: Boolean(item.is_reward_rng_locked),
             isRandomlyAvailable: item.is_randomly_available !== false,
             isActive: item.is_active !== false,
           };
@@ -139,19 +141,9 @@ function StoreEditorPage() {
 
   const categoryGroups = useMemo(() => {
     const grouped = new Map();
-    const retiredItems = [];
 
     for (const item of items) {
-      if (item.is_active === false) {
-        retiredItems.push(item);
-        continue;
-      }
-
       const code = item.category_code || "other";
-      if (code === "currency") {
-        retiredItems.push(item);
-        continue;
-      }
 
       if (!grouped.has(code)) {
         grouped.set(code, {
@@ -177,22 +169,13 @@ function StoreEditorPage() {
       items: [],
       summary: {
         total: 0,
-        active: 0,
-        locked: 0,
-        rngLocked: 0,
+        shown: 0,
+        hidden: 0,
+        buyingAllowed: 0,
+        randomEnabled: 0,
       },
       isExchange: true,
     });
-
-    if (retiredItems.length > 0) {
-      nextGroups.push({
-        code: RETIRED_CATEGORY_CODE,
-        label: "Retired & Legacy",
-        items: retiredItems,
-        summary: buildCategorySummary(retiredItems),
-        isRetired: true,
-      });
-    }
 
     return nextGroups;
   }, [items]);
@@ -220,14 +203,19 @@ function StoreEditorPage() {
     return categoryGroups.find((group) => group.code === selectedCategory) || null;
   }, [categoryGroups, selectedCategory]);
 
-  const activeEditableItems = useMemo(
-    () => items.filter((item) => item.is_active !== false && item.category_code !== "currency"),
+  const editableItems = useMemo(
+    () => items.filter((item) => item.category_code !== "currency"),
     [items]
   );
 
-  const retiredItems = useMemo(
-    () => items.filter((item) => item.is_active === false || item.category_code === "currency"),
-    [items]
+  const visibleItems = useMemo(
+    () => editableItems.filter((item) => item.is_active !== false),
+    [editableItems]
+  );
+
+  const hiddenItems = useMemo(
+    () => editableItems.filter((item) => item.is_active === false),
+    [editableItems]
   );
 
   const openerItems = useMemo(
@@ -269,7 +257,6 @@ function StoreEditorPage() {
         p_item_definition_id: item.id,
         p_store_price: Math.floor(nextPrice),
         p_is_store_purchase_locked: Boolean(draft?.isStorePurchaseLocked),
-        p_is_reward_rng_locked: Boolean(draft?.isRewardRngLocked),
         p_is_randomly_available: Boolean(draft?.isRandomlyAvailable),
         p_is_active: Boolean(draft?.isActive),
       });
@@ -287,11 +274,7 @@ function StoreEditorPage() {
   }
 
   async function handleRandomizeAvailability() {
-    if (
-      !selectedCategoryGroup ||
-      selectedCategoryGroup.code === EXCHANGE_CATEGORY_CODE ||
-      selectedCategoryGroup.code === RETIRED_CATEGORY_CODE
-    ) {
+    if (!selectedCategoryGroup || selectedCategoryGroup.code === EXCHANGE_CATEGORY_CODE) {
       return;
     }
 
@@ -300,7 +283,7 @@ function StoreEditorPage() {
     setErrorMessage("");
 
     try {
-      const { error } = await supabase.rpc("randomize_store_item_availability", {
+      const { data, error } = await supabase.rpc("randomize_store_item_availability", {
         p_category_code: selectedCategoryGroup?.code || null,
         p_enabled_ratio: 0.5,
       });
@@ -309,7 +292,9 @@ function StoreEditorPage() {
 
       setStatusMessage(
         selectedCategoryGroup
-          ? `Randomized availability for ${selectedCategoryGroup.label}.`
+          ? `Randomized ${selectedCategoryGroup.label}. ${Number(
+              data?.shown_count || 0
+            )} shown, ${Number(data?.hidden_count || 0)} hidden.`
           : "Randomized store availability across all categories."
       );
       await loadStoreItems();
@@ -345,12 +330,10 @@ function StoreEditorPage() {
 
     const nextShardsPerFeatureCoin = Number(exchangeDraft.shardsPerFeatureCoin);
     const nextFeatureCoinToShardsRate = Number(exchangeDraft.featureCoinToShardsRate);
-    const nextFeePercent = Number(exchangeDraft.feePercent);
 
     if (
       !Number.isFinite(nextShardsPerFeatureCoin) ||
-      !Number.isFinite(nextFeatureCoinToShardsRate) ||
-      !Number.isFinite(nextFeePercent)
+      !Number.isFinite(nextFeatureCoinToShardsRate)
     ) {
       setErrorMessage("Exchange values must be valid numbers.");
       setStatusMessage("");
@@ -366,7 +349,6 @@ function StoreEditorPage() {
         p_series_id: activeSeriesId,
         p_shards_per_feature_coin: nextShardsPerFeatureCoin,
         p_feature_coin_to_shards_rate: nextFeatureCoinToShardsRate,
-        p_fee_percent: nextFeePercent,
       });
 
       if (error) throw error;
@@ -393,16 +375,16 @@ function StoreEditorPage() {
             <div className="store-kicker">ADMIN</div>
             <h1 className="store-title">Store Editor</h1>
             <p className="store-subtitle">
-              Browse the store by category, open the matching editor panel, and
-              tune price, purchase locks, reward locks, and randomized availability
-              without leaving the store-style layout.
+              Browse the live store by category, then control each item's price,
+              buying state, store visibility, and whether the random store button
+              is allowed to manage it.
             </p>
           </div>
 
           <div className="store-topbar-right">
             <div className="store-shards-card store-editor-stat-card">
-              <span className="store-shards-label">Active Items</span>
-              <span className="store-shards-value">{activeEditableItems.length}</span>
+              <span className="store-shards-label">Shown Items</span>
+              <span className="store-shards-value">{visibleItems.length}</span>
             </div>
 
             <div className="store-shards-card store-feature-coin-card store-editor-stat-card">
@@ -411,8 +393,8 @@ function StoreEditorPage() {
             </div>
 
             <div className="store-shards-card store-editor-stat-card">
-              <span className="store-shards-label">Retired</span>
-              <span className="store-shards-value">{retiredItems.length}</span>
+              <span className="store-shards-label">Hidden Items</span>
+              <span className="store-shards-value">{hiddenItems.length}</span>
             </div>
 
             <button
@@ -460,9 +442,7 @@ function StoreEditorPage() {
                           ? activeSeriesName
                             ? `Exchange For ${activeSeriesName}`
                             : "Exchange Settings"
-                          : group.code === RETIRED_CATEGORY_CODE
-                            ? `${group.summary.total} Retired Items`
-                            : `${group.summary.total} Items | ${group.summary.active} Active`}
+                          : `${group.summary.total} Items | ${group.summary.shown} Shown`}
                       </div>
 
                       <div className="store-editor-category-tags">
@@ -475,19 +455,15 @@ function StoreEditorPage() {
                             </span>
                             <span>
                               {exchangeConfig
-                                ? `${Number(exchangeConfig.fee_percent || 0)}% Fee`
+                                ? `${Number(exchangeConfig.feature_coin_to_shards_rate || 0)} Shards / Sell`
                                 : "No Config"}
                             </span>
                           </>
-                        ) : group.code === RETIRED_CATEGORY_CODE ? (
-                          <>
-                            <span>{group.summary.total} Hidden From Store</span>
-                            <span>Restore Or Leave Archived</span>
-                          </>
                         ) : (
                           <>
-                            <span>{group.summary.locked} Purchase Locked</span>
-                            <span>{group.summary.rngLocked} Reward Locked</span>
+                            <span>{group.summary.hidden} Hidden</span>
+                            <span>{group.summary.buyingAllowed} Buyable</span>
+                            <span>{group.summary.randomEnabled} Random Enabled</span>
                           </>
                         )}
                       </div>
@@ -508,8 +484,8 @@ function StoreEditorPage() {
 
                 <div className="store-editor-side-copy">
                   Edit the live store from the same category structure players
-                  actually use, while keeping opener key pricing and exchange
-                  rates available here too.
+                  use, while keeping key pricing and exchange rates manageable
+                  from this page too.
                 </div>
 
                 <div className="store-editor-side-stats">
@@ -526,13 +502,19 @@ function StoreEditorPage() {
                     <strong>{selectedCategoryGroup?.summary.total || 0}</strong>
                   </div>
                   <div className="store-exchange-rate-row">
+                    <span>Selected Hidden</span>
+                    <strong>{selectedCategoryGroup?.summary.hidden || 0}</strong>
+                  </div>
+                  <div className="store-exchange-rate-row">
                     <span>Active Series</span>
                     <strong>{activeSeriesName || "None"}</strong>
                   </div>
                   <div className="store-exchange-rate-row">
-                    <span>Exchange Fee</span>
+                    <span>Sell Rate</span>
                     <strong>
-                      {exchangeConfig ? `${Number(exchangeConfig.fee_percent || 0)}%` : "--"}
+                      {exchangeConfig
+                        ? `${Number(exchangeConfig.feature_coin_to_shards_rate || 0)} Shards`
+                        : "--"}
                     </strong>
                   </div>
                 </div>
@@ -544,15 +526,13 @@ function StoreEditorPage() {
                   disabled={
                     randomizing ||
                     !selectedCategoryGroup ||
-                    selectedCategoryGroup.code === EXCHANGE_CATEGORY_CODE ||
-                    selectedCategoryGroup.code === RETIRED_CATEGORY_CODE
+                    selectedCategoryGroup.code === EXCHANGE_CATEGORY_CODE
                   }
                 >
                   {randomizing
                     ? "Randomizing..."
                     : selectedCategoryGroup &&
-                      selectedCategoryGroup.code !== EXCHANGE_CATEGORY_CODE &&
-                      selectedCategoryGroup.code !== RETIRED_CATEGORY_CODE
+                      selectedCategoryGroup.code !== EXCHANGE_CATEGORY_CODE
                       ? `Randomize ${selectedCategoryGroup.label}`
                       : "Choose a store category"}
                 </button>
@@ -572,9 +552,7 @@ function StoreEditorPage() {
                   <div className="store-kicker">
                     {selectedCategoryGroup.code === EXCHANGE_CATEGORY_CODE
                       ? "EXCHANGE EDITOR"
-                      : selectedCategoryGroup.code === RETIRED_CATEGORY_CODE
-                        ? "RETIRED ITEMS"
-                        : "CATEGORY EDITOR"}
+                      : "CATEGORY EDITOR"}
                   </div>
                   <h2 className="store-modal-title">{selectedCategoryGroup.label}</h2>
                 </div>
@@ -591,14 +569,13 @@ function StoreEditorPage() {
               {selectedCategoryGroup.code === EXCHANGE_CATEGORY_CODE ? (
                 <div className="store-editor-exchange-panel">
                   <div className="store-editor-side-copy">
-                    Set the live Shards to Feature Coin transfer cost and the
-                    fee on converting Feature Coins back into Shards for the
-                    current active series.
+                    Set the live buy and sell rates for Feature Coins in the
+                    current active series. Exchange fees are no longer used.
                   </div>
 
                   <div className="store-editor-exchange-grid">
                     <label className="store-editor-field">
-                      <span>Shards Per Feature Coin</span>
+                      <span>Buy 1 Feature Coin</span>
                       <input
                         type="number"
                         min="1"
@@ -616,7 +593,7 @@ function StoreEditorPage() {
                     </label>
 
                     <label className="store-editor-field">
-                      <span>Feature Coin To Shards Rate</span>
+                      <span>Sell 1 Feature Coin</span>
                       <input
                         type="number"
                         min="1"
@@ -633,24 +610,6 @@ function StoreEditorPage() {
                       />
                     </label>
 
-                    <label className="store-editor-field">
-                      <span>Transfer Fee %</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="99.99"
-                        step="0.01"
-                        className="store-qty-input store-editor-price-input"
-                        value={exchangeDraft.feePercent}
-                        onChange={(event) =>
-                          setExchangeDraft((current) => ({
-                            ...current,
-                            feePercent: event.target.value,
-                          }))
-                        }
-                        disabled={savingExchange}
-                      />
-                    </label>
                   </div>
 
                   <div className="store-editor-exchange-summary">
@@ -659,18 +618,18 @@ function StoreEditorPage() {
                       <strong>{activeSeriesName || "None"}</strong>
                     </div>
                     <div className="store-exchange-rate-row">
-                      <span>Current Shards Per FC</span>
+                      <span>Current Buy Rate</span>
                       <strong>
                         {exchangeConfig
-                          ? Number(exchangeConfig.shards_per_feature_coin || 0)
+                          ? `${Number(exchangeConfig.shards_per_feature_coin || 0)} Shards`
                           : "--"}
                       </strong>
                     </div>
                     <div className="store-exchange-rate-row">
-                      <span>Current FC To Shards</span>
+                      <span>Current Sell Rate</span>
                       <strong>
                         {exchangeConfig
-                          ? Number(exchangeConfig.feature_coin_to_shards_rate || 0)
+                          ? `${Number(exchangeConfig.feature_coin_to_shards_rate || 0)} Shards`
                           : "--"}
                       </strong>
                     </div>
@@ -700,13 +659,9 @@ function StoreEditorPage() {
                       type="button"
                       className="store-add-btn store-editor-randomize-inline-btn"
                       onClick={handleRandomizeAvailability}
-                      disabled={randomizing || selectedCategoryGroup.code === RETIRED_CATEGORY_CODE}
+                      disabled={randomizing}
                     >
-                      {randomizing
-                        ? "Randomizing..."
-                        : selectedCategoryGroup.code === RETIRED_CATEGORY_CODE
-                          ? "Retired Category"
-                          : "Randomize This Category"}
+                      {randomizing ? "Randomizing..." : "Randomize This Category"}
                     </button>
                   </div>
 
@@ -749,9 +704,21 @@ function StoreEditorPage() {
                                 {item.exact_item_family ? (
                                   <span className="store-item-flag">{item.exact_item_family}</span>
                                 ) : null}
-                                {item.is_active === false ? (
-                                  <span className="store-item-flag is-locked">Retired</span>
-                                ) : null}
+                                {draft.isActive === false ? (
+                                  <span className="store-item-flag is-locked">Hidden</span>
+                                ) : (
+                                  <span className="store-item-flag">Shown</span>
+                                )}
+                                {draft.isStorePurchaseLocked ? (
+                                  <span className="store-item-flag is-locked">Buying Off</span>
+                                ) : (
+                                  <span className="store-item-flag">Buying On</span>
+                                )}
+                                {draft.isRandomlyAvailable ? (
+                                  <span className="store-item-flag">Random On</span>
+                                ) : (
+                                  <span className="store-item-flag is-locked">Manual Only</span>
+                                )}
                               </div>
                             </div>
 
@@ -772,61 +739,61 @@ function StoreEditorPage() {
                                 />
                               </label>
 
-                              <label className="store-editor-toggle">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(draft.isActive)}
-                                  onChange={(event) =>
-                                    updateDraft(item.id, {
-                                      isActive: event.target.checked,
-                                    })
-                                  }
-                                  disabled={isSaving}
-                                />
-                                <span>Active In Store</span>
-                              </label>
+                              <div className="store-editor-action-grid">
+                                <div className="store-editor-action-card">
+                                  <span>Buying</span>
+                                  <button
+                                    type="button"
+                                    className={`store-editor-toggle-btn ${
+                                      draft.isStorePurchaseLocked ? "is-off" : "is-on"
+                                    }`}
+                                    onClick={() =>
+                                      updateDraft(item.id, {
+                                        isStorePurchaseLocked: !draft.isStorePurchaseLocked,
+                                      })
+                                    }
+                                    disabled={isSaving}
+                                  >
+                                    {draft.isStorePurchaseLocked ? "Allow" : "Disallow"}
+                                  </button>
+                                </div>
 
-                              <label className="store-editor-toggle">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(draft.isStorePurchaseLocked)}
-                                  onChange={(event) =>
-                                    updateDraft(item.id, {
-                                      isStorePurchaseLocked: event.target.checked,
-                                    })
-                                  }
-                                  disabled={isSaving}
-                                />
-                                <span>Purchase Locked</span>
-                              </label>
+                                <div className="store-editor-action-card">
+                                  <span>Store</span>
+                                  <button
+                                    type="button"
+                                    className={`store-editor-toggle-btn ${
+                                      draft.isActive ? "is-on" : "is-off"
+                                    }`}
+                                    onClick={() =>
+                                      updateDraft(item.id, {
+                                        isActive: !draft.isActive,
+                                      })
+                                    }
+                                    disabled={isSaving}
+                                  >
+                                    {draft.isActive ? "Hide" : "Show"}
+                                  </button>
+                                </div>
 
-                              <label className="store-editor-toggle">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(draft.isRewardRngLocked)}
-                                  onChange={(event) =>
-                                    updateDraft(item.id, {
-                                      isRewardRngLocked: event.target.checked,
-                                    })
-                                  }
-                                  disabled={isSaving}
-                                />
-                                <span>Reward RNG Locked</span>
-                              </label>
-
-                              <label className="store-editor-toggle">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(draft.isRandomlyAvailable)}
-                                  onChange={(event) =>
-                                    updateDraft(item.id, {
-                                      isRandomlyAvailable: event.target.checked,
-                                    })
-                                  }
-                                  disabled={isSaving}
-                                />
-                                <span>Randomly Available</span>
-                              </label>
+                                <div className="store-editor-action-card">
+                                  <span>Random Store</span>
+                                  <button
+                                    type="button"
+                                    className={`store-editor-toggle-btn ${
+                                      draft.isRandomlyAvailable ? "is-on" : "is-off"
+                                    }`}
+                                    onClick={() =>
+                                      updateDraft(item.id, {
+                                        isRandomlyAvailable: !draft.isRandomlyAvailable,
+                                      })
+                                    }
+                                    disabled={isSaving}
+                                  >
+                                    {draft.isRandomlyAvailable ? "Disallow" : "Allow"}
+                                  </button>
+                                </div>
+                              </div>
 
                               <button
                                 type="button"

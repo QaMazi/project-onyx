@@ -53,12 +53,12 @@ const BOX_SECTION_OPTIONS = [
     keyPrefix: "PRO",
   },
   {
-    value: "ocg",
-    label: "OCG Boxes",
-    sectionLabel: "OCG Boxes",
-    categoryCode: "ocg_box",
-    shortLabel: "OCG Box",
-    keyPrefix: "OCG",
+    value: "collectors",
+    label: "Collectors Boxes",
+    sectionLabel: "Collectors Boxes",
+    categoryCode: "collectors_box",
+    shortLabel: "Collectors Box",
+    keyPrefix: "COL",
   },
 ];
 const BOX_TYPE_CONFIGS = Object.fromEntries(
@@ -67,7 +67,7 @@ const BOX_TYPE_CONFIGS = Object.fromEntries(
 const RANDOM_KEY_FAMILY_ORDER = [
   "random_deck_box_key",
   "random_promo_box_key",
-  "random_ocg_box_key",
+  "random_collectors_box_key",
   "random_full_pack_key",
   "random_draft_pack_key",
 ];
@@ -140,7 +140,7 @@ function buildBoxKeyLabel(boxCategoryCode, boxNumberCode) {
 
 function getContainerBucket(typeCode) {
   const code = normalizeText(typeCode);
-  if (code === "promo_box" || code === "deck_box" || code === "ocg_box") return "boxes";
+  if (code === "promo_box" || code === "deck_box" || code === "collectors_box") return "boxes";
   if (code === "full_pack" || code === "draft_pack") return "packs";
   return "boxes";
 }
@@ -150,7 +150,7 @@ function getRandomKeyBucket(exactItemFamily) {
   if (
     family === "random_deck_box_key" ||
     family === "random_promo_box_key" ||
-    family === "random_ocg_box_key"
+    family === "random_collectors_box_key"
   ) {
     return "boxes";
   }
@@ -240,7 +240,6 @@ function getAffordableOpenerPurchaseCount(openerDefinition, shards) {
 function canPurchaseOpenerDefinition(openerDefinition, shards) {
   if (!openerDefinition?.id) return false;
   if (openerDefinition.is_store_purchase_locked) return false;
-  if (openerDefinition.is_randomly_available === false) return false;
   return getAffordableOpenerPurchaseCount(openerDefinition, shards) >= 1;
 }
 
@@ -257,7 +256,7 @@ function getPackSectionLabel(filter) {
 function getBoxSectionLabel(filter) {
   if (filter === "deck") return "Deck Boxes";
   if (filter === "promo") return "Promo Boxes";
-  return "OCG Boxes";
+  return "Collectors Boxes";
 }
 
 function buildSelectionAction({ mode, container, openerDefinition, inventoryRow, shards }) {
@@ -491,7 +490,7 @@ function ContainerOpenerPage() {
   const [purchaseBusyId, setPurchaseBusyId] = useState("");
   const [activeTab, setActiveTab] = useState("packs");
   const [packSectionFilter, setPackSectionFilter] = useState("tcg");
-  const [boxSectionFilter, setBoxSectionFilter] = useState("promo");
+  const [boxSectionFilter, setBoxSectionFilter] = useState("deck");
   const [activeSeriesId, setActiveSeriesId] = useState(null);
   const [shards, setShards] = useState(0);
 
@@ -635,7 +634,7 @@ function ContainerOpenerPage() {
     const eligibleCounts = {
       deck_box: 0,
       promo_box: 0,
-      ocg_box: 0,
+      collectors_box: 0,
       draft_pack: 0,
       full_pack: 0,
     };
@@ -659,7 +658,7 @@ function ContainerOpenerPage() {
 
         if (family === "random_deck_box_key") eligibleCount = eligibleCounts.deck_box;
         if (family === "random_promo_box_key") eligibleCount = eligibleCounts.promo_box;
-        if (family === "random_ocg_box_key") eligibleCount = eligibleCounts.ocg_box;
+        if (family === "random_collectors_box_key") eligibleCount = eligibleCounts.collectors_box;
         if (family === "random_draft_pack_key") eligibleCount = eligibleCounts.draft_pack;
         if (family === "random_full_pack_key") eligibleCount = eligibleCounts.full_pack;
 
@@ -667,10 +666,7 @@ function ContainerOpenerPage() {
           ...product,
           bucket,
           eligibleCount,
-          canBuy:
-            eligibleCount > 0 &&
-            product.is_store_purchase_locked !== true &&
-            product.is_randomly_available !== false,
+          canBuy: eligibleCount > 0 && product.is_store_purchase_locked !== true,
         };
       })
       .sort((left, right) => {
@@ -1214,7 +1210,7 @@ function ContainerOpenerPage() {
         supabase
           .from("item_definitions")
           .select(
-            "id, code, name, description, target_id, exact_item_family, store_price, max_purchase, is_store_purchase_locked, is_randomly_available"
+            "id, code, name, description, target_id, exact_item_family, store_price, max_purchase, is_store_purchase_locked"
           )
           .eq("behavior_code", "open_container")
           .eq("target_kind", "container")
@@ -1222,7 +1218,7 @@ function ContainerOpenerPage() {
         supabase
           .from("item_definitions")
           .select(
-            "id, code, name, description, exact_item_family, store_price, max_purchase, is_store_purchase_locked, is_randomly_available"
+            "id, code, name, description, exact_item_family, store_price, max_purchase, is_store_purchase_locked"
           )
           .eq("behavior_code", "grant_random_container_key")
           .eq("is_active", true)
@@ -2187,8 +2183,6 @@ function ContainerOpenerPage() {
                                   ? "This container is locked by admin right now."
                                   : option.openerDefinition?.is_store_purchase_locked
                                   ? "This key is purchase locked in the store editor."
-                                  : option.openerDefinition?.is_randomly_available === false
-                                  ? "This key is not currently available for purchase."
                                   : option.storePrice > shards
                                   ? "You do not have enough Shards for this key."
                                   : "This key cannot be purchased right now."}
@@ -2358,8 +2352,6 @@ function ContainerOpenerPage() {
                         <div className="container-opener-buy-note">
                           {product.is_store_purchase_locked
                             ? "This random key product is purchase locked."
-                            : product.is_randomly_available === false
-                            ? "This random key product is not currently available."
                             : product.eligibleCount <= 0
                             ? "No unlocked containers match this random key yet."
                             : maxAffordable < 1

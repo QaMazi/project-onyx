@@ -11,7 +11,7 @@ const SERIES_MENU_ITEMS = [
   { label: "Pack Database" },
   { label: "Deck Box Database" },
   { label: "Promo Box Database" },
-  { label: "OCG Box Database" },
+  { label: "Collectors Box Database" },
 ];
 
 const PHASE_RULE_SECTIONS = [
@@ -218,8 +218,8 @@ function ProgressionSeriesMenuPanel() {
       return;
     }
 
-    if (label === "OCG Box Database") {
-      navigate("/mode/progression/containers/ocg-boxes");
+    if (label === "Collectors Box Database") {
+      navigate("/mode/progression/containers/collectors-boxes");
     }
   }
 

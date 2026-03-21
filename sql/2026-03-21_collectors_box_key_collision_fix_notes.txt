@@ -1,0 +1,19 @@
+2026-03-21 - Collectors Box Key Collision Fix
+
+Problem
+- Saving a box after changing its category to Collectors Box could fail with:
+  `duplicate key value violates unique constraint "item_definitions_code_key"`
+
+Root cause
+- A stale orphan exact opener item existed:
+  - `target_kind = 'container'`
+  - `target_id = null`
+  - `code = 'col_001_collectors_box_key'`
+- The real target-linked opener item for the box then tried to rename itself into that same code.
+
+Fix
+- Delete orphaned container opener item rows that have no live references.
+- Harden `public._sync_container_opener_item(uuid)` so:
+  - it can safely reuse orphan code matches
+  - it deletes orphan duplicate-code rows before updating the real target-linked item
+  - it raises a clearer exception if the desired code is genuinely owned by another real item

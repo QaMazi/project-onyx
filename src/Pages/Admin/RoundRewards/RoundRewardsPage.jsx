@@ -15,31 +15,147 @@ const ROUND_STEPS = [
   { value: 1, label: "1" },
   { value: 2, label: "2" },
 ];
+const REWARD_KIND_OPTIONS = [
+  { value: "set", label: "Set Item" },
+  { value: "random", label: "Random" },
+  { value: "choice", label: "Choice Item" },
+];
+const OPTION_KIND_LABELS = {
+  shards: "Shards",
+  feature_coins: "Feature Coins",
+  specific_item: "Specific Item",
+  random_item: "Random Item",
+};
 
-function buildEmptyPlacement(placement) {
+function makeLocalId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeInt(value, fallback = 0) {
+  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
+function uniqueIds(values) {
+  return [...new Set((values || []).filter(Boolean).map(String))];
+}
+
+function getAllowedOptionKinds(rewardKind) {
+  if (rewardKind === "random") return ["shards", "feature_coins", "random_item"];
+  if (rewardKind === "choice") return ["shards", "feature_coins", "specific_item", "random_item"];
+  return ["shards", "feature_coins", "specific_item"];
+}
+
+function buildEmptyOption(rewardKind, optionKind) {
+  const allowedKinds = getAllowedOptionKinds(rewardKind);
+  const resolvedOptionKind = allowedKinds.includes(optionKind)
+    ? optionKind
+    : allowedKinds[allowedKinds.length - 1];
+
   return {
-    placement,
-    random_item_quantity: 0,
-    extra_shard_min: 0,
-    extra_shard_max: 0,
-    extra_feature_coin_min: 0,
-    extra_feature_coin_max: 0,
-    specific_item_definition_id: "",
-    random_pool_item_ids: [],
+    id: "",
+    localId: makeLocalId(),
+    optionKind: resolvedOptionKind,
+    exactQuantity: resolvedOptionKind === "specific_item" || resolvedOptionKind === "random_item" ? 1 : 0,
+    quantityMin: 0,
+    quantityMax: 0,
+    itemDefinitionId: "",
+    poolItemIds: [],
   };
+}
+
+function normalizeOptionForRewardKind(option, rewardKind) {
+  const allowedKinds = getAllowedOptionKinds(rewardKind);
+  const fallbackOption = buildEmptyOption(rewardKind);
+  const nextOptionKind = allowedKinds.includes(option?.optionKind)
+    ? option.optionKind
+    : fallbackOption.optionKind;
+
+  return {
+    id: option?.id || "",
+    localId: option?.localId || makeLocalId(),
+    optionKind: nextOptionKind,
+    exactQuantity: Math.max(0, normalizeInt(option?.exactQuantity, 0)),
+    quantityMin: Math.max(0, normalizeInt(option?.quantityMin, 0)),
+    quantityMax: Math.max(0, normalizeInt(option?.quantityMax, 0)),
+    itemDefinitionId: nextOptionKind === "specific_item" ? option?.itemDefinitionId || "" : "",
+    poolItemIds: nextOptionKind === "random_item" ? uniqueIds(option?.poolItemIds) : [],
+  };
+}
+
+function normalizeEntry(entry) {
+  const rewardKind = entry?.rewardKind || "set";
+  const baseOptions = Array.isArray(entry?.options) ? entry.options : [];
+  let nextOptions = baseOptions.map((option) => normalizeOptionForRewardKind(option, rewardKind));
+
+  if (rewardKind === "choice") {
+    if (nextOptions.length === 0) {
+      nextOptions = [
+        buildEmptyOption("choice", "specific_item"),
+        buildEmptyOption("choice", "shards"),
+      ];
+    }
+  } else {
+    nextOptions = [normalizeOptionForRewardKind(nextOptions[0] || buildEmptyOption(rewardKind), rewardKind)];
+  }
+
+  return {
+    id: entry?.id || "",
+    localId: entry?.localId || makeLocalId(),
+    placement:
+      entry?.placement === null || entry?.placement === undefined || entry?.placement === ""
+        ? null
+        : normalizeInt(entry.placement, 1),
+    entryOrder: Math.max(1, normalizeInt(entry?.entryOrder, 1)),
+    rewardKind,
+    choiceCount:
+      rewardKind === "choice"
+        ? Math.min(Math.max(1, normalizeInt(entry?.choiceCount, 1)), Math.max(1, nextOptions.length))
+        : 1,
+    options: nextOptions,
+  };
+}
+
+function normalizeEntries(entries) {
+  const normalized = (entries || []).map(normalizeEntry);
+  const sharedEntries = normalized
+    .filter((entry) => entry.placement == null)
+    .map((entry, index) => ({ ...entry, placement: null, entryOrder: index + 1 }));
+  const placementEntries = PLACEMENTS.flatMap((placement) =>
+    normalized
+      .filter((entry) => Number(entry.placement) === placement)
+      .map((entry, index) => ({ ...entry, placement, entryOrder: index + 1 }))
+  );
+
+  return [...sharedEntries, ...placementEntries];
+}
+
+function buildEmptyEntry(rewardKind = "set", placement = null) {
+  if (rewardKind === "choice") {
+    return normalizeEntry({
+      placement,
+      rewardKind,
+      choiceCount: 1,
+      options: [
+        buildEmptyOption("choice", "specific_item"),
+        buildEmptyOption("choice", "shards"),
+      ],
+    });
+  }
+
+  return normalizeEntry({
+    placement,
+    rewardKind,
+    choiceCount: 1,
+    options: [buildEmptyOption(rewardKind)],
+  });
 }
 
 function buildInitialFormState(roundNumber = 0) {
   return {
-    round_number: roundNumber,
-    round_step: 1,
-    shared_shard_min: 0,
-    shared_shard_max: 0,
-    shared_feature_coin_min: 0,
-    shared_feature_coin_max: 0,
-    shared_item_definition_id: "",
-    shared_item_quantity: 0,
-    placements: PLACEMENTS.map(buildEmptyPlacement),
+    configId: "",
+    roundNumber,
+    roundStep: 1,
+    entries: [],
   };
 }
 
@@ -47,30 +163,34 @@ function formatRoundLabel(roundNumber, roundStep) {
   return `Round ${roundNumber}-${roundStep}`;
 }
 
-function getItemName(itemId, itemMap) {
-  if (!itemId) return "";
-  return itemMap.get(String(itemId))?.name || "Unknown Item";
+function getConfigSummary(config) {
+  const entries = Array.isArray(config?.entries) ? config.entries : [];
+  const sharedCount = entries.filter((entry) => entry.placement == null).length;
+  const placementCount = entries.filter((entry) => entry.placement != null).length;
+  return `${sharedCount} shared | ${placementCount} placement`;
 }
 
-function buildPlacementRewardSummary(row, itemMap) {
-  if (row.specific_item_definition_id) {
-    return {
-      title: getItemName(row.specific_item_definition_id, itemMap),
-      subtitle: "Exact reward item",
-    };
+function describeOption(option, rewardKind, itemMap) {
+  if (option.optionKind === "shards") {
+    return rewardKind === "random"
+      ? `Shards ${Math.max(0, option.quantityMin)}-${Math.max(0, option.quantityMax)}`
+      : `${Math.max(0, option.exactQuantity)} Shards`;
   }
 
-  if (row.random_pool_item_ids.length > 0) {
-    return {
-      title: `Random Pool (${row.random_pool_item_ids.length})`,
-      subtitle: "Random from your selected pool",
-    };
+  if (option.optionKind === "feature_coins") {
+    return rewardKind === "random"
+      ? `Feature Coins ${Math.max(0, option.quantityMin)}-${Math.max(0, option.quantityMax)}`
+      : `${Math.max(0, option.exactQuantity)} Feature Coins`;
   }
 
-  return {
-    title: "Random Eligible Item",
-    subtitle: "Falls back to all reward-eligible items",
-  };
+  if (option.optionKind === "specific_item") {
+    const itemName = itemMap.get(String(option.itemDefinitionId))?.name || "Choose item";
+    return `${itemName} x${Math.max(0, option.exactQuantity)}`;
+  }
+
+  return option.poolItemIds.length
+    ? `Random from pool (${option.poolItemIds.length}) x${Math.max(0, option.exactQuantity)}`
+    : `Random eligible item x${Math.max(0, option.exactQuantity)}`;
 }
 
 function RangeEditor({ label, minValue, maxValue, onMinChange, onMaxChange }) {
@@ -82,7 +202,7 @@ function RangeEditor({ label, minValue, maxValue, onMinChange, onMaxChange }) {
           type="number"
           min="0"
           value={minValue}
-          onChange={(event) => onMinChange(Number(event.target.value || 0))}
+          onChange={(event) => onMinChange(Math.max(0, Number(event.target.value || 0)))}
           placeholder="Min"
         />
         <div className="round-rewards-range-divider">-</div>
@@ -90,7 +210,7 @@ function RangeEditor({ label, minValue, maxValue, onMinChange, onMaxChange }) {
           type="number"
           min="0"
           value={maxValue}
-          onChange={(event) => onMaxChange(Number(event.target.value || 0))}
+          onChange={(event) => onMaxChange(Math.max(0, Number(event.target.value || 0)))}
           placeholder="Max"
         />
       </div>
@@ -98,7 +218,7 @@ function RangeEditor({ label, minValue, maxValue, onMinChange, onMaxChange }) {
   );
 }
 
-function RewardPickerModal({
+function RewardItemPickerModal({
   pickerState,
   itemGroups,
   itemMap,
@@ -106,19 +226,17 @@ function RewardPickerModal({
   onApply,
   onSelectSpecificItem,
   onTogglePoolItem,
-  onSetMode,
   onSetSearch,
   onSetCategory,
 }) {
   if (!pickerState.open) return null;
 
-  const isPlacementPicker = pickerState.targetType === "placement";
   const filteredGroups = itemGroups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
         const matchesCategory =
-          pickerState.selectedCategory === "all" || group.code === pickerState.selectedCategory;
+          pickerState.selectedCategory === "all" || pickerState.selectedCategory === group.code;
         const query = pickerState.search.trim().toLowerCase();
         const matchesSearch =
           !query ||
@@ -136,13 +254,13 @@ function RewardPickerModal({
         <div className="round-rewards-modal-header">
           <div>
             <div className="round-rewards-modal-kicker">
-              {isPlacementPicker ? `Placement ${pickerState.placement}` : "Shared Reward"}
+              {pickerState.selectionMode === "pool" ? "RANDOM POOL" : "EXACT ITEM"}
             </div>
-            <h2>{isPlacementPicker ? "Choose Reward Item" : "Choose Shared Item"}</h2>
+            <h2>{pickerState.selectionMode === "pool" ? "Choose Random Item Pool" : "Choose Specific Item"}</h2>
             <p>
-              {isPlacementPicker
-                ? "Pick an exact reward item or build the random pool for this placement."
-                : "Pick the fixed item all players receive for this round."}
+              {pickerState.selectionMode === "pool"
+                ? "Pick the items this random reward can roll from."
+                : "Pick the exact store item this reward should give."}
             </p>
           </div>
 
@@ -150,25 +268,6 @@ function RewardPickerModal({
             Close
           </button>
         </div>
-
-        {isPlacementPicker ? (
-          <div className="round-rewards-modal-mode-row">
-            <button
-              type="button"
-              className={`round-rewards-mode-pill ${pickerState.mode === "specific" ? "is-active" : ""}`}
-              onClick={() => onSetMode("specific")}
-            >
-              Exact Item
-            </button>
-            <button
-              type="button"
-              className={`round-rewards-mode-pill ${pickerState.mode === "random" ? "is-active" : ""}`}
-              onClick={() => onSetMode("random")}
-            >
-              Random Pool
-            </button>
-          </div>
-        ) : null}
 
         <div className="round-rewards-modal-toolbar">
           <input
@@ -195,14 +294,14 @@ function RewardPickerModal({
 
         <div className="round-rewards-modal-selection-bar">
           <div className="round-rewards-selection-summary">
-            {pickerState.mode === "random" && isPlacementPicker
-              ? `Pool selected: ${pickerState.draftPoolItemIds.length} items`
-              : `Selected: ${getItemName(pickerState.draftSpecificItemId, itemMap) || (isPlacementPicker ? "Random from pool" : "None")}`}
+            {pickerState.selectionMode === "pool"
+              ? `Pool selected: ${pickerState.draftPoolItemIds.length} item(s)`
+              : `Selected: ${itemMap.get(String(pickerState.draftSpecificItemId))?.name || "None selected"}`}
           </div>
         </div>
 
         <div className="round-rewards-modal-groups">
-          {isPlacementPicker && pickerState.mode === "specific" ? (
+          {pickerState.selectionMode === "specific" ? (
             <button
               type="button"
               className={`round-rewards-item-card round-rewards-item-card--special ${
@@ -210,23 +309,8 @@ function RewardPickerModal({
               }`}
               onClick={() => onSelectSpecificItem("")}
             >
-              <div className="round-rewards-item-card-title">Random From Selected Pool</div>
-              <div className="round-rewards-item-card-meta">
-                Use the random pool for this placement instead of an exact item.
-              </div>
-            </button>
-          ) : !isPlacementPicker ? (
-            <button
-              type="button"
-              className={`round-rewards-item-card round-rewards-item-card--special ${
-                !pickerState.draftSpecificItemId ? "is-selected" : ""
-              }`}
-              onClick={() => onSelectSpecificItem("")}
-            >
-              <div className="round-rewards-item-card-title">No Shared Item</div>
-              <div className="round-rewards-item-card-meta">
-                Remove the shared item reward from this round config.
-              </div>
+              <div className="round-rewards-item-card-title">No Specific Item</div>
+              <div className="round-rewards-item-card-meta">Clear the exact item from this reward slot.</div>
             </button>
           ) : null}
 
@@ -242,10 +326,10 @@ function RewardPickerModal({
 
                 <div className="round-rewards-item-grid">
                   {group.items.map((item) => {
-                    const isSpecificSelected = pickerState.draftSpecificItemId === item.id;
-                    const isPoolSelected = pickerState.draftPoolItemIds.includes(item.id);
                     const isSelected =
-                      pickerState.mode === "random" && isPlacementPicker ? isPoolSelected : isSpecificSelected;
+                      pickerState.selectionMode === "pool"
+                        ? pickerState.draftPoolItemIds.includes(item.id)
+                        : pickerState.draftSpecificItemId === item.id;
 
                     return (
                       <button
@@ -253,7 +337,7 @@ function RewardPickerModal({
                         type="button"
                         className={`round-rewards-item-card ${isSelected ? "is-selected" : ""}`}
                         onClick={() => {
-                          if (pickerState.mode === "random" && isPlacementPicker) {
+                          if (pickerState.selectionMode === "pool") {
                             onTogglePoolItem(item.id);
                           } else {
                             onSelectSpecificItem(item.id);
@@ -291,6 +375,205 @@ function RewardPickerModal({
   );
 }
 
+function RewardOptionEditor({
+  entry,
+  option,
+  itemMap,
+  onChangeOptionKind,
+  onChangeExactQuantity,
+  onChangeRange,
+  onOpenSpecificPicker,
+  onOpenPoolPicker,
+  onRemoveOption,
+  canRemoveOption,
+}) {
+  const allowedKinds = getAllowedOptionKinds(entry.rewardKind);
+  const optionSummary = describeOption(option, entry.rewardKind, itemMap);
+
+  return (
+    <div className="round-rewards-option-card">
+      <div className="round-rewards-option-toprow">
+        <label className="round-rewards-compact-field">
+          <span>{entry.rewardKind === "choice" ? "Choice Option" : "Reward Type"}</span>
+          <select
+            value={option.optionKind}
+            onChange={(event) => onChangeOptionKind(event.target.value)}
+          >
+            {allowedKinds.map((kind) => (
+              <option key={kind} value={kind}>
+                {OPTION_KIND_LABELS[kind]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {canRemoveOption ? (
+          <button
+            type="button"
+            className="round-rewards-icon-btn round-rewards-danger-btn"
+            onClick={onRemoveOption}
+          >
+            Remove
+          </button>
+        ) : null}
+      </div>
+
+      {entry.rewardKind === "random" &&
+      (option.optionKind === "shards" || option.optionKind === "feature_coins") ? (
+        <RangeEditor
+          label="Min - Max"
+          minValue={option.quantityMin}
+          maxValue={option.quantityMax}
+          onMinChange={(value) => onChangeRange("quantityMin", value)}
+          onMaxChange={(value) => onChangeRange("quantityMax", value)}
+        />
+      ) : null}
+
+      {(entry.rewardKind !== "random" || option.optionKind === "specific_item" || option.optionKind === "random_item") &&
+      option.optionKind !== "shards" &&
+      option.optionKind !== "feature_coins" ? (
+        <label className="round-rewards-compact-field">
+          <span>{option.optionKind === "random_item" ? "Rolls" : "Quantity"}</span>
+          <input
+            type="number"
+            min="0"
+            value={option.exactQuantity}
+            onChange={(event) => onChangeExactQuantity(Math.max(0, Number(event.target.value || 0)))}
+          />
+        </label>
+      ) : null}
+
+      {entry.rewardKind !== "random" &&
+      (option.optionKind === "shards" || option.optionKind === "feature_coins") ? (
+        <label className="round-rewards-compact-field">
+          <span>Quantity</span>
+          <input
+            type="number"
+            min="0"
+            value={option.exactQuantity}
+            onChange={(event) => onChangeExactQuantity(Math.max(0, Number(event.target.value || 0)))}
+          />
+        </label>
+      ) : null}
+
+      {option.optionKind === "specific_item" ? (
+        <button type="button" className="round-rewards-picker-btn" onClick={onOpenSpecificPicker}>
+          <div className="round-rewards-picker-btn-label">Specific Item</div>
+          <div className="round-rewards-picker-btn-value">{optionSummary}</div>
+        </button>
+      ) : null}
+
+      {option.optionKind === "random_item" ? (
+        <button type="button" className="round-rewards-picker-btn" onClick={onOpenPoolPicker}>
+          <div className="round-rewards-picker-btn-label">Random Pool</div>
+          <div className="round-rewards-picker-btn-value">{optionSummary}</div>
+          <div className="round-rewards-picker-btn-subvalue">
+            {option.poolItemIds.length ? "Curated pool" : "Falls back to all reward-eligible items"}
+          </div>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function RewardEntryCard({
+  entry,
+  itemMap,
+  onChangeRewardKind,
+  onChangeChoiceCount,
+  onChangeOptionKind,
+  onChangeOptionExactQuantity,
+  onChangeOptionRange,
+  onOpenSpecificPicker,
+  onOpenPoolPicker,
+  onAddChoiceOption,
+  onRemoveChoiceOption,
+  onRemoveEntry,
+}) {
+  return (
+    <article className="round-rewards-entry-card">
+      <div className="round-rewards-entry-header">
+        <div>
+          <div className="round-rewards-entry-kicker">
+            {entry.placement == null ? "Shared Reward" : `Placement ${entry.placement}`}
+          </div>
+          <h3>
+            {entry.rewardKind === "choice"
+              ? `Choice Reward #${entry.entryOrder}`
+              : entry.rewardKind === "random"
+              ? `Random Reward #${entry.entryOrder}`
+              : `Set Reward #${entry.entryOrder}`}
+          </h3>
+        </div>
+
+        <div className="round-rewards-entry-actions">
+          <label className="round-rewards-compact-field">
+            <span>Reward Type</span>
+            <select
+              value={entry.rewardKind}
+              onChange={(event) => onChangeRewardKind(event.target.value)}
+            >
+              {REWARD_KIND_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button type="button" className="round-rewards-icon-btn round-rewards-danger-btn" onClick={onRemoveEntry}>
+            Remove
+          </button>
+        </div>
+      </div>
+
+      {entry.rewardKind === "choice" ? (
+        <div className="round-rewards-entry-choicebar">
+          <label className="round-rewards-compact-field round-rewards-compact-field--choicecount">
+            <span>Choices To Give</span>
+            <input
+              type="number"
+              min="1"
+              max={Math.max(1, entry.options.length)}
+              value={entry.choiceCount}
+              onChange={(event) =>
+                onChangeChoiceCount(
+                  Math.min(
+                    Math.max(1, Number(event.target.value || 1)),
+                    Math.max(1, entry.options.length)
+                  )
+                )
+              }
+            />
+          </label>
+
+          <button type="button" className="round-rewards-secondary-btn" onClick={onAddChoiceOption}>
+            + Add Choice
+          </button>
+        </div>
+      ) : null}
+
+      <div className="round-rewards-entry-options">
+        {entry.options.map((option) => (
+          <RewardOptionEditor
+            key={option.localId}
+            entry={entry}
+            option={option}
+            itemMap={itemMap}
+            onChangeOptionKind={(value) => onChangeOptionKind(option.localId, value)}
+            onChangeExactQuantity={(value) => onChangeOptionExactQuantity(option.localId, value)}
+            onChangeRange={(key, value) => onChangeOptionRange(option.localId, key, value)}
+            onOpenSpecificPicker={() => onOpenSpecificPicker(option.localId)}
+            onOpenPoolPicker={() => onOpenPoolPicker(option.localId)}
+            onRemoveOption={() => onRemoveChoiceOption(option.localId)}
+            canRemoveOption={entry.rewardKind === "choice" && entry.options.length > 1}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
 function RoundRewardsPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
@@ -302,23 +585,17 @@ function RoundRewardsPage() {
   const [activeSeriesId, setActiveSeriesId] = useState(null);
   const [rewardConfigs, setRewardConfigs] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
-  const [selectedConfigId, setSelectedConfigId] = useState("");
   const [formState, setFormState] = useState(buildInitialFormState(0));
   const [pickerState, setPickerState] = useState({
     open: false,
-    targetType: "placement",
-    placement: 1,
-    mode: "specific",
+    selectionMode: "specific",
+    entryLocalId: "",
+    optionLocalId: "",
     search: "",
     selectedCategory: "all",
     draftSpecificItemId: "",
     draftPoolItemIds: [],
   });
-
-  const selectedConfig = useMemo(
-    () => rewardConfigs.find((config) => config.id === selectedConfigId) || null,
-    [rewardConfigs, selectedConfigId]
-  );
 
   const itemMap = useMemo(
     () => new Map(itemOptions.map((item) => [String(item.id), item])),
@@ -327,6 +604,7 @@ function RoundRewardsPage() {
 
   const itemGroups = useMemo(() => {
     const groups = new Map();
+
     itemOptions.forEach((item) => {
       const code = item.category_code || "other";
       if (!groups.has(code)) {
@@ -341,9 +619,32 @@ function RoundRewardsPage() {
 
     return sortStoreGroups(Array.from(groups.values())).map((group) => ({
       ...group,
-      items: [...group.items].sort((left, right) => String(left.name || "").localeCompare(String(right.name || ""))),
+      items: [...group.items].sort((left, right) =>
+        String(left.name || "").localeCompare(String(right.name || ""))
+      ),
     }));
   }, [itemOptions]);
+
+  const selectedConfig = useMemo(
+    () => rewardConfigs.find((config) => config.id === formState.configId) || null,
+    [rewardConfigs, formState.configId]
+  );
+
+  const sharedEntries = useMemo(
+    () => formState.entries.filter((entry) => entry.placement == null),
+    [formState.entries]
+  );
+
+  const placementEntries = useMemo(
+    () =>
+      Object.fromEntries(
+        PLACEMENTS.map((placement) => [
+          placement,
+          formState.entries.filter((entry) => Number(entry.placement) === placement),
+        ])
+      ),
+    [formState.entries]
+  );
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -351,7 +652,7 @@ function RoundRewardsPage() {
     }
   }, [authLoading, user]);
 
-  async function loadPage() {
+  async function loadPage(preferredConfigId = "") {
     if (!user) return;
 
     setLoading(true);
@@ -359,28 +660,8 @@ function RoundRewardsPage() {
     setStatusMessage("");
 
     try {
-      const [
-        activeSeriesResponse,
-        configsResponse,
-        placementsResponse,
-        poolsResponse,
-        itemsResponse,
-        categoriesResponse,
-      ] = await Promise.all([
+      const [activeSeriesResponse, itemsResponse, categoriesResponse] = await Promise.all([
         supabase.from("game_series").select("id, name").eq("is_current", true).maybeSingle(),
-        supabase
-          .from("series_round_reward_configs")
-          .select("*")
-          .order("round_number", { ascending: true })
-          .order("round_step", { ascending: true }),
-        supabase
-          .from("series_round_reward_config_placements")
-          .select("*")
-          .order("placement", { ascending: true }),
-        supabase
-          .from("series_round_reward_config_random_items")
-          .select("*")
-          .order("placement", { ascending: true }),
         supabase
           .from("item_definitions")
           .select("id, category_id, code, name, description, store_price, is_active")
@@ -390,16 +671,13 @@ function RoundRewardsPage() {
       ]);
 
       if (activeSeriesResponse.error) throw activeSeriesResponse.error;
-      if (configsResponse.error) throw configsResponse.error;
-      if (placementsResponse.error) throw placementsResponse.error;
-      if (poolsResponse.error) throw poolsResponse.error;
       if (itemsResponse.error) throw itemsResponse.error;
       if (categoriesResponse.error) throw categoriesResponse.error;
 
-      const nextSeriesId = activeSeriesResponse.data?.id || null;
-      const categoryMap = new Map((categoriesResponse.data || []).map((row) => [row.id, row]));
+      const seriesId = activeSeriesResponse.data?.id || null;
+      setActiveSeriesId(seriesId);
 
-      setActiveSeriesId(nextSeriesId);
+      const categoryMap = new Map((categoriesResponse.data || []).map((row) => [row.id, row]));
       setItemOptions(
         (itemsResponse.data || []).map((item) => {
           const category = categoryMap.get(item.category_id);
@@ -411,39 +689,49 @@ function RoundRewardsPage() {
         })
       );
 
-      const poolMap = new Map();
-      (poolsResponse.data || []).forEach((row) => {
-        const key = `${row.reward_config_id}:${row.placement}`;
-        if (!poolMap.has(key)) {
-          poolMap.set(key, []);
-        }
-        poolMap.get(key).push(row.item_definition_id);
-      });
+      if (!seriesId) {
+        setRewardConfigs([]);
+        setFormState(buildInitialFormState(0));
+        return;
+      }
 
-      const placementsByConfigId = new Map();
-      (placementsResponse.data || []).forEach((row) => {
-        if (!placementsByConfigId.has(row.reward_config_id)) {
-          placementsByConfigId.set(row.reward_config_id, []);
-        }
+      const { data: configData, error: configError } = await supabase.rpc(
+        "get_series_round_reward_editor_configs",
+        { p_series_id: seriesId }
+      );
 
-        placementsByConfigId.get(row.reward_config_id).push({
-          ...row,
-          random_pool_item_ids: poolMap.get(`${row.reward_config_id}:${row.placement}`) || [],
-        });
-      });
+      if (configError) throw configError;
 
-      const hydratedConfigs = (configsResponse.data || [])
-        .filter((row) => row.series_id === nextSeriesId)
-        .map((row) => ({
-          ...row,
-          placements: placementsByConfigId.get(row.id) || [],
-        }));
+      const configs = (configData || []).map((config) => ({
+        id: config.id,
+        roundNumber: normalizeInt(config.round_number, 0),
+        roundStep: normalizeInt(config.round_step, 1),
+        entries: normalizeEntries(
+          (config.entries || []).map((entry) => ({
+            id: entry.id,
+            placement: entry.placement,
+            entryOrder: entry.entry_order,
+            rewardKind: entry.reward_kind,
+            choiceCount: entry.choice_count,
+            options: (entry.options || []).map((option) => ({
+              id: option.id,
+              optionKind: option.option_kind,
+              exactQuantity: option.exact_quantity,
+              quantityMin: option.quantity_min,
+              quantityMax: option.quantity_max,
+              itemDefinitionId: option.item_definition_id || "",
+              poolItemIds: uniqueIds(option.pool_item_ids),
+            })),
+          }))
+        ),
+      }));
 
-      setRewardConfigs(hydratedConfigs);
+      setRewardConfigs(configs);
 
       const nextConfig =
-        hydratedConfigs.find((config) => config.id === selectedConfigId) ||
-        hydratedConfigs[0] ||
+        configs.find((config) => config.id === preferredConfigId) ||
+        configs.find((config) => config.id === formState.configId) ||
+        configs[0] ||
         null;
 
       if (nextConfig) {
@@ -460,77 +748,182 @@ function RoundRewardsPage() {
   }
 
   function hydrateForm(config) {
-    setSelectedConfigId(config.id || "");
-
-    const placementMap = new Map((config.placements || []).map((row) => [Number(row.placement), row]));
-
     setFormState({
-      round_number: Number(config.round_number ?? 0),
-      round_step: Number(config.round_step || 1),
-      shared_shard_min: Number(config.shared_shard_min || 0),
-      shared_shard_max: Number(config.shared_shard_max || 0),
-      shared_feature_coin_min: Number(config.shared_feature_coin_min || 0),
-      shared_feature_coin_max: Number(config.shared_feature_coin_max || 0),
-      shared_item_definition_id: config.shared_item_definition_id || "",
-      shared_item_quantity: Number(config.shared_item_quantity || 0),
-      placements: PLACEMENTS.map((placement) => {
-        const row = placementMap.get(placement);
-        return {
-          placement,
-          random_item_quantity: Number(row?.random_item_quantity || 0),
-          extra_shard_min: Number(row?.extra_shard_min || 0),
-          extra_shard_max: Number(row?.extra_shard_max || 0),
-          extra_feature_coin_min: Number(row?.extra_feature_coin_min || 0),
-          extra_feature_coin_max: Number(row?.extra_feature_coin_max || 0),
-          specific_item_definition_id: row?.specific_item_definition_id || "",
-          random_pool_item_ids: [...(row?.random_pool_item_ids || [])],
-        };
-      }),
+      configId: config.id || "",
+      roundNumber: normalizeInt(config.roundNumber, 0),
+      roundStep: normalizeInt(config.roundStep, 1),
+      entries: normalizeEntries(config.entries || []),
     });
+    setPickerState((current) => ({ ...current, open: false }));
+    setStatusMessage("");
+    setErrorMessage("");
   }
 
   function handleNewConfig() {
-    setSelectedConfigId("");
     setFormState(buildInitialFormState(0));
     setPickerState((current) => ({ ...current, open: false }));
-    setErrorMessage("");
     setStatusMessage("");
+    setErrorMessage("");
   }
 
-  function updatePlacement(placement, key, value) {
+  function updateEntries(updater) {
     setFormState((current) => ({
       ...current,
-      placements: current.placements.map((row) =>
-        row.placement === placement ? { ...row, [key]: value } : row
-      ),
+      entries: normalizeEntries(typeof updater === "function" ? updater(current.entries) : updater),
     }));
   }
 
-  function openSharedItemPicker() {
-    setPickerState({
-      open: true,
-      targetType: "shared",
-      placement: 1,
-      mode: "specific",
-      search: "",
-      selectedCategory: "all",
-      draftSpecificItemId: formState.shared_item_definition_id || "",
-      draftPoolItemIds: [],
+  function updateEntry(entryLocalId, updater) {
+    updateEntries((currentEntries) =>
+      currentEntries.map((entry) =>
+        entry.localId === entryLocalId ? normalizeEntry(updater(entry)) : entry
+      )
+    );
+  }
+
+  function updateOption(entryLocalId, optionLocalId, updater) {
+    updateEntries((currentEntries) =>
+      currentEntries.map((entry) => {
+        if (entry.localId !== entryLocalId) return entry;
+        return normalizeEntry({
+          ...entry,
+          options: entry.options.map((option) =>
+            option.localId === optionLocalId ? updater(option) : option
+          ),
+        });
+      })
+    );
+  }
+
+  function addRewardEntry(placement, rewardKind) {
+    updateEntries((currentEntries) => [...currentEntries, buildEmptyEntry(rewardKind, placement)]);
+  }
+
+  function removeRewardEntry(entryLocalId) {
+    updateEntries((currentEntries) => currentEntries.filter((entry) => entry.localId !== entryLocalId));
+  }
+
+  function changeEntryRewardKind(entryLocalId, rewardKind) {
+    updateEntry(entryLocalId, (entry) => {
+      if (rewardKind === "choice") {
+        const nextOptions = entry.options.length
+          ? entry.options.map((option) => normalizeOptionForRewardKind(option, "choice"))
+          : [buildEmptyOption("choice", "specific_item"), buildEmptyOption("choice", "shards")];
+
+        if (nextOptions.length === 1) {
+          nextOptions.push(buildEmptyOption("choice", "shards"));
+        }
+
+        return {
+          ...entry,
+          rewardKind,
+          choiceCount: Math.min(Math.max(1, entry.choiceCount || 1), nextOptions.length),
+          options: nextOptions,
+        };
+      }
+
+      return {
+        ...entry,
+        rewardKind,
+        choiceCount: 1,
+        options: [normalizeOptionForRewardKind(entry.options[0] || buildEmptyOption(rewardKind), rewardKind)],
+      };
     });
   }
 
-  function openPlacementPicker(placement) {
-    const row = formState.placements.find((entry) => entry.placement === placement) || buildEmptyPlacement(placement);
+  function addChoiceOption(entryLocalId) {
+    updateEntry(entryLocalId, (entry) => ({
+      ...entry,
+      options: [...entry.options, buildEmptyOption("choice", "specific_item")],
+    }));
+  }
+
+  function removeChoiceOption(entryLocalId, optionLocalId) {
+    updateEntry(entryLocalId, (entry) => {
+      const nextOptions = entry.options.filter((option) => option.localId !== optionLocalId);
+      return {
+        ...entry,
+        choiceCount: Math.min(Math.max(1, entry.choiceCount), Math.max(1, nextOptions.length)),
+        options: nextOptions,
+      };
+    });
+  }
+
+  function openItemPicker(entryLocalId, optionLocalId, selectionMode) {
+    const entry = formState.entries.find((row) => row.localId === entryLocalId);
+    const option = entry?.options.find((row) => row.localId === optionLocalId);
+    if (!entry || !option) return;
+
     setPickerState({
       open: true,
-      targetType: "placement",
-      placement,
-      mode: row.specific_item_definition_id ? "specific" : "random",
+      selectionMode,
+      entryLocalId,
+      optionLocalId,
       search: "",
       selectedCategory: "all",
-      draftSpecificItemId: row.specific_item_definition_id || "",
-      draftPoolItemIds: [...(row.random_pool_item_ids || [])],
+      draftSpecificItemId: option.itemDefinitionId || "",
+      draftPoolItemIds: [...(option.poolItemIds || [])],
     });
+  }
+
+  function applyItemPicker() {
+    updateOption(pickerState.entryLocalId, pickerState.optionLocalId, (option) => ({
+      ...option,
+      itemDefinitionId:
+        pickerState.selectionMode === "specific" ? pickerState.draftSpecificItemId || "" : "",
+      poolItemIds:
+        pickerState.selectionMode === "pool" ? [...pickerState.draftPoolItemIds] : option.poolItemIds,
+    }));
+
+    setPickerState((current) => ({ ...current, open: false }));
+  }
+
+  function handleDuplicateConfig() {
+    const nextRoundNumber =
+      formState.roundNumber === 0
+        ? 1
+        : formState.roundStep === 1
+        ? formState.roundNumber
+        : formState.roundNumber + 1;
+    const nextRoundStep = formState.roundNumber === 0 ? 1 : formState.roundStep === 1 ? 2 : 1;
+
+    setFormState({
+      configId: "",
+      roundNumber: nextRoundNumber,
+      roundStep: nextRoundStep,
+      entries: normalizeEntries(
+        formState.entries.map((entry) => ({
+          ...entry,
+          id: "",
+          localId: makeLocalId(),
+          options: entry.options.map((option) => ({
+            ...option,
+            id: "",
+            localId: makeLocalId(),
+          })),
+        }))
+      ),
+    });
+    setStatusMessage("Config duplicated into a new unsaved round.");
+    setErrorMessage("");
+  }
+
+  function serializeEntries(entries) {
+    return normalizeEntries(entries).map((entry) => ({
+      placement: entry.placement == null ? null : Number(entry.placement),
+      entry_order: entry.entryOrder,
+      reward_kind: entry.rewardKind,
+      choice_count: entry.rewardKind === "choice" ? entry.choiceCount : 1,
+      options: entry.options.map((option, index) => ({
+        option_order: index + 1,
+        option_kind: option.optionKind,
+        exact_quantity: Math.max(0, option.exactQuantity),
+        quantity_min: Math.max(0, option.quantityMin),
+        quantity_max: Math.max(0, option.quantityMax),
+        item_definition_id: option.itemDefinitionId || null,
+        pool_item_ids: uniqueIds(option.poolItemIds),
+      })),
+    }));
   }
 
   async function saveConfig() {
@@ -544,100 +937,18 @@ function RoundRewardsPage() {
     setStatusMessage("");
 
     try {
-      const duplicateConfig = rewardConfigs.find(
-        (config) =>
-          config.id !== selectedConfigId &&
-          Number(config.round_number) === Number(formState.round_number) &&
-          Number(config.round_step) === Number(formState.round_step)
-      );
+      const { data, error } = await supabase.rpc("save_series_round_reward_config", {
+        p_series_id: activeSeriesId,
+        p_config_id: formState.configId || null,
+        p_round_number: Math.max(0, Number(formState.roundNumber || 0)),
+        p_round_step: Number(formState.roundStep || 1),
+        p_entries: serializeEntries(formState.entries),
+      });
 
-      if (duplicateConfig) {
-        throw new Error(
-          `${formatRoundLabel(formState.round_number, formState.round_step)} already exists. Load it from the left list instead.`
-        );
-      }
+      if (error) throw error;
 
-      const payload = {
-        series_id: activeSeriesId,
-        round_number: Math.max(0, Number(formState.round_number ?? 0)),
-        round_step: Number(formState.round_step || 1),
-        shared_shard_min: Number(formState.shared_shard_min || 0),
-        shared_shard_max: Number(formState.shared_shard_max || 0),
-        shared_feature_coin_min: Number(formState.shared_feature_coin_min || 0),
-        shared_feature_coin_max: Number(formState.shared_feature_coin_max || 0),
-        shared_item_definition_id: formState.shared_item_definition_id || null,
-        shared_item_quantity: Number(formState.shared_item_quantity || 0),
-      };
-
-      let configId = selectedConfigId;
-
-      if (!configId) {
-        const { data, error } = await supabase
-          .from("series_round_reward_configs")
-          .insert(payload)
-          .select("id")
-          .single();
-
-        if (error) throw error;
-        configId = data.id;
-      } else {
-        const { error } = await supabase
-          .from("series_round_reward_configs")
-          .update(payload)
-          .eq("id", configId);
-
-        if (error) throw error;
-
-        const { error: deletePlacementError } = await supabase
-          .from("series_round_reward_config_placements")
-          .delete()
-          .eq("reward_config_id", configId);
-
-        if (deletePlacementError) throw deletePlacementError;
-
-        const { error: deletePoolError } = await supabase
-          .from("series_round_reward_config_random_items")
-          .delete()
-          .eq("reward_config_id", configId);
-
-        if (deletePoolError) throw deletePoolError;
-      }
-
-      const placementRows = formState.placements.map((row) => ({
-        reward_config_id: configId,
-        placement: row.placement,
-        random_item_quantity: Number(row.random_item_quantity || 0),
-        extra_shard_min: Number(row.extra_shard_min || 0),
-        extra_shard_max: Number(row.extra_shard_max || 0),
-        extra_feature_coin_min: Number(row.extra_feature_coin_min || 0),
-        extra_feature_coin_max: Number(row.extra_feature_coin_max || 0),
-        specific_item_definition_id: row.specific_item_definition_id || null,
-      }));
-
-      const { error: placementError } = await supabase
-        .from("series_round_reward_config_placements")
-        .insert(placementRows);
-
-      if (placementError) throw placementError;
-
-      const poolRows = formState.placements.flatMap((row) =>
-        [...new Set(row.random_pool_item_ids || [])].map((itemDefinitionId) => ({
-          reward_config_id: configId,
-          placement: row.placement,
-          item_definition_id: itemDefinitionId,
-        }))
-      );
-
-      if (poolRows.length > 0) {
-        const { error: poolError } = await supabase
-          .from("series_round_reward_config_random_items")
-          .insert(poolRows);
-
-        if (poolError) throw poolError;
-      }
-
-      setStatusMessage(`${formatRoundLabel(formState.round_number, formState.round_step)} saved.`);
-      await loadPage();
+      setStatusMessage(`${formatRoundLabel(formState.roundNumber, formState.roundStep)} saved.`);
+      await loadPage(data);
     } catch (error) {
       console.error("Failed to save round reward config:", error);
       setErrorMessage(error.message || "Failed to save round reward config.");
@@ -646,12 +957,33 @@ function RoundRewardsPage() {
     }
   }
 
-  if (authLoading) return null;
+  async function deleteConfig() {
+    if (!activeSeriesId || !formState.configId) return;
 
-  if (!user) {
-    return <Navigate to="/" replace />;
+    setSaving(true);
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      const { error } = await supabase.rpc("delete_series_round_reward_config", {
+        p_series_id: activeSeriesId,
+        p_config_id: formState.configId,
+      });
+
+      if (error) throw error;
+
+      setStatusMessage("Round reward config deleted.");
+      await loadPage("");
+    } catch (error) {
+      console.error("Failed to delete round reward config:", error);
+      setErrorMessage(error.message || "Failed to delete round reward config.");
+    } finally {
+      setSaving(false);
+    }
   }
 
+  if (authLoading) return null;
+  if (!user) return <Navigate to="/" replace />;
   if (user.role !== "Admin+" && user.role !== "Admin") {
     return <Navigate to="/mode/progression" replace />;
   }
@@ -664,7 +996,8 @@ function RoundRewardsPage() {
             <div className="round-rewards-kicker">ADMIN</div>
             <h1 className="round-rewards-title">Round Rewards</h1>
             <p className="round-rewards-subtitle">
-              Edit every round directly, including Round 0, with cleaner reward pickers and custom random pools.
+              Build shared rewards, placement rewards, random pools, and player
+              choice rewards from one cleaner editor.
             </p>
           </div>
 
@@ -687,7 +1020,7 @@ function RoundRewardsPage() {
               <div className="round-rewards-section-header">
                 <div>
                   <h2>Configured Rounds</h2>
-                  <p>Pick a round config to edit or start a fresh one.</p>
+                  <p>Load an existing reward config or start a fresh one.</p>
                 </div>
                 <button type="button" className="round-rewards-primary-btn" onClick={handleNewConfig}>
                   New Round
@@ -703,18 +1036,12 @@ function RoundRewardsPage() {
                       key={config.id}
                       type="button"
                       className={`round-rewards-config-row ${selectedConfig?.id === config.id ? "is-selected" : ""}`}
-                      onClick={() => {
-                        hydrateForm(config);
-                        setStatusMessage("");
-                        setErrorMessage("");
-                      }}
+                      onClick={() => hydrateForm(config)}
                     >
                       <div className="round-rewards-config-row-title">
-                        {formatRoundLabel(config.round_number, config.round_step)}
+                        {formatRoundLabel(config.roundNumber, config.roundStep)}
                       </div>
-                      <div className="round-rewards-config-row-meta">
-                        Shared {Number(config.shared_shard_min || 0)}-{Number(config.shared_shard_max || 0)} Shards
-                      </div>
+                      <div className="round-rewards-config-row-meta">{getConfigSummary(config)}</div>
                     </button>
                   ))
                 )}
@@ -726,7 +1053,28 @@ function RoundRewardsPage() {
                 <div className="round-rewards-section-header">
                   <div>
                     <h2>Round Chooser</h2>
-                    <p>Keep the round label compact while you edit.</p>
+                    <p>Keep the round target compact, then duplicate or fine tune from there.</p>
+                  </div>
+
+                  <div className="round-rewards-chooser-actions">
+                    {formState.entries.length ? (
+                      <button
+                        type="button"
+                        className="round-rewards-secondary-btn"
+                        onClick={handleDuplicateConfig}
+                      >
+                        Duplicate Config
+                      </button>
+                    ) : null}
+                    {formState.configId ? (
+                      <button
+                        type="button"
+                        className="round-rewards-danger-btn"
+                        onClick={deleteConfig}
+                      >
+                        Delete Config
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -736,11 +1084,11 @@ function RoundRewardsPage() {
                     <input
                       type="number"
                       min="0"
-                      value={formState.round_number}
+                      value={formState.roundNumber}
                       onChange={(event) =>
                         setFormState((current) => ({
                           ...current,
-                          round_number: Math.max(0, Number(event.target.value || 0)),
+                          roundNumber: Math.max(0, Number(event.target.value || 0)),
                         }))
                       }
                     />
@@ -749,11 +1097,11 @@ function RoundRewardsPage() {
                   <label className="round-rewards-compact-field round-rewards-compact-field--step">
                     <span>Step</span>
                     <select
-                      value={formState.round_step}
+                      value={formState.roundStep}
                       onChange={(event) =>
                         setFormState((current) => ({
                           ...current,
-                          round_step: Number(event.target.value || 1),
+                          roundStep: Number(event.target.value || 1),
                         }))
                       }
                     >
@@ -766,7 +1114,7 @@ function RoundRewardsPage() {
                   </label>
 
                   <div className="round-rewards-round-preview">
-                    {formatRoundLabel(formState.round_number, formState.round_step)}
+                    {formatRoundLabel(formState.roundNumber, formState.roundStep)}
                   </div>
                 </div>
               </section>
@@ -775,130 +1123,143 @@ function RoundRewardsPage() {
                 <div className="round-rewards-section-header">
                   <div>
                     <h2>Shared Rewards</h2>
-                    <p>These apply to every result row in the selected round.</p>
+                    <p>These reward rows apply to every player result in this round.</p>
+                  </div>
+                  <div className="round-rewards-add-actions">
+                    <button type="button" className="round-rewards-secondary-btn" onClick={() => addRewardEntry(null, "set")}>
+                      + Set
+                    </button>
+                    <button type="button" className="round-rewards-secondary-btn" onClick={() => addRewardEntry(null, "random")}>
+                      + Random
+                    </button>
+                    <button type="button" className="round-rewards-secondary-btn" onClick={() => addRewardEntry(null, "choice")}>
+                      + Choice
+                    </button>
                   </div>
                 </div>
 
-                <div className="round-rewards-shared-grid">
-                  <RangeEditor
-                    label="Shards"
-                    minValue={formState.shared_shard_min}
-                    maxValue={formState.shared_shard_max}
-                    onMinChange={(value) => setFormState((current) => ({ ...current, shared_shard_min: value }))}
-                    onMaxChange={(value) => setFormState((current) => ({ ...current, shared_shard_max: value }))}
-                  />
-
-                  <RangeEditor
-                    label="Feature Coins"
-                    minValue={formState.shared_feature_coin_min}
-                    maxValue={formState.shared_feature_coin_max}
-                    onMinChange={(value) =>
-                      setFormState((current) => ({ ...current, shared_feature_coin_min: value }))
-                    }
-                    onMaxChange={(value) =>
-                      setFormState((current) => ({ ...current, shared_feature_coin_max: value }))
-                    }
-                  />
-
-                  <label className="round-rewards-compact-field">
-                    <span>Item Qty</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formState.shared_item_quantity}
-                      onChange={(event) =>
-                        setFormState((current) => ({
-                          ...current,
-                          shared_item_quantity: Number(event.target.value || 0),
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <button
-                    type="button"
-                    className="round-rewards-picker-btn"
-                    onClick={openSharedItemPicker}
-                  >
-                    <div className="round-rewards-picker-btn-label">Shared Item</div>
-                    <div className="round-rewards-picker-btn-value">
-                      {formState.shared_item_definition_id
-                        ? getItemName(formState.shared_item_definition_id, itemMap)
-                        : "None selected"}
-                    </div>
-                  </button>
+                <div className="round-rewards-entry-list">
+                  {sharedEntries.length === 0 ? (
+                    <div className="round-rewards-empty">No shared rewards configured yet.</div>
+                  ) : (
+                    sharedEntries.map((entry) => (
+                      <RewardEntryCard
+                        key={entry.localId}
+                        entry={entry}
+                        itemMap={itemMap}
+                        onChangeRewardKind={(value) => changeEntryRewardKind(entry.localId, value)}
+                        onChangeChoiceCount={(value) =>
+                          updateEntry(entry.localId, (currentEntry) => ({
+                            ...currentEntry,
+                            choiceCount: value,
+                          }))
+                        }
+                        onChangeOptionKind={(optionLocalId, value) =>
+                          updateOption(entry.localId, optionLocalId, (option) =>
+                            normalizeOptionForRewardKind({ ...option, optionKind: value }, entry.rewardKind)
+                          )
+                        }
+                        onChangeOptionExactQuantity={(optionLocalId, value) =>
+                          updateOption(entry.localId, optionLocalId, (option) => ({
+                            ...option,
+                            exactQuantity: value,
+                          }))
+                        }
+                        onChangeOptionRange={(optionLocalId, key, value) =>
+                          updateOption(entry.localId, optionLocalId, (option) => ({
+                            ...option,
+                            [key]: value,
+                          }))
+                        }
+                        onOpenSpecificPicker={(optionLocalId) =>
+                          openItemPicker(entry.localId, optionLocalId, "specific")
+                        }
+                        onOpenPoolPicker={(optionLocalId) =>
+                          openItemPicker(entry.localId, optionLocalId, "pool")
+                        }
+                        onAddChoiceOption={() => addChoiceOption(entry.localId)}
+                        onRemoveChoiceOption={(optionLocalId) =>
+                          removeChoiceOption(entry.localId, optionLocalId)
+                        }
+                        onRemoveEntry={() => removeRewardEntry(entry.localId)}
+                      />
+                    ))
+                  )}
                 </div>
               </section>
 
               <section className="round-rewards-placement-grid">
-                {formState.placements.map((row) => {
-                  const summary = buildPlacementRewardSummary(row, itemMap);
+                {PLACEMENTS.map((placement) => (
+                  <article className="round-rewards-card round-rewards-placement-card" key={placement}>
+                    <div className="round-rewards-section-header">
+                      <div>
+                        <div className="round-rewards-placement-kicker">Placement</div>
+                        <h2>{placement}</h2>
+                        <p>Build this placement’s direct rewards and player choices here.</p>
+                      </div>
+                      <div className="round-rewards-add-actions">
+                        <button type="button" className="round-rewards-secondary-btn" onClick={() => addRewardEntry(placement, "set")}>
+                          + Set
+                        </button>
+                        <button type="button" className="round-rewards-secondary-btn" onClick={() => addRewardEntry(placement, "random")}>
+                          + Random
+                        </button>
+                        <button type="button" className="round-rewards-secondary-btn" onClick={() => addRewardEntry(placement, "choice")}>
+                          + Choice
+                        </button>
+                      </div>
+                    </div>
 
-                  return (
-                    <article className="round-rewards-placement-card round-rewards-card" key={row.placement}>
-                      <div className="round-rewards-placement-header">
-                        <div>
-                          <div className="round-rewards-placement-kicker">Placement</div>
-                          <h3>{row.placement}</h3>
-                        </div>
-
-                        <label className="round-rewards-compact-field round-rewards-compact-field--qty">
-                          <span>Quantity</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.random_item_quantity}
-                            onChange={(event) =>
-                              updatePlacement(
-                                row.placement,
-                                "random_item_quantity",
-                                Number(event.target.value || 0)
+                    <div className="round-rewards-entry-list">
+                      {placementEntries[placement]?.length ? (
+                        placementEntries[placement].map((entry) => (
+                          <RewardEntryCard
+                            key={entry.localId}
+                            entry={entry}
+                            itemMap={itemMap}
+                            onChangeRewardKind={(value) => changeEntryRewardKind(entry.localId, value)}
+                            onChangeChoiceCount={(value) =>
+                              updateEntry(entry.localId, (currentEntry) => ({
+                                ...currentEntry,
+                                choiceCount: value,
+                              }))
+                            }
+                            onChangeOptionKind={(optionLocalId, value) =>
+                              updateOption(entry.localId, optionLocalId, (option) =>
+                                normalizeOptionForRewardKind({ ...option, optionKind: value }, entry.rewardKind)
                               )
                             }
+                            onChangeOptionExactQuantity={(optionLocalId, value) =>
+                              updateOption(entry.localId, optionLocalId, (option) => ({
+                                ...option,
+                                exactQuantity: value,
+                              }))
+                            }
+                            onChangeOptionRange={(optionLocalId, key, value) =>
+                              updateOption(entry.localId, optionLocalId, (option) => ({
+                                ...option,
+                                [key]: value,
+                              }))
+                            }
+                            onOpenSpecificPicker={(optionLocalId) =>
+                              openItemPicker(entry.localId, optionLocalId, "specific")
+                            }
+                            onOpenPoolPicker={(optionLocalId) =>
+                              openItemPicker(entry.localId, optionLocalId, "pool")
+                            }
+                            onAddChoiceOption={() => addChoiceOption(entry.localId)}
+                            onRemoveChoiceOption={(optionLocalId) =>
+                              removeChoiceOption(entry.localId, optionLocalId)
+                            }
+                            onRemoveEntry={() => removeRewardEntry(entry.localId)}
                           />
-                        </label>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="round-rewards-picker-btn round-rewards-picker-btn--placement"
-                        onClick={() => openPlacementPicker(row.placement)}
-                      >
-                        <div className="round-rewards-picker-btn-label">Reward Item</div>
-                        <div className="round-rewards-picker-btn-value">{summary.title}</div>
-                        <div className="round-rewards-picker-btn-subvalue">{summary.subtitle}</div>
-                      </button>
-
-                      <div className="round-rewards-placement-ranges">
-                        <RangeEditor
-                          label="Shards"
-                          minValue={row.extra_shard_min}
-                          maxValue={row.extra_shard_max}
-                          onMinChange={(value) => updatePlacement(row.placement, "extra_shard_min", value)}
-                          onMaxChange={(value) => updatePlacement(row.placement, "extra_shard_max", value)}
-                        />
-
-                        <RangeEditor
-                          label="Feature Coins"
-                          minValue={row.extra_feature_coin_min}
-                          maxValue={row.extra_feature_coin_max}
-                          onMinChange={(value) =>
-                            updatePlacement(row.placement, "extra_feature_coin_min", value)
-                          }
-                          onMaxChange={(value) =>
-                            updatePlacement(row.placement, "extra_feature_coin_max", value)
-                          }
-                        />
-                      </div>
-
-                      <div className="round-rewards-placement-footer">
-                        <div className="round-rewards-placement-footer-pill">
-                          Pool Size: {row.random_pool_item_ids.length || 0}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                        ))
+                      ) : (
+                        <div className="round-rewards-empty">No placement rewards configured yet.</div>
+                      )}
+                    </div>
+                  </article>
+                ))}
               </section>
 
               {statusMessage ? <div className="round-rewards-success">{statusMessage}</div> : null}
@@ -913,31 +1274,12 @@ function RoundRewardsPage() {
           </div>
         )}
 
-        <RewardPickerModal
+        <RewardItemPickerModal
           pickerState={pickerState}
           itemGroups={itemGroups}
           itemMap={itemMap}
           onClose={() => setPickerState((current) => ({ ...current, open: false }))}
-          onApply={() => {
-            if (pickerState.targetType === "shared") {
-              setFormState((current) => ({
-                ...current,
-                shared_item_definition_id: pickerState.draftSpecificItemId || "",
-              }));
-            } else {
-              updatePlacement(
-                pickerState.placement,
-                "specific_item_definition_id",
-                pickerState.mode === "specific" ? pickerState.draftSpecificItemId || "" : ""
-              );
-              updatePlacement(
-                pickerState.placement,
-                "random_pool_item_ids",
-                [...pickerState.draftPoolItemIds]
-              );
-            }
-            setPickerState((current) => ({ ...current, open: false }));
-          }}
+          onApply={applyItemPicker}
           onSelectSpecificItem={(itemId) =>
             setPickerState((current) => ({
               ...current,
@@ -952,7 +1294,6 @@ function RoundRewardsPage() {
                 : [...current.draftPoolItemIds, itemId],
             }))
           }
-          onSetMode={(mode) => setPickerState((current) => ({ ...current, mode }))}
           onSetSearch={(search) => setPickerState((current) => ({ ...current, search }))}
           onSetCategory={(selectedCategory) =>
             setPickerState((current) => ({ ...current, selectedCategory }))

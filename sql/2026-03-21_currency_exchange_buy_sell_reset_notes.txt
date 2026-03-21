@@ -1,0 +1,12 @@
+2026-03-21 currency exchange reset
+
+- Currency exchange is back to a simple buy/sell model.
+- Buy rate default:
+  - 150 Shards -> 1 Feature Coin
+- Sell rate default:
+  - 1 Feature Coin -> 140 Shards
+- Exchange fees are no longer used in the player flow or admin editor.
+- Existing series exchange rows were reset to:
+  - shards_per_feature_coin = 150
+  - feature_coin_to_shards_rate = 140
+  - fee_percent = 0

@@ -2,31 +2,31 @@ const CATEGORY_LABELS = {
   banlist: "Banlist",
   progression: "Progression",
   chaos: "Chaos",
-  thiefs_cards: "Thief's Cards",
+  thiefs_cards: "Binder Steal",
   hex_idols: "Hex Idols",
   card_extractors: "Card Extractors",
   forced_exchanges: "Forced Exchanges",
   protection: "Protection",
   special: "Special",
-  container_openers: "Container Openers",
+  container_openers: "Keys",
   currency_exchange: "Currency Exchange",
-  pack_openers: "Container Openers",
-  pack_keys: "Container Openers",
-  box_keys: "Container Openers",
+  pack_openers: "Keys",
+  pack_keys: "Keys",
+  box_keys: "Keys",
 };
 
 const CATEGORY_ORDER = [
+  "container_openers",
   "banlist",
-  "progression",
   "thiefs_cards",
+  "currency_exchange",
+  "progression",
   "hex_idols",
   "card_extractors",
   "forced_exchanges",
   "protection",
   "special",
-  "container_openers",
   "pack_opener",
-  "currency_exchange",
 ];
 
 export function normalizeStoreCategoryCode(code) {
@@ -73,4 +73,26 @@ export function sortStoreGroups(groups) {
 
     return String(left.label || "").localeCompare(String(right.label || ""));
   });
+}
+
+export function isSupportedStoreItem(item) {
+  const normalizedCategoryCode = normalizeStoreCategoryCode(item?.category_code);
+  const itemCode = String(item?.code || item?.item_code || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedCategoryCode === "container_openers") {
+    return true;
+  }
+
+  if (normalizedCategoryCode === "banlist") {
+    return [
+      "forbidden_edict",
+      "limit_edict",
+      "semi_limit_edict",
+      "amnesty_edict",
+    ].includes(itemCode);
+  }
+
+  return itemCode === "thiefs_card";
 }

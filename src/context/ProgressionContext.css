@@ -77,6 +77,42 @@
   margin-top: 22px;
 }
 
+.progression-admin-phase-modal {
+  display: grid;
+  gap: 20px;
+}
+
+.progression-admin-phase-about {
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(184, 156, 95, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(12, 14, 20, 0.94);
+}
+
+.progression-admin-phase-about-kicker {
+  font-size: 0.76rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(184, 156, 95, 0.82);
+}
+
+.progression-admin-phase-about-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #f3efe3;
+}
+
+.progression-admin-phase-about-copy {
+  margin: 0;
+  line-height: 1.65;
+  color: rgba(243, 239, 227, 0.76);
+}
+
 .progression-global-primary-btn {
   min-width: 220px;
   padding: 14px 22px;

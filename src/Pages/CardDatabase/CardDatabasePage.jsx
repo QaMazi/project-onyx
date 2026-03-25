@@ -610,6 +610,40 @@ function applySharedFilters(
   return nextQuery;
 }
 
+function matchesSharedFilters(
+  card,
+  searchMode,
+  searchTerm,
+  attribute,
+  race,
+  otValue,
+  atkMin,
+  atkMax,
+  defMin,
+  defMax
+) {
+  const loweredSearch = String(searchTerm || "").trim().toLowerCase();
+
+  if (loweredSearch) {
+    const haystack =
+      searchMode === "desc"
+        ? String(card?.desc || "").toLowerCase()
+        : String(card?.name || "").toLowerCase();
+
+    if (!haystack.includes(loweredSearch)) return false;
+  }
+
+  if (attribute !== "all" && Number(card?.attribute || 0) !== Number(attribute)) return false;
+  if (race !== "all" && Number(card?.race || 0) !== Number(race)) return false;
+  if (otValue !== "all" && String(card?.ot ?? "") !== String(otValue)) return false;
+  if (atkMin !== "" && Number(card?.atk ?? -999999) < Number(atkMin)) return false;
+  if (atkMax !== "" && Number(card?.atk ?? 999999) > Number(atkMax)) return false;
+  if (defMin !== "" && Number(card?.def ?? -999999) < Number(defMin)) return false;
+  if (defMax !== "" && Number(card?.def ?? 999999) > Number(defMax)) return false;
+
+  return true;
+}
+
 function matchesLevelRange(card, minValue, maxValue) {
   if (minValue === "" && maxValue === "") return true;
 
@@ -851,6 +885,7 @@ function CardDatabasePage() {
   const [defMin, setDefMin] = useState("");
   const [defMax, setDefMax] = useState("");
 
+  const [allCards, setAllCards] = useState([]);
   const [cards, setCards] = useState([]);
   const [lockedCard, setLockedCard] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -952,218 +987,46 @@ function CardDatabasePage() {
   }, [showSpellTrapSubtypeFilter, spellTrapSubtype]);
 
   useEffect(() => {
-    async function loadTypeIndex() {
-      if (typeIndexRef.current) return;
-
+    async function loadAllCards() {
       setTypeIndexLoading(true);
 
       try {
         const { data, error } = await supabase
           .from("cards")
-          .select("id, type, name, ot")
-          .not("type", "is", null);
+          .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url")
+          .order("name", { ascending: true });
 
         if (error) {
           throw error;
         }
 
-        typeIndexRef.current = createTypeIndexBuckets(data || []);
+        setAllCards(data || []);
       } catch (error) {
-        console.error("Failed to build card type index:", error);
+        console.error("Failed to load card database rows:", error);
+        setAllCards([]);
+        setLoadError("Failed to load card database.");
       } finally {
         setTypeIndexLoading(false);
       }
     }
 
     if (!authLoading && user) {
-      loadTypeIndex();
+      loadAllCards();
     }
   }, [authLoading, user]);
 
   useEffect(() => {
     async function fetchCards() {
+      if (authLoading || !user || typeIndexLoading) return;
+
       setLoadingCards(true);
       setLoadError("");
 
       try {
-        const matchingIds = getMatchingIdsFromTypeIndex(
-          typeIndexRef.current,
-          cardKind,
-          showMonsterSubtypeFilter ? monsterSubtype : "all",
-          showSpellTrapSubtypeFilter ? spellTrapSubtype : "all",
-          monsterTraits
-        );
-
-        if (Array.isArray(matchingIds) && matchingIds.length === 0) {
-          setCards([]);
-          setLockedCard(null);
-          setHoveredCard(null);
-          setTotalCount(0);
-          setLoadingCards(false);
-          return;
-        }
-
-        let fetchedRows = [];
-        let resolvedTotalCount = 0;
-
-        if (!hasComputedFilters && !Array.isArray(matchingIds)) {
-          let countQuery = supabase
-            .from("cards")
-            .select("id", { count: "exact", head: true });
-
-          countQuery = applySharedFilters(
-            countQuery,
-            searchMode,
-            searchTerm,
-            attribute,
-            race,
-            otValue,
-            atkMin,
-            atkMax,
-            defMin,
-            defMax
-          );
-
-          const { count, error: countError } = await countQuery;
-          if (countError) throw countError;
-
-          resolvedTotalCount = count || 0;
-          const resolvedTotalPages = Math.max(1, Math.ceil(resolvedTotalCount / pageSize));
-          const resolvedPage = clampPage(page, resolvedTotalPages);
-
-          if (resolvedPage !== page) {
-            setPage(resolvedPage);
-            setTotalCount(resolvedTotalCount);
-            setLoadingCards(false);
-            return;
-          }
-
-          const start = (resolvedPage - 1) * pageSize;
-          const end = start + pageSize - 1;
-
-          let query = supabase
-            .from("cards")
-            .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url");
-
-          query = applySharedFilters(
-            query,
-            searchMode,
-            searchTerm,
-            attribute,
-            race,
-            otValue,
-            atkMin,
-            atkMax,
-            defMin,
-            defMax
-          );
-
-          const { data, error } = await query
-            .order("name", { ascending: true })
-            .range(start, end);
-
-          if (error) throw error;
-
-          fetchedRows = data || [];
-          setTotalCount(resolvedTotalCount);
-        } else {
-          let baseCountQuery = supabase
-            .from("cards")
-            .select("id", { count: "exact", head: true });
-
-          baseCountQuery = applySharedFilters(
-            baseCountQuery,
-            searchMode,
-            searchTerm,
-            attribute,
-            race,
-            otValue,
-            atkMin,
-            atkMax,
-            defMin,
-            defMax
-          );
-
-          if (Array.isArray(matchingIds)) {
-            baseCountQuery = baseCountQuery.in("id", matchingIds);
-          }
-
-          const { count, error: countError } = await baseCountQuery;
-          if (countError) throw countError;
-
-          const roughCount = count || 0;
-          const resolvedTotalPages = Math.max(1, Math.ceil(roughCount / pageSize));
-          const resolvedPage = clampPage(page, resolvedTotalPages);
-
-          if (resolvedPage !== page) {
-            setPage(resolvedPage);
-            setTotalCount(roughCount);
-            setLoadingCards(false);
-            return;
-          }
-
-          const start = (resolvedPage - 1) * pageSize;
-          const end = start + pageSize - 1;
-
-          if (Array.isArray(matchingIds) && matchingIds.length > 0) {
-            const chunks = chunkArray(matchingIds, 500);
-            const collectedRows = [];
-
-            for (const chunk of chunks) {
-              let chunkQuery = supabase
-                .from("cards")
-                .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url")
-                .in("id", chunk);
-
-              chunkQuery = applySharedFilters(
-                chunkQuery,
-                searchMode,
-                searchTerm,
-                attribute,
-                race,
-                otValue,
-                atkMin,
-                atkMax,
-                defMin,
-                defMax
-              );
-
-              const { data: chunkRows, error: chunkError } = await chunkQuery.order("name", {
-                ascending: true,
-              });
-
-              if (chunkError) throw chunkError;
-
-              collectedRows.push(...(chunkRows || []));
-            }
-
-            const filteredRows = collectedRows.filter((card) =>
-              matchesStrictFilters(
-                card,
-                cardKind,
-                monsterSubtype,
-                spellTrapSubtype,
-                monsterTraits,
-                levelMin,
-                levelMax,
-                linkMin,
-                linkMax,
-                pendulumMin,
-                pendulumMax
-              )
-            );
-
-            filteredRows.sort((a, b) => a.name.localeCompare(b.name));
-            resolvedTotalCount = filteredRows.length;
-            fetchedRows = filteredRows.slice(start, end + 1);
-            setTotalCount(resolvedTotalCount);
-          } else {
-            let query = supabase
-              .from("cards")
-              .select("id, ot, name, desc, type, race, attribute, level, atk, def, setcode, image_url");
-
-            query = applySharedFilters(
-              query,
+        const filteredRows = allCards.filter(
+          (card) =>
+            matchesSharedFilters(
+              card,
               searchMode,
               searchTerm,
               attribute,
@@ -1173,33 +1036,37 @@ function CardDatabasePage() {
               atkMax,
               defMin,
               defMax
-            );
+            ) &&
+            matchesStrictFilters(
+              card,
+              cardKind,
+              monsterSubtype,
+              spellTrapSubtype,
+              monsterTraits,
+              levelMin,
+              levelMax,
+              linkMin,
+              linkMax,
+              pendulumMin,
+              pendulumMax
+            )
+        );
 
-            const { data, error } = await query.order("name", { ascending: true });
-            if (error) throw error;
+        const resolvedTotalCount = filteredRows.length;
+        const resolvedTotalPages = Math.max(1, Math.ceil(resolvedTotalCount / pageSize));
+        const resolvedPage = clampPage(page, resolvedTotalPages);
 
-            const filteredRows = (data || []).filter((card) =>
-              matchesStrictFilters(
-                card,
-                cardKind,
-                monsterSubtype,
-                spellTrapSubtype,
-                monsterTraits,
-                levelMin,
-                levelMax,
-                linkMin,
-                linkMax,
-                pendulumMin,
-                pendulumMax
-              )
-            );
-
-            resolvedTotalCount = filteredRows.length;
-            fetchedRows = filteredRows.slice(start, end + 1);
-            setTotalCount(resolvedTotalCount);
-          }
+        if (resolvedPage !== page) {
+          setPage(resolvedPage);
+          setTotalCount(resolvedTotalCount);
+          setLoadingCards(false);
+          return;
         }
 
+        const start = (resolvedPage - 1) * pageSize;
+        const end = start + pageSize - 1;
+        const fetchedRows = filteredRows.slice(start, end + 1);
+        setTotalCount(resolvedTotalCount);
         setCards(fetchedRows);
         setLockedCard((currentLockedCard) => {
           if (currentLockedCard) {
@@ -1222,12 +1089,13 @@ function CardDatabasePage() {
       }
     }
 
-    if (!authLoading && user) {
+    if (!authLoading && user && !typeIndexLoading) {
       fetchCards();
     }
   }, [
     authLoading,
     user,
+    allCards,
     searchMode,
     searchTerm,
     cardKind,
@@ -1249,7 +1117,7 @@ function CardDatabasePage() {
     defMax,
     page,
     pageSize,
-    hasComputedFilters,
+    typeIndexLoading,
     showMonsterSubtypeFilter,
     showSpellTrapSubtypeFilter,
   ]);

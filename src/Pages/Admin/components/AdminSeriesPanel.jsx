@@ -444,12 +444,28 @@ function AdminSeriesPanel() {
   function getStatusLabel(status) {
     const normalized = String(status || "").toLowerCase();
 
-    if (normalized === "lobby") return "Lobby";
+    if (normalized === "lobby") return "Admin Phase";
     if (normalized === "active") return "Active";
     if (normalized === "paused") return "Paused";
     if (normalized === "ended") return "Ended";
 
     return "Unknown";
+  }
+
+  function formatPhaseLabel(phase) {
+    const normalized = String(phase || "").toLowerCase();
+
+    if (normalized === "lobby") return "Admin Phase";
+    if (normalized === "standby") return "Standby Phase";
+    if (normalized === "ban") return "Ban Phase";
+    if (normalized === "binder") return "Binder Phase";
+    if (normalized === "feature") return "Feature Phase";
+    if (normalized === "draft") return "Draft Phase";
+    if (normalized === "deckbuilding") return "Deckbuilding Phase";
+    if (normalized === "dueling") return "Dueling Phase";
+    if (normalized === "reward") return "Reward Phase";
+
+    return phase || "Unknown";
   }
 
   function getMemberRoleLabel(member) {
@@ -504,7 +520,7 @@ function AdminSeriesPanel() {
               <span className="admin-series-active-meta">
                 {globalActiveSeries
                   ? `${getStatusLabel(globalActiveSeries.status)} • Phase: ${
-                      globalActiveSeries.current_phase || "lobby"
+                      formatPhaseLabel(globalActiveSeries.current_phase || "lobby")
                     }`
                   : "Starting or resuming one of your series will make it the active global series."}
               </span>
@@ -637,7 +653,7 @@ function AdminSeriesPanel() {
                     </div>
 
                     <div className="admin-series-meta">
-                      <span>Phase: {series.current_phase || "lobby"}</span>
+                      <span>Phase: {formatPhaseLabel(series.current_phase || "lobby")}</span>
                       <span>
                         Players: {series.player_count ?? "—"} / {series.max_players ?? "—"}
                       </span>
@@ -654,7 +670,7 @@ function AdminSeriesPanel() {
                         disabled={isBusy || series.status !== "lobby"}
                         type="button"
                       >
-                        {isBusy && series.status === "lobby" ? "Working..." : "Start"}
+                        {isBusy && series.status === "lobby" ? "Working..." : "Begin Series"}
                       </button>
 
                       <button

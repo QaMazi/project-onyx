@@ -1,0 +1,6 @@
+2026-03-24 Binder Removal same-name family fix
+
+- Binder Phase Option 1 now removes by card name family instead of exact card_id only.
+- This covers alternate-art and multi-print cards that share the same displayed card name.
+- The live patch also updates the RPC declaration block so the new helper variables exist before the Binder Removal branch runs.
+- Frontend Binder Phase targeting already groups Option 1 by card name family to match this behavior.

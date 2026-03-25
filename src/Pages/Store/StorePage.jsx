@@ -5,6 +5,7 @@ import { useUser } from "../../context/UserContext";
 import { supabase } from "../../lib/supabase";
 import {
   formatStoreCategoryName,
+  isSupportedStoreItem,
   normalizeStoreCategoryCode,
   sortStoreGroups,
 } from "../../lib/storeCatalog";
@@ -14,7 +15,6 @@ import "./StorePage.css";
 const HIDDEN_STORE_CATEGORY_CODES = new Set([
   "feature_tokens",
   "collection_notices",
-  "container_openers",
 ]);
 
 function StorePage() {
@@ -84,7 +84,9 @@ function StorePage() {
       if (cartResponse.error) throw cartResponse.error;
       if (exchangeResponse.error) throw exchangeResponse.error;
 
-      const nextCatalog = catalogResponse.data || [];
+      const nextCatalog = (catalogResponse.data || []).filter((item) =>
+        isSupportedStoreItem(item)
+      );
       const nextCart = cartResponse.data || [];
 
       setCatalog(nextCatalog);
@@ -288,8 +290,8 @@ function StorePage() {
             <div className="store-kicker">PROGRESSION</div>
             <h1 className="store-title">Store</h1>
             <p className="store-subtitle">
-              Buy items with shards, exchange into Feature Coins, and send purchases
-              straight into your active-series inventory.
+              Buy keys, banlist effects, and binder steal tools with Shards, then
+              exchange into Feature Coins for Feature Slots.
             </p>
           </div>
 

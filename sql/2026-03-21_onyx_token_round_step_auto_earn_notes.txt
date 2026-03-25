@@ -1,0 +1,15 @@
+Onyx Token auto earn now grants 1 token after every completed round-step instead of only after a completed main round pair.
+
+Live changes in the SQL patch:
+- added `round_step` to `public.profile_premium_main_round_awards`
+- changed the unique award scope to `(series_id, round_number, round_step, user_id)`
+- added a new step-aware `_award_completed_main_round_tokens(uuid, integer, integer)` helper
+- kept the old 2-arg helper as a compatibility wrapper
+- updated `advance_series_phase(uuid, boolean)` to award after every reward-phase completion, including `Round 0-1`
+
+Current intended earn pattern:
+- completing `Round 0-1` -> +1 Onyx Token
+- completing `Round 1-1` -> +1 Onyx Token
+- completing `Round 1-2` -> +1 Onyx Token
+- completing `Round 2-1` -> +1 Onyx Token
+- and so on

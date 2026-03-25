@@ -1,0 +1,5 @@
+Binder Phase tied-targeting follow-up
+
+- Hostile Binder Phase options now treat exact overall-scoreboard ties as valid targets.
+- A solo first-place player will have no eligible hostile targets and will no longer see options 1-4 in the Binder choice modal.
+- This does not change turn order. Turn order still uses last round placement first, then overall placement.

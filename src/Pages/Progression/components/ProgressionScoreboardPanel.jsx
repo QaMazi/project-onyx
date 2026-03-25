@@ -6,6 +6,14 @@ function formatPhaseLabel(phase) {
   switch (phase) {
     case "standby":
       return "STANDBY PHASE";
+    case "ban":
+      return "BAN PHASE";
+    case "binder":
+      return "BINDER PHASE";
+    case "feature":
+      return "FEATURE PHASE";
+    case "draft":
+      return "DRAFT PHASE";
     case "deckbuilding":
       return "DECKBUILDING PHASE";
     case "dueling":
@@ -13,7 +21,7 @@ function formatPhaseLabel(phase) {
     case "reward":
       return "REWARD PHASE";
     case "lobby":
-      return "LOBBY";
+      return "ADMIN PHASE";
     default:
       return phase ? String(phase).toUpperCase() : "UNKNOWN PHASE";
   }

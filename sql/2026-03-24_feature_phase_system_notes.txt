@@ -1,0 +1,23 @@
+Feature Phase system applied on 2026-03-24.
+
+What this added:
+- real Phase 4 turn system for normal rounds
+- X-1 Feature rewards:
+  - Monster
+  - Spell
+  - Trap
+  - Extra Deck
+  - Random Promo Box Key
+- X-2 Feature rewards:
+  - one unlocked Deck Box or Promo Box
+- special round bonus support for every 6th round:
+  - 5 Collectors Boxes of choice
+  - 3 Promo Boxes of choice
+- duplicate choice refresh logic when the available pool is exhausted
+- auto advance from Feature -> Draft after all turns finish
+- free picker-machine reward sessions tied to Feature Phase turns
+- direct box-opening reward helpers for Promo / Deck / Collectors boxes
+
+Frontend follow-up included:
+- Feature Slots page now becomes the forced Phase 4 resolution page
+- progression lock copy updated so Feature Phase is no longer treated as undefined

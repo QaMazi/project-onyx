@@ -202,6 +202,282 @@
   gap: 10px;
 }
 
+.ban-phase-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.ban-phase-card {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(18, 22, 33, 0.9), rgba(8, 10, 16, 0.92));
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  padding: 18px;
+}
+
+.ban-phase-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ban-phase-card-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.ban-phase-card-header span,
+.ban-phase-search-status {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(240, 244, 255, 0.84);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ban-phase-turn-stack,
+.ban-phase-system-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.ban-phase-turn-card,
+.ban-phase-system-card {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ban-phase-turn-card.is-current {
+  border-color: rgba(200, 168, 93, 0.48);
+  box-shadow: 0 0 0 1px rgba(200, 168, 93, 0.22);
+}
+
+.ban-phase-turn-card.is-mine {
+  background: rgba(200, 168, 93, 0.08);
+}
+
+.ban-phase-turn-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.ban-phase-turn-top strong,
+.ban-phase-system-card strong {
+  font-size: 15px;
+}
+
+.ban-phase-turn-top span,
+.ban-phase-turn-meta,
+.ban-phase-turn-result,
+.ban-phase-system-card small {
+  color: rgba(231, 237, 255, 0.72);
+  font-size: 12px;
+}
+
+.ban-phase-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ban-phase-summary-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ban-phase-summary-item span {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(231, 237, 255, 0.66);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ban-phase-summary-item strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.ban-phase-summary-copy {
+  color: rgba(231, 237, 255, 0.76);
+  line-height: 1.6;
+}
+
+.ban-phase-section-card.is-droppable {
+  border-color: rgba(200, 168, 93, 0.45);
+}
+
+.ban-phase-section-card.is-drop-active {
+  box-shadow:
+    0 0 0 1px rgba(200, 168, 93, 0.25),
+    0 0 26px rgba(200, 168, 93, 0.16);
+}
+
+.ban-phase-drop-hint {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(200, 168, 93, 0.12);
+  border: 1px solid rgba(200, 168, 93, 0.2);
+  color: #f2ddad;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ban-phase-row {
+  grid-template-columns: 1fr;
+}
+
+.ban-phase-row-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ban-phase-source-badge {
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ban-phase-source-badge.source-era {
+  background: rgba(126, 165, 255, 0.15);
+  color: #b4ccff;
+  border: 1px solid rgba(126, 165, 255, 0.28);
+}
+
+.ban-phase-source-badge.source-custom {
+  background: rgba(87, 178, 120, 0.14);
+  color: #bdf0ca;
+  border: 1px solid rgba(87, 178, 120, 0.24);
+}
+
+.ban-phase-source-badge.source-system {
+  background: rgba(212, 101, 101, 0.16);
+  color: #ffd1d1;
+  border: 1px solid rgba(212, 101, 101, 0.28);
+}
+
+.ban-phase-confirm-bar {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(180deg, rgba(20, 24, 34, 0.88), rgba(9, 12, 18, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ban-phase-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 6, 10, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.ban-phase-option-modal {
+  width: min(900px, calc(100vw - 32px));
+  max-height: min(88vh, 880px);
+  overflow: auto;
+  padding: 24px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(17, 21, 31, 0.96), rgba(7, 10, 15, 0.98));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
+}
+
+.ban-phase-option-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.ban-phase-option-copy {
+  margin: 12px 0 18px;
+  color: rgba(231, 237, 255, 0.72);
+  line-height: 1.6;
+}
+
+.ban-phase-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ban-phase-option-btn {
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f6f8ff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.ban-phase-option-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(200, 168, 93, 0.4);
+  background: rgba(200, 168, 93, 0.08);
+}
+
+.ban-phase-option-btn.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.ban-phase-option-btn span,
+.ban-phase-option-btn small {
+  display: block;
+}
+
+.ban-phase-option-btn span {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.ban-phase-option-btn small {
+  color: rgba(231, 237, 255, 0.72);
+  line-height: 1.5;
+}
+
 .banlist-search-row,
 .banlist-row {
   display: grid;
@@ -288,6 +564,12 @@
   .banlist-editor-controls {
     grid-template-columns: 1fr;
   }
+
+  .ban-phase-layout,
+  .ban-phase-summary-grid,
+  .ban-phase-option-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -312,6 +594,13 @@
   }
 
   .banlist-row-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ban-phase-confirm-bar,
+  .ban-phase-turn-top,
+  .ban-phase-card-header {
     flex-direction: column;
     align-items: stretch;
   }

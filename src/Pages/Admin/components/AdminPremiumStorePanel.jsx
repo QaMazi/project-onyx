@@ -150,7 +150,7 @@ export default function AdminPremiumStorePanel() {
           <h2 className="admin-panel-title">Premium Store</h2>
           <p className="admin-section-description">
             Grant Onyx Tokens, tune premium item prices, and toggle the
-            hardcoded 1 Onyx Token per 2 main rounds reward rule.
+            hardcoded 1 Onyx Token per completed round-step reward rule.
           </p>
         </div>
 
@@ -237,8 +237,8 @@ export default function AdminPremiumStorePanel() {
                     {autoMainRoundTokensEnabled ? "Enabled" : "Disabled"}
                   </strong>
                   <span className="admin-series-active-meta">
-                    1 Onyx Token is granted automatically after each completed main
-                    round pair when this is enabled.
+                    1 Onyx Token is granted automatically after each completed
+                    round-step when this is enabled.
                   </span>
                 </div>
 

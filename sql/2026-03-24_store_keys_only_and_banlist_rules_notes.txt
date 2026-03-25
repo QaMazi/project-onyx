@@ -1,0 +1,5 @@
+Store reduction pass:
+- Keep only key items, the four banlist edicts, and Thief's Card purchasable in the store.
+- Remove all other item families from the live store without deleting owned inventory copies.
+- Clear retired/disallowed items out of carts.
+- Make store banlist items obey the same era/custom restrictions as Ban Phase.

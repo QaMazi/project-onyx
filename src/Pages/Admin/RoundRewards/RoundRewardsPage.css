@@ -1,6 +1,6 @@
 .round-rewards-page {
   display: grid;
-  gap: 18px;
+  gap: 22px;
 }
 
 .round-rewards-topbar,
@@ -21,9 +21,57 @@
 .round-rewards-topbar {
   display: flex;
   justify-content: space-between;
-  gap: 18px;
+  gap: 24px;
+  align-items: stretch;
+  padding: 26px 28px;
+  background:
+    radial-gradient(circle at top right, rgba(var(--theme-accent-2-rgb), 0.16), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(var(--theme-accent-3-rgb), 0.14), transparent 26%),
+    rgba(10, 12, 18, 0.92);
+}
+
+.round-rewards-topbar-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.round-rewards-topbar-actions {
+  display: flex;
   align-items: flex-start;
-  padding: 22px 24px;
+  justify-content: flex-end;
+}
+
+.round-rewards-topbar-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.round-rewards-topbar-pill {
+  min-width: 140px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.round-rewards-topbar-pill span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(247, 219, 160, 0.72);
+  font-weight: 800;
+}
+
+.round-rewards-topbar-pill strong {
+  display: block;
+  color: #fff1c7;
+  font-size: 0.98rem;
+  line-height: 1.3;
 }
 
 .round-rewards-kicker,
@@ -50,6 +98,7 @@
   margin: 10px 0 0;
   color: rgba(243, 239, 227, 0.72);
   max-width: 760px;
+  line-height: 1.55;
 }
 
 .round-rewards-primary-btn,
@@ -91,7 +140,34 @@
 .round-rewards-modal-close,
 .round-rewards-danger-btn,
 .round-rewards-icon-btn {
-  padding: 12px 16px;
+  padding: 12px 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.round-rewards-primary-btn {
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent-2));
+  color: #0e1218;
+  border-color: rgba(var(--theme-accent-rgb), 0.34);
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.24),
+    0 0 22px rgba(var(--theme-accent-rgb), 0.14);
+}
+
+.round-rewards-primary-btn:hover {
+  border-color: rgba(var(--theme-accent-2-rgb), 0.42);
+  box-shadow:
+    0 16px 30px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(var(--theme-accent-2-rgb), 0.2);
+}
+
+.round-rewards-secondary-btn,
+.round-rewards-modal-close {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035));
+}
+
+.round-rewards-icon-btn {
+  min-height: 46px;
 }
 
 .round-rewards-danger-btn {
@@ -102,11 +178,11 @@
 .round-rewards-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  gap: 18px;
+  gap: 20px;
 }
 
 .round-rewards-card {
-  padding: 18px;
+  padding: 20px;
 }
 
 .round-rewards-sidebar,
@@ -116,7 +192,7 @@
 
 .round-rewards-main {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .round-rewards-section-header,
@@ -124,7 +200,7 @@
 .round-rewards-option-toprow {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   align-items: flex-start;
 }
 
@@ -132,14 +208,16 @@
 .round-rewards-modal-group-header h3,
 .round-rewards-entry-header h3 {
   margin: 0;
+  color: #fff1cd;
 }
 
 .round-rewards-section-header p,
 .round-rewards-modal-header p,
 .round-rewards-entry-header p {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: rgba(243, 239, 227, 0.66);
   font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .round-rewards-config-list,
@@ -148,12 +226,19 @@
 .round-rewards-modal-groups,
 .round-rewards-modal-group {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .round-rewards-config-row {
   text-align: left;
-  padding: 14px 16px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03)),
+    rgba(9, 12, 18, 0.7);
+}
+
+.round-rewards-config-row-title {
+  font-size: 1rem;
 }
 
 .round-rewards-config-row.is-selected,
@@ -182,6 +267,22 @@
   font-size: 0.9rem;
 }
 
+.round-rewards-sidebar {
+  position: sticky;
+  top: 18px;
+  align-self: start;
+  max-height: calc(100vh - 136px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+}
+
+.round-rewards-config-list {
+  overflow: auto;
+  padding-right: 4px;
+}
+
 .round-rewards-empty,
 .round-rewards-modal-empty {
   color: rgba(243, 239, 227, 0.62);
@@ -202,6 +303,10 @@
 
 .round-rewards-chooser-row {
   align-items: end;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02));
 }
 
 .round-rewards-compact-field,
@@ -224,6 +329,7 @@
   color: #f3efe3;
   padding: 0 14px;
   outline: none;
+  box-sizing: border-box;
 }
 
 .round-rewards-compact-field input:focus,
@@ -236,7 +342,7 @@
 }
 
 .round-rewards-compact-field--step {
-  width: 120px;
+  width: 132px;
 }
 
 .round-rewards-round-preview {
@@ -244,11 +350,15 @@
   display: flex;
   align-items: center;
   padding: 0 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 18px;
+  border: 1px solid rgba(var(--theme-accent-2-rgb), 0.24);
+  background:
+    linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.14), rgba(var(--theme-accent-2-rgb), 0.08)),
+    rgba(255, 255, 255, 0.03);
   font-weight: 800;
-  min-width: 180px;
+  min-width: 196px;
+  color: #fff0c4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .round-rewards-range-inputs {
@@ -266,11 +376,12 @@
 
 .round-rewards-entry-card,
 .round-rewards-option-card {
-  padding: 16px;
+  padding: 18px;
 }
 
 .round-rewards-entry-choicebar {
   align-items: end;
+  padding-top: 4px;
 }
 
 .round-rewards-compact-field--choicecount {
@@ -278,7 +389,47 @@
 }
 
 .round-rewards-option-card {
-  background: rgba(255, 255, 255, 0.03);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.round-rewards-entry-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.round-rewards-entry-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.2);
+  background: rgba(var(--theme-accent-rgb), 0.12);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffefc6;
+}
+
+.round-rewards-entry-pill--set {
+  border-color: rgba(94, 162, 255, 0.28);
+  background: rgba(94, 162, 255, 0.14);
+}
+
+.round-rewards-entry-pill--random {
+  border-color: rgba(120, 219, 171, 0.28);
+  background: rgba(120, 219, 171, 0.14);
+}
+
+.round-rewards-entry-pill--choice {
+  border-color: rgba(236, 192, 97, 0.28);
+  background: rgba(236, 192, 97, 0.16);
 }
 
 .round-rewards-picker-btn {
@@ -286,12 +437,30 @@
   gap: 4px;
   text-align: left;
   padding: 14px 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
 }
 
 .round-rewards-placement-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
+}
+
+.round-rewards-placement-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.round-rewards-placement-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(var(--theme-accent-2-rgb), 0.55), transparent);
+  pointer-events: none;
 }
 
 .round-rewards-success,
@@ -313,6 +482,16 @@
 .round-rewards-actions {
   display: flex;
   justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
+  background:
+    linear-gradient(180deg, rgba(12, 15, 21, 0.96), rgba(9, 12, 18, 0.96)),
+    rgba(12, 15, 21, 0.96);
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.16);
 }
 
 .round-rewards-modal-backdrop {
@@ -391,6 +570,8 @@
   text-align: left;
   display: grid;
   gap: 6px;
+  align-content: start;
+  min-height: 146px;
 }
 
 .round-rewards-item-card-desc {
@@ -403,6 +584,11 @@
   .round-rewards-layout,
   .round-rewards-placement-grid {
     grid-template-columns: 1fr;
+  }
+
+  .round-rewards-sidebar {
+    position: static;
+    max-height: none;
   }
 }
 
@@ -417,5 +603,21 @@
 
   .round-rewards-item-grid {
     grid-template-columns: 1fr;
+  }
+
+  .round-rewards-topbar-pills {
+    grid-template-columns: 1fr;
+  }
+
+  .round-rewards-topbar-pill {
+    min-width: 0;
+  }
+
+  .round-rewards-actions {
+    justify-content: stretch;
+  }
+
+  .round-rewards-actions .round-rewards-primary-btn {
+    width: 100%;
   }
 }

@@ -403,7 +403,7 @@ function decodeRace(value) {
 }
 
 function isPreErrataCard(card) {
-  return /\(pre-errata\)/i.test(String(card?.name || ""));
+  return /\(pre-errata\)/i.test(String(card?.name || "")) || Number(card?.ot || 0) === 8;
 }
 
 function isTokenMonster(card) {

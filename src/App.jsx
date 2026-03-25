@@ -271,7 +271,7 @@ function App() {
         path="/mode/progression/vault"
         element={
           <ProgressionRoute>
-            <ProgressionSystemRoute pageKey="binder">
+            <ProgressionSystemRoute pageKey="vault">
               <VaultPage />
             </ProgressionSystemRoute>
           </ProgressionRoute>

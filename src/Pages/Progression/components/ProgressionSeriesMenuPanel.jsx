@@ -16,17 +16,59 @@ const SERIES_MENU_ITEMS = [
 
 const PHASE_RULE_SECTIONS = [
   {
-    title: "Lobby",
+    title: "Admin Phase",
     bullets: [
-      "Admin setup phase before players can use progression systems.",
-      "Players stay locked to the progression hub until an admin advances into Round 0.",
+      "Pre-series setup phase used by admins before the round flow begins.",
+      "This phase is not part of the normal round rotation.",
+      "Players stay locked to the progression hub until an admin begins the series and advances into Round 0.",
+    ],
+  },
+  {
+    title: "Round Flow",
+    bullets: [
+      "Each round is made up of phases.",
+      "The normal phase order is Standby Phase -> Ban Phase -> Binder Phase -> Feature Phase -> Draft Phase -> Standby Phase -> Deckbuilding Phase -> Dueling Phase -> Reward Phase.",
+      "When the last phase of a round is completed, the next round begins.",
     ],
   },
   {
     title: "Standby Phase",
     bullets: [
+      "Normal rounds use Standby twice: once before Ban Phase and once again after Draft Phase distributes the round keys.",
       "Store, inventory, trade, binder, and container systems are available.",
       "Active deck switching and active deck edits stay locked.",
+    ],
+  },
+  {
+    title: "Ban Phase",
+    bullets: [
+      "Players resolve the round-robin custom ban choices in turn order based on the last round placement.",
+      "The official era banlist is the baseline and can only be changed by a player choosing Unlimited.",
+      "After player choices finish, the system rolls one random deck ban per player before everyone confirms the banlist.",
+    ],
+  },
+  {
+    title: "Binder Phase",
+    bullets: [
+      "Round placement order resolves the Binder Phase choices from 1st place downward.",
+      "Players resolve one Binder option each, including removal, forced trade, card lockout, Binder Stack, Ban List card rewards, Promo Box rewards, and draft pack rewards.",
+      "Players ahead of you on the overall standings are the valid targets for the hostile Binder options.",
+    ],
+  },
+  {
+    title: "Feature Phase",
+    bullets: [
+      "Round placement order resolves the Feature Phase choices from 1st place downward.",
+      "X-1 rounds use feature rewards like Monster, Spell, Trap, Extra Deck, and Random Promo Box Key.",
+      "X-2 rounds use unlocked Promo Boxes or Deck Boxes instead, and every 6th round also grants bonus Collectors Boxes and Promo Boxes.",
+    ],
+  },
+  {
+    title: "Draft Phase",
+    bullets: [
+      "The system automatically grants 30 TCG pack keys based on the round number.",
+      "X-1 rounds give Full Pack Keys, while X-2 rounds give Draft Pack Keys for the same numbered pack.",
+      "After the keys are distributed, the round returns to Standby so players can open their new packs before Deckbuilding.",
     ],
   },
   {
@@ -46,14 +88,16 @@ const PHASE_RULE_SECTIONS = [
   {
     title: "Reward Phase",
     bullets: [
-      "Rewards are processed by the system.",
+      "Rewards are processed by the system using the current round placement, not the overall scoreboard.",
+      "1st place chooses a Promo Box, 2nd place gets a drafted Feature reward, 3rd place chooses a Ban List card, and the lower placements receive their fixed reward packages.",
       "If reward errors happen, admins must clear the fix list before advancing.",
     ],
   },
   {
     title: "Round 0",
     bullets: [
-      "Begins when an admin advances out of Lobby.",
+      "Begins when an admin advances out of Admin Phase.",
+      "Round 0 is still a real round and exists separately from Admin Phase.",
       "The starter-deck claim modal stays up until you claim, then remains until every player has claimed one.",
     ],
   },

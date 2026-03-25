@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import LauncherLayout from "../../components/LauncherLayout";
 import { useUser } from "../../context/UserContext";
+import { useProgression } from "../../context/ProgressionContext";
 import { supabase } from "../../lib/supabase";
 import BinderHoverTooltip from "../Binder/Components/BinderHoverTooltip";
 
@@ -128,9 +129,138 @@ function getHoverPreviewPosition(target) {
   };
 }
 
+function getFeaturePhaseOptionLabel(option) {
+  switch (String(option || "")) {
+    case "monster":
+      return "Monster";
+    case "spell":
+      return "Spell";
+    case "trap":
+      return "Trap";
+    case "extra":
+      return "Extra Deck";
+    case "random_promo_box_key":
+      return "Random Promo Box Key";
+    case "box_open":
+      return "Box Open";
+    default:
+      return "Unknown";
+  }
+}
+
+function formatFeaturePhaseTurnSummary(turn) {
+  const payload = turn?.resolved_payload || {};
+  const choiceOption = String(turn?.choice_option || "");
+
+  if (!choiceOption) return "Waiting to choose";
+
+  if (
+    choiceOption === "monster" ||
+    choiceOption === "spell" ||
+    choiceOption === "trap" ||
+    choiceOption === "extra"
+  ) {
+    const claimedCard = payload?.feature_slot_claim?.claimed_offer?.card_name;
+    if (claimedCard) {
+      return `Claimed ${claimedCard} from ${getFeaturePhaseOptionLabel(choiceOption)}`;
+    }
+    return `Picked ${getFeaturePhaseOptionLabel(choiceOption)} reward`;
+  }
+
+  if (choiceOption === "random_promo_box_key") {
+    return "Received 1 Random Promo Box Key";
+  }
+
+  if (choiceOption === "box_open") {
+    return `Opened ${payload?.main_open_result?.container_name || "a box"}`;
+  }
+
+  return getFeaturePhaseOptionLabel(choiceOption);
+}
+
+function FeaturePhaseStatusPanel({ featurePhaseState }) {
+  const turns = Array.isArray(featurePhaseState?.turns) ? featurePhaseState.turns : [];
+
+  return (
+    <section className="feature-phase-status-panel">
+      <div className="feature-phase-status-header">
+        <div>
+          <div className="feature-slots-kicker">PHASE 4</div>
+          <h2 className="feature-phase-title">Feature Phase</h2>
+          <p className="feature-phase-copy">
+            Resolve the round winner order, claim each Feature reward, then the
+            series will move into Draft Phase automatically.
+          </p>
+        </div>
+
+        <div className="feature-phase-status-pills">
+          <div className="feature-phase-status-pill">
+            <span>Variant</span>
+            <strong>{featurePhaseState?.phase_variant === "x2" ? "X-2" : "X-1"}</strong>
+          </div>
+          <div className="feature-phase-status-pill">
+            <span>Current Turn</span>
+            <strong>
+              {featurePhaseState?.current_turn_order
+                ? `#${featurePhaseState.current_turn_order}`
+                : "Complete"}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="feature-phase-turn-list">
+        {turns.map((turn) => (
+          <article
+            key={`${turn.user_id}-${turn.turn_order}`}
+            className={`feature-phase-turn-card ${
+              turn.is_current_turn ? "is-current" : ""
+            } ${turn.completed_at ? "is-complete" : ""}`}
+          >
+            <div className="feature-phase-turn-top">
+              <div className="feature-phase-turn-player">
+                <img
+                  src={turn.avatar || CARD_IMAGE_FALLBACK}
+                  alt={turn.username || "Player"}
+                  className="feature-phase-turn-avatar"
+                  onError={(event) => {
+                    event.currentTarget.src = CARD_IMAGE_FALLBACK;
+                  }}
+                />
+                <div>
+                  <strong>{turn.username || "Player"}</strong>
+                  <span>
+                    Turn #{turn.turn_order}
+                    {turn.last_round_placement
+                      ? ` | Last Round #${turn.last_round_placement}`
+                      : ""}
+                  </span>
+                </div>
+              </div>
+
+              <div className="feature-phase-turn-state">
+                {turn.completed_at
+                  ? "Complete"
+                  : turn.is_current_turn
+                    ? "Current Turn"
+                    : "Waiting"}
+              </div>
+            </div>
+
+            <p className="feature-phase-turn-summary">
+              {formatFeaturePhaseTurnSummary(turn)}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function FeatureSlotsPage() {
   const navigate = useNavigate();
   const { user, authLoading } = useUser();
+  const { state: progressionState, refresh: refreshProgression } = useProgression();
   const spinTimeoutsRef = useRef([]);
 
   const [loading, setLoading] = useState(true);
@@ -159,10 +289,19 @@ function FeatureSlotsPage() {
   const [selectedRegenIndexes, setSelectedRegenIndexes] = useState([]);
   const [hoverPreview, setHoverPreview] = useState(null);
   const [hoverCardDetailsById, setHoverCardDetailsById] = useState({});
+  const [featurePhaseState, setFeaturePhaseState] = useState(null);
+  const [featurePhaseBusy, setFeaturePhaseBusy] = useState(false);
+  const [selectedFeatureChoiceOption, setSelectedFeatureChoiceOption] = useState("");
+  const [selectedFeatureMainBoxId, setSelectedFeatureMainBoxId] = useState("");
+  const [selectedBonusCollectorsBoxId, setSelectedBonusCollectorsBoxId] = useState("");
+  const [selectedBonusPromoBoxId, setSelectedBonusPromoBoxId] = useState("");
 
   const canViewPage =
     user?.role === "Admin+" || user?.role === "Admin" || user?.role === "Duelist";
   const isSeriesAdmin = user?.role === "Admin+" || user?.role === "Admin";
+  const isFeaturePhaseActive =
+    Number(progressionState?.roundNumber || 0) > 0 &&
+    String(progressionState?.currentPhase || "").toLowerCase() === "feature";
 
   const slotCards = useMemo(
     () => (Array.isArray(slotState?.slots) ? slotState.slots : []),
@@ -254,6 +393,35 @@ function FeatureSlotsPage() {
       getRaisedRarity(cardRarities, selectedSlot?.min_rarity_floor || null, rarityBoosts),
     [cardRarities, rarityBoosts, selectedSlot]
   );
+  const featurePhaseTurns = useMemo(
+    () => (Array.isArray(featurePhaseState?.turns) ? featurePhaseState.turns : []),
+    [featurePhaseState]
+  );
+  const featurePhaseAvailableOptions = useMemo(
+    () => (Array.isArray(featurePhaseState?.available_options) ? featurePhaseState.available_options : []),
+    [featurePhaseState]
+  );
+  const featurePhaseAvailableMainBoxes = useMemo(
+    () =>
+      Array.isArray(featurePhaseState?.available_main_boxes)
+        ? featurePhaseState.available_main_boxes
+        : [],
+    [featurePhaseState]
+  );
+  const bonusCollectorsBoxes = useMemo(
+    () =>
+      Array.isArray(featurePhaseState?.bonus_collectors_boxes)
+        ? featurePhaseState.bonus_collectors_boxes
+        : [],
+    [featurePhaseState]
+  );
+  const bonusPromoBoxes = useMemo(
+    () =>
+      Array.isArray(featurePhaseState?.bonus_promo_boxes)
+        ? featurePhaseState.bonus_promo_boxes
+        : [],
+    [featurePhaseState]
+  );
 
   async function loadPage(currentUser) {
     if (!currentUser?.id) return;
@@ -277,6 +445,9 @@ function FeatureSlotsPage() {
         supabase.rpc("get_my_feature_slot_state", {
           p_series_id: currentSeries.id,
         }),
+        supabase.rpc("get_current_feature_phase_state", {
+          p_series_id: currentSeries.id,
+        }),
         supabase
           .from("card_rarities")
           .select("id, code, name, sort_order")
@@ -295,19 +466,22 @@ function FeatureSlotsPage() {
 
       const results = await Promise.all(requests);
       const slotResponse = results[0];
-      const rarityResponse = results[1];
+      const featurePhaseResponse = results[1];
+      const rarityResponse = results[2];
 
       if (slotResponse.error) throw slotResponse.error;
+      if (featurePhaseResponse.error) throw featurePhaseResponse.error;
       if (rarityResponse.error) throw rarityResponse.error;
 
       const nextSlotState = slotResponse.data || null;
       const nextSlots = nextSlotState?.slots || [];
+      setFeaturePhaseState(featurePhaseResponse.data || null);
       setCardRarities(rarityResponse.data || []);
 
       setSlotState(nextSlotState);
 
       if (isSeriesAdmin) {
-        const playerResponse = results[2];
+        const playerResponse = results[3];
         if (playerResponse?.error) throw playerResponse.error;
 
         const nextPlayers = playerResponse?.data || [];
@@ -327,6 +501,7 @@ function FeatureSlotsPage() {
       console.error("Failed to load Feature Slots page:", error);
       setErrorMessage(error.message || "Failed to load Feature Slots.");
       setSlotState(null);
+      setFeaturePhaseState(null);
       setPlayers([]);
     } finally {
       setLoading(false);
@@ -337,7 +512,14 @@ function FeatureSlotsPage() {
     if (!authLoading && user) {
       loadPage(user);
     }
-  }, [authLoading, user, isSeriesAdmin]);
+  }, [
+    authLoading,
+    user,
+    isSeriesAdmin,
+    progressionState?.currentPhase,
+    progressionState?.roundNumber,
+    progressionState?.roundStep,
+  ]);
 
   useEffect(() => {
     if (!isSeriesAdmin) {
@@ -358,6 +540,85 @@ function FeatureSlotsPage() {
       setSelectedAdminSlotId(getSlotId(slotCards[0]));
     }
   }, [isSeriesAdmin, players, selectedPlayerId, selectedAdminSlotId, slotCards]);
+
+  useEffect(() => {
+    if (!featurePhaseState?.active || !featurePhaseState?.is_my_turn) {
+      setSelectedFeatureChoiceOption("");
+      setSelectedFeatureMainBoxId("");
+      setSelectedBonusCollectorsBoxId("");
+      setSelectedBonusPromoBoxId("");
+      return;
+    }
+
+    if (
+      featurePhaseState.phase_variant === "x1" &&
+      !featurePhaseState.pending_reward_session &&
+      featurePhaseAvailableOptions.length > 0 &&
+      !featurePhaseAvailableOptions.some(
+        (option) => String(option.choice_option || "") === selectedFeatureChoiceOption
+      )
+    ) {
+      setSelectedFeatureChoiceOption(
+        String(featurePhaseAvailableOptions[0]?.choice_option || "")
+      );
+    }
+
+    if (
+      featurePhaseState.phase_variant === "x2" &&
+      featurePhaseAvailableMainBoxes.length > 0 &&
+      !featurePhaseAvailableMainBoxes.some(
+        (box) => String(box.id || "") === selectedFeatureMainBoxId
+      )
+    ) {
+      setSelectedFeatureMainBoxId(String(featurePhaseAvailableMainBoxes[0]?.id || ""));
+    }
+
+    if (
+      featurePhaseState.is_special_round &&
+      bonusCollectorsBoxes.length > 0 &&
+      !bonusCollectorsBoxes.some((box) => String(box.id || "") === selectedBonusCollectorsBoxId)
+    ) {
+      setSelectedBonusCollectorsBoxId(String(bonusCollectorsBoxes[0]?.id || ""));
+    }
+
+    if (
+      featurePhaseState.is_special_round &&
+      bonusPromoBoxes.length > 0 &&
+      !bonusPromoBoxes.some((box) => String(box.id || "") === selectedBonusPromoBoxId)
+    ) {
+      setSelectedBonusPromoBoxId(String(bonusPromoBoxes[0]?.id || ""));
+    }
+  }, [
+    bonusCollectorsBoxes,
+    bonusPromoBoxes,
+    featurePhaseAvailableMainBoxes,
+    featurePhaseAvailableOptions,
+    featurePhaseState,
+    selectedBonusCollectorsBoxId,
+    selectedBonusPromoBoxId,
+    selectedFeatureChoiceOption,
+    selectedFeatureMainBoxId,
+  ]);
+
+  useEffect(() => {
+    const pendingSlotId = featurePhaseState?.pending_reward_session?.feature_slot_id;
+    if (!featurePhaseState?.active || !pendingSlotId || !slotCards.length) return;
+    if (getSlotId(selectedSlot) === pendingSlotId) return;
+
+    const pendingSlot = slotCards.find((slot) => getSlotId(slot) === pendingSlotId);
+    if (!pendingSlot) return;
+
+    let cancelled = false;
+    (async () => {
+      if (!cancelled) {
+        await openMachineModal(pendingSlot);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [featurePhaseState, selectedSlot, slotCards]);
 
   useEffect(() => {
     spinTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
@@ -455,6 +716,7 @@ function FeatureSlotsPage() {
       setMachineError("");
       await runMutation();
       await loadPage(user);
+      await refreshProgression();
       if (getSlotId(selectedSlot)) {
         await loadMachineState(getSlotId(selectedSlot));
       }
@@ -463,6 +725,31 @@ function FeatureSlotsPage() {
       setMachineError(error.message || "Feature Slot action failed.");
     } finally {
       setMachineBusy(false);
+    }
+  }
+
+  async function resolveFeaturePhaseChoice(payload) {
+    if (!activeSeries?.id || !featurePhaseState?.active) return;
+
+    setFeaturePhaseBusy(true);
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      const { error } = await supabase.rpc("resolve_current_feature_phase_choice", {
+        p_series_id: activeSeries.id,
+        p_payload: payload,
+      });
+
+      if (error) throw error;
+
+      await loadPage(user);
+      await refreshProgression();
+    } catch (error) {
+      console.error("Failed to resolve Feature Phase choice:", error);
+      setErrorMessage(error.message || "Failed to resolve Feature Phase choice.");
+    } finally {
+      setFeaturePhaseBusy(false);
     }
   }
 
@@ -620,8 +907,9 @@ function FeatureSlotsPage() {
             <div className="feature-slots-kicker">PROGRESSION</div>
             <h1 className="feature-slots-title">Feature Slots</h1>
             <p className="feature-slots-subtitle">
-              Spend Feature Coins on animated machine pulls, reroll live reels, and
-              claim only the cards worth keeping.
+              {isFeaturePhaseActive
+                ? "Feature Phase is active. Follow the turn order, claim the assigned rewards, and the series will move into Draft automatically."
+                : "Spend Feature Coins on animated machine pulls, reroll live reels, and claim only the cards worth keeping."}
             </p>
           </div>
 
@@ -664,84 +952,346 @@ function FeatureSlotsPage() {
           </div>
         ) : (
           <>
-            <div className="feature-slots-grid">
-              {slotCards.length === 0 ? (
-                <div className="feature-slots-card feature-slots-empty">
-                  No Feature Slot machines are configured for this series yet.
-                </div>
-              ) : null}
+            {featurePhaseState?.active ? (
+              <>
+                <FeaturePhaseStatusPanel featurePhaseState={featurePhaseState} />
 
-              {slotCards.map((slot) => (
-                <article
-                  key={getSlotId(slot) || slot.name}
-                  className="feature-slots-card feature-slots-slot-card"
-                >
-                  <div className="feature-slots-slot-top">
-                    <div>
-                      <div className="feature-slots-slot-type">
-                        {formatModeLabel(slot.slot_mode || slot.slot_type || "slot")}
-                      </div>
-                      <h2 className="feature-slots-slot-name">{slot.name}</h2>
-                    </div>
-
-                    <div className="feature-slots-cost-shell">
-                      <span className="feature-slots-cost-label">Next Cost</span>
-                      <span className="feature-slots-cost-value">
-                        {Number(slot.next_feature_coin_cost || 0)}
-                      </span>
-                    </div>
+                <section className="feature-slots-card feature-phase-action-card">
+                  <div className="feature-slots-kicker">
+                    {featurePhaseState?.phase_variant === "x2" ? "X-2 FEATURE" : "X-1 FEATURE"}
                   </div>
-
-                  <div className="feature-slots-machine-preview" aria-hidden="true">
-                    {IDLE_REEL_WORDS.map((word, index) => (
-                      <div
-                        key={`${getSlotId(slot) || slot.name}-${word}`}
-                        className="feature-slots-machine-preview-window"
-                      >
-                        <span>
-                          {index === 1
-                            ? formatModeLabel(slot.slot_mode || slot.slot_type || "slot")
-                            : word}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="feature-slots-slot-description">
-                    {slot.description || "No description available."}
+                  <h2 className="feature-phase-title">
+                    {featurePhaseState?.is_my_turn ? "Your Turn" : "Waiting For Turn"}
+                  </h2>
+                  <p className="feature-phase-copy">
+                    {featurePhaseState?.phase_variant === "x2"
+                      ? "Choose one unlocked Deck Box or Promo Box. Duplicate picks recycle only after the current pool is exhausted."
+                      : "Choose one unique Feature reward this cycle. Category rewards open a free picker session; Random Promo Box Key grants the inventory item directly."}
                   </p>
 
-                  <div className="feature-slots-slot-meta">
-                    <div className="feature-slots-slot-meta-row">
-                      <span>Current Spin Count</span>
-                      <strong>{Number(slot.spin_count || 0)}</strong>
+                  {featurePhaseState?.is_special_round ? (
+                    <div className="feature-phase-special-banner">
+                      Special round active: after the main Feature reward, you also open 5
+                      Collectors Boxes and 3 Promo Boxes of your choice.
                     </div>
+                  ) : null}
 
-                    <div className="feature-slots-slot-meta-row">
-                      <span>Rules</span>
-                      <strong>{formatSlotSubtitle(slot)}</strong>
+                  {!featurePhaseState?.is_my_turn ? (
+                    <div className="feature-slots-empty">
+                      The current Feature reward turn belongs to another player. Your page
+                      will update here when it reaches you.
                     </div>
+                  ) : featurePhaseState?.pending_reward_session ? (
+                    <div className="feature-phase-reward-session">
+                      <div className="feature-slots-slot-meta-row">
+                        <span>Open Reward Session</span>
+                        <strong>
+                          {getFeaturePhaseOptionLabel(featurePhaseState?.my_choice_option)}
+                        </strong>
+                      </div>
+                      <p className="feature-phase-copy">
+                        Finish the free picker reward in the machine modal. Claiming that
+                        card completes your Feature Phase turn.
+                      </p>
+                      <div className="feature-slots-modal-actions">
+                        <button
+                          type="button"
+                          className="feature-slots-primary-btn"
+                          disabled={machineBusy}
+                          onClick={() => {
+                            const pendingSlot = slotCards.find(
+                              (slot) =>
+                                getSlotId(slot) ===
+                                featurePhaseState?.pending_reward_session?.feature_slot_id
+                            );
+                            if (pendingSlot) {
+                              openMachineModal(pendingSlot);
+                            }
+                          }}
+                        >
+                          Resume Reward Machine
+                        </button>
+                      </div>
+                    </div>
+                  ) : featurePhaseState?.phase_variant === "x1" ? (
+                    <div className="feature-phase-choice-stack">
+                      <div className="feature-phase-option-grid">
+                        {featurePhaseAvailableOptions.map((option) => (
+                          <button
+                            key={option.choice_option}
+                            type="button"
+                            className={`feature-phase-option-card ${
+                              selectedFeatureChoiceOption === option.choice_option
+                                ? "is-selected"
+                                : ""
+                            }`}
+                            onClick={() =>
+                              setSelectedFeatureChoiceOption(
+                                String(option.choice_option || "")
+                              )
+                            }
+                          >
+                            <strong>{option.label}</strong>
+                            <span>{option.description}</span>
+                          </button>
+                        ))}
+                      </div>
 
-                    <div className="feature-slots-slot-meta-row">
-                      <span>Status</span>
-                      <strong>
-                        {slot.open_session ? "Session Open" : slot.is_locked ? "Locked" : "Ready"}
-                      </strong>
+                      {featurePhaseState?.is_special_round ? (
+                        <div className="feature-phase-bonus-grid">
+                          <div className="feature-slots-field">
+                            <label htmlFor="feature-phase-collectors-box">
+                              Bonus Collectors Box
+                            </label>
+                            <select
+                              id="feature-phase-collectors-box"
+                              className="feature-slots-select"
+                              value={selectedBonusCollectorsBoxId}
+                              onChange={(event) =>
+                                setSelectedBonusCollectorsBoxId(event.target.value)
+                              }
+                            >
+                              <option value="">Choose a Collectors Box...</option>
+                              {bonusCollectorsBoxes.map((box) => (
+                                <option key={box.id} value={box.id}>
+                                  {box.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="feature-slots-field">
+                            <label htmlFor="feature-phase-promo-box">Bonus Promo Box</label>
+                            <select
+                              id="feature-phase-promo-box"
+                              className="feature-slots-select"
+                              value={selectedBonusPromoBoxId}
+                              onChange={(event) =>
+                                setSelectedBonusPromoBoxId(event.target.value)
+                              }
+                            >
+                              <option value="">Choose a Promo Box...</option>
+                              {bonusPromoBoxes.map((box) => (
+                                <option key={box.id} value={box.id}>
+                                  {box.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="feature-slots-modal-actions">
+                        <button
+                          type="button"
+                          className="feature-slots-primary-btn"
+                          disabled={
+                            featurePhaseBusy ||
+                            !selectedFeatureChoiceOption ||
+                            (featurePhaseState?.is_special_round &&
+                              (!selectedBonusCollectorsBoxId || !selectedBonusPromoBoxId))
+                          }
+                          onClick={() =>
+                            resolveFeaturePhaseChoice({
+                              choice_option: selectedFeatureChoiceOption,
+                              bonus_collectors_box_id:
+                                selectedBonusCollectorsBoxId || null,
+                              bonus_promo_box_id: selectedBonusPromoBoxId || null,
+                            })
+                          }
+                        >
+                          {featurePhaseBusy ? "Resolving..." : "Lock Feature Reward"}
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="feature-phase-choice-stack">
+                      <div className="feature-phase-box-grid">
+                        {featurePhaseAvailableMainBoxes.map((box) => (
+                          <button
+                            key={box.id}
+                            type="button"
+                            className={`feature-phase-box-card ${
+                              selectedFeatureMainBoxId === box.id ? "is-selected" : ""
+                            }`}
+                            onClick={() => setSelectedFeatureMainBoxId(String(box.id || ""))}
+                          >
+                            <img
+                              src={box.image_url || CARD_IMAGE_FALLBACK}
+                              alt={box.name}
+                              className="feature-phase-box-image"
+                              onError={(event) => {
+                                event.currentTarget.src = CARD_IMAGE_FALLBACK;
+                              }}
+                            />
+                            <div className="feature-phase-box-copy">
+                              <strong>{box.name}</strong>
+                              <span>
+                                {box.container_type_code === "deck_box"
+                                  ? "Deck Box"
+                                  : "Promo Box"}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {featurePhaseState?.is_special_round ? (
+                        <div className="feature-phase-bonus-grid">
+                          <div className="feature-slots-field">
+                            <label htmlFor="feature-phase-collectors-box-x2">
+                              Bonus Collectors Box
+                            </label>
+                            <select
+                              id="feature-phase-collectors-box-x2"
+                              className="feature-slots-select"
+                              value={selectedBonusCollectorsBoxId}
+                              onChange={(event) =>
+                                setSelectedBonusCollectorsBoxId(event.target.value)
+                              }
+                            >
+                              <option value="">Choose a Collectors Box...</option>
+                              {bonusCollectorsBoxes.map((box) => (
+                                <option key={box.id} value={box.id}>
+                                  {box.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="feature-slots-field">
+                            <label htmlFor="feature-phase-promo-box-x2">
+                              Bonus Promo Box
+                            </label>
+                            <select
+                              id="feature-phase-promo-box-x2"
+                              className="feature-slots-select"
+                              value={selectedBonusPromoBoxId}
+                              onChange={(event) =>
+                                setSelectedBonusPromoBoxId(event.target.value)
+                              }
+                            >
+                              <option value="">Choose a Promo Box...</option>
+                              {bonusPromoBoxes.map((box) => (
+                                <option key={box.id} value={box.id}>
+                                  {box.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="feature-slots-modal-actions">
+                        <button
+                          type="button"
+                          className="feature-slots-primary-btn"
+                          disabled={
+                            featurePhaseBusy ||
+                            !selectedFeatureMainBoxId ||
+                            (featurePhaseState?.is_special_round &&
+                              (!selectedBonusCollectorsBoxId || !selectedBonusPromoBoxId))
+                          }
+                          onClick={() =>
+                            resolveFeaturePhaseChoice({
+                              container_id: selectedFeatureMainBoxId,
+                              bonus_collectors_box_id:
+                                selectedBonusCollectorsBoxId || null,
+                              bonus_promo_box_id: selectedBonusPromoBoxId || null,
+                            })
+                          }
+                        >
+                          {featurePhaseBusy ? "Opening..." : "Resolve Feature Reward"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </>
+            ) : (
+              <div className="feature-slots-grid">
+                {slotCards.length === 0 ? (
+                  <div className="feature-slots-card feature-slots-empty">
+                    No Feature Slot machines are configured for this series yet.
                   </div>
+                ) : null}
 
-                  <div className="feature-slots-slot-actions">
-                    <button
-                      type="button"
-                      className="feature-slots-primary-btn"
-                      onClick={() => openMachineModal(slot)}
-                    >
-                      {slot.open_session ? "Resume Machine" : "Play Machine"}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+                {slotCards.map((slot) => (
+                  <article
+                    key={getSlotId(slot) || slot.name}
+                    className="feature-slots-card feature-slots-slot-card"
+                  >
+                    <div className="feature-slots-slot-top">
+                      <div>
+                        <div className="feature-slots-slot-type">
+                          {formatModeLabel(slot.slot_mode || slot.slot_type || "slot")}
+                        </div>
+                        <h2 className="feature-slots-slot-name">{slot.name}</h2>
+                      </div>
+
+                      <div className="feature-slots-cost-shell">
+                        <span className="feature-slots-cost-label">Next Cost</span>
+                        <span className="feature-slots-cost-value">
+                          {Number(slot.next_feature_coin_cost || 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="feature-slots-machine-preview" aria-hidden="true">
+                      {IDLE_REEL_WORDS.map((word, index) => (
+                        <div
+                          key={`${getSlotId(slot) || slot.name}-${word}`}
+                          className="feature-slots-machine-preview-window"
+                        >
+                          <span>
+                            {index === 1
+                              ? formatModeLabel(slot.slot_mode || slot.slot_type || "slot")
+                              : word}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="feature-slots-slot-description">
+                      {slot.description || "No description available."}
+                    </p>
+
+                    <div className="feature-slots-slot-meta">
+                      <div className="feature-slots-slot-meta-row">
+                        <span>Current Spin Count</span>
+                        <strong>{Number(slot.spin_count || 0)}</strong>
+                      </div>
+
+                      <div className="feature-slots-slot-meta-row">
+                        <span>Rules</span>
+                        <strong>{formatSlotSubtitle(slot)}</strong>
+                      </div>
+
+                      <div className="feature-slots-slot-meta-row">
+                        <span>Status</span>
+                        <strong>
+                          {slot.open_session
+                            ? "Session Open"
+                            : slot.is_locked
+                              ? "Locked"
+                              : "Ready"}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="feature-slots-slot-actions">
+                      <button
+                        type="button"
+                        className="feature-slots-primary-btn"
+                        onClick={() => openMachineModal(slot)}
+                      >
+                        {slot.open_session ? "Resume Machine" : "Play Machine"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
 
             {isSeriesAdmin ? (
               <section className="feature-slots-card feature-slots-admin-card">

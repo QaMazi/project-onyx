@@ -20,6 +20,9 @@ const REWARD_KIND_OPTIONS = [
   { value: "random", label: "Random" },
   { value: "choice", label: "Choice Item" },
 ];
+const REWARD_KIND_LABELS = Object.fromEntries(
+  REWARD_KIND_OPTIONS.map((option) => [option.value, option.label])
+);
 const OPTION_KIND_LABELS = {
   shards: "Shards",
   feature_coins: "Feature Coins",
@@ -497,13 +500,25 @@ function RewardEntryCard({
           <div className="round-rewards-entry-kicker">
             {entry.placement == null ? "Shared Reward" : `Placement ${entry.placement}`}
           </div>
-          <h3>
+          <div className="round-rewards-entry-title-row">
+            <h3>
+              {entry.rewardKind === "choice"
+                ? `Choice Reward #${entry.entryOrder}`
+                : entry.rewardKind === "random"
+                ? `Random Reward #${entry.entryOrder}`
+                : `Set Reward #${entry.entryOrder}`}
+            </h3>
+            <span className={`round-rewards-entry-pill round-rewards-entry-pill--${entry.rewardKind}`}>
+              {REWARD_KIND_LABELS[entry.rewardKind] || "Reward"}
+            </span>
+          </div>
+          <p>
             {entry.rewardKind === "choice"
-              ? `Choice Reward #${entry.entryOrder}`
+              ? "Players choose from the configured options below."
               : entry.rewardKind === "random"
-              ? `Random Reward #${entry.entryOrder}`
-              : `Set Reward #${entry.entryOrder}`}
-          </h3>
+              ? "Each slot rolls independently from the configured reward type."
+              : "Players receive these exact rewards as configured."}
+          </p>
         </div>
 
         <div className="round-rewards-entry-actions">
@@ -583,6 +598,7 @@ function RoundRewardsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [activeSeriesId, setActiveSeriesId] = useState(null);
+  const [activeSeriesName, setActiveSeriesName] = useState("");
   const [rewardConfigs, setRewardConfigs] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [formState, setFormState] = useState(buildInitialFormState(0));
@@ -676,6 +692,7 @@ function RoundRewardsPage() {
 
       const seriesId = activeSeriesResponse.data?.id || null;
       setActiveSeriesId(seriesId);
+      setActiveSeriesName(activeSeriesResponse.data?.name || "");
 
       const categoryMap = new Map((categoriesResponse.data || []).map((row) => [row.id, row]));
       setItemOptions(
@@ -692,6 +709,7 @@ function RoundRewardsPage() {
       if (!seriesId) {
         setRewardConfigs([]);
         setFormState(buildInitialFormState(0));
+        setActiveSeriesName("");
         return;
       }
 
@@ -992,13 +1010,27 @@ function RoundRewardsPage() {
     <LauncherLayout>
       <div className="round-rewards-page">
         <div className="round-rewards-topbar">
-          <div>
+          <div className="round-rewards-topbar-copy">
             <div className="round-rewards-kicker">ADMIN</div>
             <h1 className="round-rewards-title">Round Rewards</h1>
             <p className="round-rewards-subtitle">
               Build shared rewards, placement rewards, random pools, and player
               choice rewards from one cleaner editor.
             </p>
+            <div className="round-rewards-topbar-pills">
+              <div className="round-rewards-topbar-pill">
+                <span>Series</span>
+                <strong>{activeSeriesName || "No active series"}</strong>
+              </div>
+              <div className="round-rewards-topbar-pill">
+                <span>Configs</span>
+                <strong>{rewardConfigs.length}</strong>
+              </div>
+              <div className="round-rewards-topbar-pill">
+                <span>Editing</span>
+                <strong>{formatRoundLabel(formState.roundNumber, formState.roundStep)}</strong>
+              </div>
+            </div>
           </div>
 
           <div className="round-rewards-topbar-actions">
@@ -1017,11 +1049,11 @@ function RoundRewardsPage() {
         ) : (
           <div className="round-rewards-layout">
             <aside className="round-rewards-card round-rewards-sidebar">
-              <div className="round-rewards-section-header">
-                <div>
-                  <h2>Configured Rounds</h2>
-                  <p>Load an existing reward config or start a fresh one.</p>
-                </div>
+                <div className="round-rewards-section-header">
+                  <div>
+                    <h2>Configured Rounds</h2>
+                    <p>Load a saved setup fast, or start a fresh reward sheet.</p>
+                  </div>
                 <button type="button" className="round-rewards-primary-btn" onClick={handleNewConfig}>
                   New Round
                 </button>
@@ -1053,7 +1085,7 @@ function RoundRewardsPage() {
                 <div className="round-rewards-section-header">
                   <div>
                     <h2>Round Chooser</h2>
-                    <p>Keep the round target compact, then duplicate or fine tune from there.</p>
+                    <p>Pick the reward target first, then duplicate or fine tune from there.</p>
                   </div>
 
                   <div className="round-rewards-chooser-actions">

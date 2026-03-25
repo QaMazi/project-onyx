@@ -319,6 +319,228 @@
   margin-top: 18px;
 }
 
+.feature-phase-status-panel,
+.feature-phase-action-card {
+  margin-bottom: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(21, 23, 31, 0.92), rgba(8, 11, 18, 0.96));
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.feature-phase-status-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.feature-phase-title {
+  margin: 6px 0 8px;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.feature-phase-copy,
+.feature-phase-turn-summary {
+  margin: 0;
+  color: rgba(230, 235, 255, 0.74);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.feature-phase-status-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.feature-phase-status-pill,
+.feature-phase-special-banner {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.feature-phase-status-pill span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(231, 237, 255, 0.6);
+  text-transform: uppercase;
+}
+
+.feature-phase-status-pill strong {
+  font-size: 18px;
+}
+
+.feature-phase-turn-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.feature-phase-turn-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.feature-phase-turn-card.is-current {
+  border-color: rgba(212, 173, 89, 0.42);
+  box-shadow: 0 0 0 1px rgba(212, 173, 89, 0.18);
+}
+
+.feature-phase-turn-card.is-complete {
+  background: rgba(84, 168, 116, 0.08);
+}
+
+.feature-phase-turn-top,
+.feature-phase-turn-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feature-phase-turn-player {
+  justify-content: flex-start;
+}
+
+.feature-phase-turn-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feature-phase-turn-player strong {
+  display: block;
+  font-size: 16px;
+}
+
+.feature-phase-turn-player span,
+.feature-phase-turn-state {
+  font-size: 12px;
+  color: rgba(231, 237, 255, 0.66);
+}
+
+.feature-phase-turn-summary {
+  margin-top: 10px;
+}
+
+.feature-phase-action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature-phase-choice-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature-phase-option-grid,
+.feature-phase-box-grid,
+.feature-phase-bonus-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.feature-phase-option-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.feature-phase-box-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.feature-phase-bonus-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feature-phase-option-card,
+.feature-phase-box-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(25, 28, 38, 0.96), rgba(10, 12, 18, 0.98));
+  color: #f5f7ff;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.feature-phase-option-card:hover,
+.feature-phase-box-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 173, 89, 0.34);
+}
+
+.feature-phase-option-card.is-selected,
+.feature-phase-box-card.is-selected {
+  border-color: rgba(212, 173, 89, 0.5);
+  box-shadow: 0 0 0 1px rgba(212, 173, 89, 0.2), 0 0 24px rgba(212, 173, 89, 0.14);
+}
+
+.feature-phase-option-card {
+  text-align: left;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feature-phase-option-card strong,
+.feature-phase-box-copy strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.feature-phase-option-card span,
+.feature-phase-box-copy span {
+  color: rgba(231, 237, 255, 0.7);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.feature-phase-box-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.feature-phase-box-image {
+  width: 100%;
+  aspect-ratio: 5 / 8;
+  object-fit: cover;
+  display: block;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.feature-phase-box-copy {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feature-phase-reward-session {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .feature-slots-admin-grid {
   display: grid;
   grid-template-columns: minmax(0, 280px) minmax(0, 280px) minmax(0, 1fr);

@@ -5,6 +5,7 @@ import { useUser } from "../../../context/UserContext";
 import { supabase } from "../../../lib/supabase";
 import {
   formatStoreCategoryName,
+  isSupportedStoreItem,
   normalizeStoreCategoryCode,
   sortStoreGroups,
 } from "../../../lib/storeCatalog";
@@ -140,9 +141,10 @@ function StoreEditorPage() {
   }, [authLoading, user]);
 
   const categoryGroups = useMemo(() => {
+    const supportedItems = items.filter((item) => isSupportedStoreItem(item));
     const grouped = new Map();
 
-    for (const item of items) {
+    for (const item of supportedItems) {
       const code = item.category_code || "other";
 
       if (!grouped.has(code)) {
@@ -204,7 +206,11 @@ function StoreEditorPage() {
   }, [categoryGroups, selectedCategory]);
 
   const editableItems = useMemo(
-    () => items.filter((item) => item.category_code !== "currency"),
+    () =>
+      items.filter(
+        (item) =>
+          item.category_code !== "currency" && isSupportedStoreItem(item)
+      ),
     [items]
   );
 
@@ -216,11 +222,6 @@ function StoreEditorPage() {
   const hiddenItems = useMemo(
     () => editableItems.filter((item) => item.is_active === false),
     [editableItems]
-  );
-
-  const openerItems = useMemo(
-    () => items.filter((item) => normalizeStoreCategoryCode(item.category_code) === "container_openers"),
-    [items]
   );
 
   const filteredModalItems = useMemo(() => {

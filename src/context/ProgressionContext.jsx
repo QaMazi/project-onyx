@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useUser } from "./UserContext";
 import "./ProgressionContext.css";
@@ -61,7 +62,7 @@ function getPageAllowance(pageKey, state, user) {
     }
 
     const reason =
-      "Series setup is still in Lobby. Wait for an admin to advance into Round 0.";
+      "Series setup is still in Admin Phase. Wait for an admin to begin the series and advance into Round 0.";
 
     return {
       allowed: pageKey === "progression",
@@ -96,6 +97,52 @@ function getPageAllowance(pageKey, state, user) {
       showLobbyModal: false,
       showRoundZeroWaitingModal: showRoundZeroFlow && pageKey === "progression",
       showWaitingOverlay: !isAdmin && pageKey !== "progression",
+    };
+  }
+
+  if (roundNumber > 0 && phase === "ban") {
+    return {
+      allowed: pageKey === "banlist",
+      reason: "Ban Phase is active. Complete the turn order and confirm the series banlist.",
+      showBeginModal: false,
+      showLobbyModal: false,
+      showRoundZeroWaitingModal: false,
+      showWaitingOverlay: pageKey !== "banlist",
+    };
+  }
+
+  if (roundNumber > 0 && phase === "binder") {
+    return {
+      allowed: pageKey === "binder",
+      reason: "Binder Phase is active. Resolve the turn order and confirm Binder results on the Binder page.",
+      showBeginModal: false,
+      showLobbyModal: false,
+      showRoundZeroWaitingModal: false,
+      showWaitingOverlay: pageKey !== "binder",
+    };
+  }
+
+  if (roundNumber > 0 && phase === "feature") {
+    return {
+      allowed: pageKey === "feature-slots",
+      reason:
+        "Feature Phase is active. Resolve the turn order and claim the phase rewards on the Feature Slots page.",
+      showBeginModal: false,
+      showLobbyModal: false,
+      showRoundZeroWaitingModal: false,
+      showWaitingOverlay: pageKey !== "feature-slots",
+    };
+  }
+
+  if (roundNumber > 0 && phase === "draft") {
+    return {
+      allowed: pageKey === "opener",
+      reason:
+        "Draft Phase is resolving. Draft keys are being distributed before the round returns to Standby.",
+      showBeginModal: false,
+      showLobbyModal: false,
+      showRoundZeroWaitingModal: false,
+      showWaitingOverlay: pageKey !== "opener",
     };
   }
 
@@ -166,7 +213,25 @@ function getPageAllowance(pageKey, state, user) {
   };
 }
 
+function getForcedPhasePath(state) {
+  if (!state?.activeSeriesId) return "";
+
+  const phase = String(state.currentPhase || "").toLowerCase();
+  const roundNumber = Number(state.roundNumber || 0);
+
+  if (roundNumber <= 0) return "";
+  if (phase === "ban") return "/mode/progression/banlist";
+  if (phase === "binder") return "/mode/progression/binder";
+  if (phase === "feature") return "/mode/progression/feature-slots";
+  if (phase === "draft") return "/mode/progression/opener";
+  return "";
+}
+
 function formatRewardChoiceOptionLabel(option) {
+  if (option?.label) {
+    return option.label;
+  }
+
   const optionKind = String(option?.option_kind || "");
 
   if (optionKind === "shards") {
@@ -186,6 +251,26 @@ function formatRewardChoiceOptionLabel(option) {
     return poolCount
       ? `Random Item from Pool (${poolCount}) x${Number(option?.exact_quantity || 0)}`
       : `Random Eligible Item x${Number(option?.exact_quantity || 0)}`;
+  }
+
+  if (optionKind === "promo_box") {
+    return "Promo Box Reward";
+  }
+
+  if (optionKind === "deck_box") {
+    return "Deck Box Reward";
+  }
+
+  if (optionKind === "feature_picker") {
+    return "Feature Reward";
+  }
+
+  if (optionKind === "banlist_card") {
+    return "Ban List Card";
+  }
+
+  if (optionKind === "deck_steal_random") {
+    return "Random Active Deck Steal";
   }
 
   return "Unknown Choice";
@@ -209,6 +294,9 @@ function RewardNotificationModal({
   if (!notification) return null;
 
   const payload = notification.payload || {};
+  const notificationKind = String(
+    notification?.notification_kind || payload.notification_kind || "round_reward"
+  ).toLowerCase();
   const grants = payload.grants || [];
   const standings = payload.scoreboard || [];
   const currentStanding = standings.find(
@@ -217,6 +305,21 @@ function RewardNotificationModal({
   const grantStatus = payload.grant_status || "complete";
   const unresolvedChoices = Array.isArray(pendingChoices) ? pendingChoices : [];
   const hasPendingChoices = unresolvedChoices.length > 0;
+  const modalKicker =
+    payload.kicker ||
+    (notificationKind === "draft_phase" ? "DRAFT PHASE" : "ROUND REWARD");
+  const modalTitle =
+    payload.title ||
+    (notificationKind === "draft_phase"
+      ? `Round ${payload.round_label || ""} Draft Keys`
+      : `Round ${payload.round_label || "Reward"}`);
+  const showRewardSummaryCards = notificationKind === "round_reward";
+  const showStandings = notificationKind === "round_reward";
+  const closeLabel =
+    payload.close_button_label ||
+    (notificationKind === "draft_phase"
+      ? "Close Draft Panel"
+      : "Close Reward Panel");
 
   function toggleChoiceOption(choiceEntryId, optionId, maxSelections) {
     setSelectedChoices((current) => {
@@ -246,34 +349,40 @@ function RewardNotificationModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="progression-reward-notice-shell">
-          <div className="progression-global-modal-kicker">ROUND REWARD</div>
-          <h2 className="progression-global-modal-title">
-            Round {payload.round_label || "Reward"}
-          </h2>
+          <div className="progression-global-modal-kicker">{modalKicker}</div>
+          <h2 className="progression-global-modal-title">{modalTitle}</h2>
 
           <div className="progression-reward-notice-scroll">
-            <div className="progression-reward-notice-grid">
-              <div className="progression-reward-notice-card">
-                <div className="progression-reward-notice-label">Placement</div>
-                <div className="progression-reward-notice-value">
-                  {payload.placement ?? "-"}
-                </div>
-              </div>
+            {payload.description ? (
+              <p className="progression-global-modal-copy">
+                {payload.description}
+              </p>
+            ) : null}
 
-              <div className="progression-reward-notice-card">
-                <div className="progression-reward-notice-label">Points</div>
-                <div className="progression-reward-notice-value">
-                  {payload.points_awarded ?? "-"}
+            {showRewardSummaryCards ? (
+              <div className="progression-reward-notice-grid">
+                <div className="progression-reward-notice-card">
+                  <div className="progression-reward-notice-label">Placement</div>
+                  <div className="progression-reward-notice-value">
+                    {payload.placement ?? "-"}
+                  </div>
                 </div>
-              </div>
 
-              <div className="progression-reward-notice-card">
-                <div className="progression-reward-notice-label">Current Points</div>
-                <div className="progression-reward-notice-value">
-                  {currentStanding?.points ?? payload.current_points ?? "-"}
+                <div className="progression-reward-notice-card">
+                  <div className="progression-reward-notice-label">Points</div>
+                  <div className="progression-reward-notice-value">
+                    {payload.points_awarded ?? "-"}
+                  </div>
+                </div>
+
+                <div className="progression-reward-notice-card">
+                  <div className="progression-reward-notice-label">Current Points</div>
+                  <div className="progression-reward-notice-value">
+                    {currentStanding?.points ?? payload.current_points ?? "-"}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
 
             {grantStatus !== "complete" ? (
               <div className="progression-global-error">
@@ -301,7 +410,9 @@ function RewardNotificationModal({
                       <article key={choiceEntry.id} className="progression-reward-choice-card">
                         <div className="progression-reward-choice-header">
                           <div>
-                            <div className="progression-reward-notice-label">Choice Reward</div>
+                            <div className="progression-reward-notice-label">
+                              {optionSnapshots[0]?.choice_group_label || "Choice Reward"}
+                            </div>
                             <strong>Pick {requiredSelections} option{requiredSelections === 1 ? "" : "s"}</strong>
                           </div>
                           <span>
@@ -369,28 +480,30 @@ function RewardNotificationModal({
               )}
             </section>
 
-            <section className="progression-reward-notice-section">
-              <h3>Standings</h3>
-              {standings.length === 0 ? (
-                <div className="progression-reward-notice-empty">
-                  Scoreboard data is not available yet.
-                </div>
-              ) : (
-                <div className="progression-reward-notice-list">
-                  {standings.map((row, index) => (
-                    <div
-                      key={`${notification.id}-standing-${row.user_id || index}`}
-                      className="progression-reward-notice-row"
-                    >
-                      <span>
-                        #{row.position ?? index + 1} {row.username || "Player"}
-                      </span>
-                      <strong>{row.points ?? 0} pts</strong>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+            {showStandings ? (
+              <section className="progression-reward-notice-section">
+                <h3>Standings</h3>
+                {standings.length === 0 ? (
+                  <div className="progression-reward-notice-empty">
+                    Scoreboard data is not available yet.
+                  </div>
+                ) : (
+                  <div className="progression-reward-notice-list">
+                    {standings.map((row, index) => (
+                      <div
+                        key={`${notification.id}-standing-${row.user_id || index}`}
+                        className="progression-reward-notice-row"
+                      >
+                        <span>
+                          #{row.position ?? index + 1} {row.username || "Player"}
+                        </span>
+                        <strong>{row.points ?? 0} pts</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : null}
           </div>
 
           <div className="progression-global-modal-actions">
@@ -404,7 +517,7 @@ function RewardNotificationModal({
                 ? "Saving..."
                 : hasPendingChoices
                 ? "Resolve Choice Rewards First"
-                : "Close Reward Panel"}
+                : closeLabel}
             </button>
           </div>
         </div>
@@ -464,13 +577,32 @@ function RoundZeroWaitingModal({ everyoneClaimed }) {
 function LobbyKickoffModal() {
   return (
     <div className="progression-global-modal-backdrop">
-      <div className="progression-global-modal progression-begin-series-modal">
-        <div className="progression-global-modal-kicker">LOBBY</div>
-        <h2 className="progression-global-modal-title">Waiting For Kickoff</h2>
+      <div className="progression-global-modal progression-begin-series-modal progression-admin-phase-modal">
+        <div className="progression-global-modal-kicker">ADMIN PHASE</div>
+        <h2 className="progression-global-modal-title">
+          Waiting for Admin to Begin the Series
+        </h2>
         <p className="progression-global-modal-copy">
-          Admin setup is still in progress. Progression systems unlock when an admin
-          advances the series into Round 0.
+          Admin setup is still in progress. Players stay locked here until an
+          admin begins the series and advances it into Round 0.
         </p>
+
+        <section className="progression-admin-phase-about">
+          <div className="progression-admin-phase-about-kicker">YGO Progression</div>
+          <h3 className="progression-admin-phase-about-title">About the Game</h3>
+          <p className="progression-admin-phase-about-copy">
+            In this game, players will progress through a series of phases each
+            round. The objective is simple: build the strongest deck possible
+            using the cards available to you and defeat your opponents.
+          </p>
+          <p className="progression-admin-phase-about-copy">
+            As the game progresses, your card pool will grow, allowing you to
+            improve your deck and refine your strategy.
+          </p>
+          <p className="progression-admin-phase-about-copy">
+            Good luck, and may the best duelist win!
+          </p>
+        </section>
       </div>
     </div>
   );
@@ -490,6 +622,8 @@ function PageLockOverlay({ reason }) {
 
 export function ProgressionSystemProvider({ pageKey, children }) {
   const { user } = useUser();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [state, setState] = useState(null);
   const [statusStrip, setStatusStrip] = useState([]);
@@ -686,6 +820,14 @@ export function ProgressionSystemProvider({ pageKey, children }) {
     () => getPageAllowance(pageKey, state, user),
     [pageKey, state, user]
   );
+
+  const forcedPhasePath = useMemo(() => getForcedPhasePath(state), [state]);
+
+  useEffect(() => {
+    if (!forcedPhasePath || !state?.activeSeriesId) return;
+    if (location.pathname === forcedPhasePath) return;
+    navigate(forcedPhasePath, { replace: true });
+  }, [forcedPhasePath, location.pathname, navigate, state?.activeSeriesId]);
 
   const beginSeries = useCallback(async () => {
     if (!activeSeriesId || busy) return;

@@ -23,6 +23,14 @@ function formatPhaseLabel(phase) {
   switch (phase) {
     case "standby":
       return "Standby Phase";
+    case "ban":
+      return "Ban Phase";
+    case "binder":
+      return "Binder Phase";
+    case "feature":
+      return "Feature Phase";
+    case "draft":
+      return "Draft Phase";
     case "deckbuilding":
       return "Deckbuilding Phase";
     case "dueling":
@@ -30,7 +38,7 @@ function formatPhaseLabel(phase) {
     case "reward":
       return "Reward Phase";
     case "lobby":
-      return "Lobby";
+      return "Admin Phase";
     default:
       return phase || "Unknown";
   }
